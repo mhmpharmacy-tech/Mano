@@ -74,6 +74,22 @@ class ManoChildPrivacyTest {
   }
 
   @Test
+  fun widgetCacheIsClearedAfterLocalDataPurge() {
+    val preferences = context.getSharedPreferences("mano_fever_timeline_widget", Context.MODE_PRIVATE)
+    preferences.edit()
+      .putString("latest_temp_text", "تب ساختگی خصوصی")
+      .putString("latest_dose_text", "داروی ساختگی خصوصی")
+      .putString("safe_interval_text", "زمان خصوصی")
+      .commit()
+    assertEquals("تب ساختگی خصوصی", FeverTimelineWidgetStore.readSummary(context).first)
+    FeverTimelineWidgetStore.clearAndUpdateWidgets(context)
+    val displayed = FeverTimelineWidgetStore.readSummary(context)
+    assertEquals("دما: ثبت نشده", displayed.first)
+    assertEquals("دارو: نوبتی ثبت نشده", displayed.second)
+    assertFalse(displayed.third.contains("زمان خصوصی"))
+  }
+
+  @Test
   fun localPurgeDeletesAllChildRelatedPreferencesButKeepsThemeAndBookmarks() = runBlocking {
     val p = prefs
     p.clearAllLocalChildHealthData()
