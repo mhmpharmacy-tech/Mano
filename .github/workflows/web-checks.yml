@@ -24,5 +24,6 @@ jobs:
         run: |
           node --check web/logic.js
           node --check web/app.js
+          node --check web/staff-demo.js
       - name: Behavior and asset checks
         run: node --test web/tests/smoke.test.cjs
