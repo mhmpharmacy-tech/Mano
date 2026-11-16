@@ -342,6 +342,9 @@ class ManoTimelineAnd3DWalkthroughTest {
     composeTestRule.onNodeWithTag("studio_training_only_warning").assertIsDisplayed()
     composeTestRule.onNodeWithText("شبیه‌ساز آموزشی", substring = true).assertIsDisplayed()
     composeTestRule.onNodeWithTag("studio_3d_target_sync_banner").assertIsDisplayed()
+    // Personalized target prefill no longer expands the training dock automatically.
+    composeTestRule.onNodeWithTag("studio_3d_expand_dock").performClick()
+    composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("studio_3d_guided_steps_row").assertIsDisplayed()
     composeTestRule.onNodeWithTag("studio_3d_shake_bottle_btn").assertIsDisplayed()
 
