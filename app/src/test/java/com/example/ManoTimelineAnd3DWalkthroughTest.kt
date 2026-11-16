@@ -135,7 +135,9 @@ class ManoTimelineAnd3DWalkthroughTest {
     val (tempSummary, doseSummary, intervalSummary) = FeverTimelineWidgetStore.readSummary(context)
     assertTrue(tempSummary.contains("37.9°C"))
     assertTrue(doseSummary.contains("5.0 mL"))
-    assertTrue(intervalSummary.contains("استامینوفن بعدی"))
+    assertTrue("Widget must state interval timing without authorizing the next dose", intervalSummary.contains("فاصله حداقلی"))
+    assertTrue("Widget must never say when to administer the next dose", !intervalSummary.contains("استامینوفن بعدی"))
+    assertTrue("Time passage is not permission for treatment", intervalSummary.contains("مجوز مصرف نیست"))
 
     val report =
       FeverDoseTimelineEngine.buildDoctorSummaryReportFa(
