@@ -279,7 +279,7 @@ fun MyChildScreen(
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
+      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("child_profile_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
