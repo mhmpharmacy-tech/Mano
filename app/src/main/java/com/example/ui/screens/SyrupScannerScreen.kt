@@ -706,7 +706,7 @@ fun SyrupScannerScreen(
                         fontWeight = FontWeight.Bold,
                       )
                       LtrText(
-                        text = LiquidDoseVisualizerEngine.formatMl(preview.recommendedMl),
+                        text = if (preview.isBlocked) "غیرفعال" else LiquidDoseVisualizerEngine.formatMl(preview.recommendedMl),
                         color = previewTint,
                         modifier = Modifier.testTag("scanner_calculated_ml_label"),
                       )
