@@ -55,3 +55,13 @@ jobs:
           keytool -genkeypair -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Android Debug,O=Android,C=US"
       - name: Build and run Android unit tests
         run: gradle :app:assembleDebug :app:testDebugUnitTest --no-daemon --stacktrace
+      - name: Upload test results for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-robolectric-test-results
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 7
