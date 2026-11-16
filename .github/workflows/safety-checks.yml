@@ -50,5 +50,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
+      - name: Generate temporary CI debug signing key
+        run: |
+          keytool -genkeypair -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Android Debug,O=Android,C=US"
       - name: Build and run Android unit tests
         run: gradle :app:assembleDebug :app:testDebugUnitTest --no-daemon --stacktrace
