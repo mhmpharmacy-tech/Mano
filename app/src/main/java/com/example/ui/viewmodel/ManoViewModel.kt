@@ -490,34 +490,6 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  fun advanceDemoRequestStatus(id: String) {
-    _uiState.update { state ->
-      val updated =
-        state.askPharmacist.requests.map { req ->
-          if (req.id != id) req
-          else {
-            val nextStatus =
-              when (req.status) {
-                ConsultationStatus.PENDING -> ConsultationStatus.RECEIVED
-                ConsultationStatus.RECEIVED -> ConsultationStatus.REVIEWED
-                ConsultationStatus.REVIEWED -> ConsultationStatus.REVIEWED
-              }
-            val nextNote =
-              if (nextStatus == ConsultationStatus.REVIEWED) {
-                FollowUpNote(
-                  scheduleFa = "بررسی‌شده",
-                  guidanceFa = "پاسخ نهایی تنها پس از بررسی داروساز تاییدشده نمایش داده می‌شود.",
-                )
-              } else {
-                req.followUp
-              }
-            req.copy(status = nextStatus, followUp = nextNote)
-          }
-        }
-      state.copy(askPharmacist = state.askPharmacist.copy(requests = updated))
-    }
-  }
-
   // --- Consent-Gated My Child Profile (DataStore) ---
   fun saveChildProfileDemo(
     aliasFa: String,
