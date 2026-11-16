@@ -26,7 +26,7 @@ jobs:
           node --check web/app.js
           node --check web/staff-demo.js
       - name: Behavior and asset checks
-        run: node --test web/tests/smoke.test.cjs
+        run: node --test web/tests/smoke.test.cjs web/tests/release-gate.test.cjs
 
   browser-qa:
     name: Real Chromium responsive and safety flow
