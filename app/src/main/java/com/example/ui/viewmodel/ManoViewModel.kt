@@ -323,7 +323,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
           return
         }
         // Immediate clinical safety short-circuit: fever >= 38.0 in infant < 3m triggers urgent alert immediately
-        if (flow.id == "fever" && age == AgeBand.NEWBORN && parsedTemp != null && parsedTemp >= 38.0) {
+        if (age == AgeBand.NEWBORN && parsedTemp != null && parsedTemp >= 38.0) {
           val result =
             TriageEngine.evaluate(
               flow = flow,
