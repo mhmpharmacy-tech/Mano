@@ -68,7 +68,7 @@ img { max-width: 100%; display: block; }
 .hero-trust span::before { content: "✓"; color: #0d9a8d; margin-left: 5px; }
 .hero-art { min-height: 515px; position: relative; display: grid; place-items: center; isolation: isolate; }
 .mascot-halo { position: absolute; inset: 90px 32px 60px; z-index: -1; border-radius: 50%; background: radial-gradient(circle, #c9eee5 5%, #dff3f0 53%, transparent 74%); }
-.hero-mascot { width: 86%; max-height: 460px; object-fit: contain; filter: drop-shadow(0 22px 22px rgba(27,105,105,.11)); position: relative; z-index: 1; }
+.hero-mascot { width: 86%; max-height: 460px; object-fit: contain; mix-blend-mode: multiply; filter: drop-shadow(0 22px 22px rgba(27,105,105,.11)); position: relative; z-index: 1; }
 .orbit { position: absolute; border: 1px solid rgba(7,136,133,.11); border-radius: 50%; z-index: -2; aspect-ratio: 1; }
 .orbit-one { width: 95%; }.orbit-two { width: 73%; }
 .float-tag { position: absolute; z-index: 2; display: flex; align-items: center; gap: 7px; background: #fffc; border: 1px solid #e0f1ec; border-radius: 13px; padding: 8px 12px; color: #305a60; font-size: 12px; font-weight: 800; box-shadow: var(--shadow); backdrop-filter: blur(9px); white-space: nowrap; }
@@ -128,6 +128,7 @@ img { max-width: 100%; display: block; }
 .text-link { font-size: 13px; font-weight: 900; color: var(--teal); }
 .feature-visual { min-height: 310px; max-width: 460px; width: 100%; display: grid; place-items: center; border-radius: 30px; overflow: hidden; position: relative; }
 .feature-visual img { max-height: 290px; max-width: 89%; object-fit: contain; }
+.feature-visual img[src$=".png"] { mix-blend-mode: multiply; }
 .feature-visual.medicine-visual { background: radial-gradient(circle, #d8edfe, #e7f4f9 73%); }
 .feature-visual.skin-visual { background: radial-gradient(circle, #ffe4d9, #fff1e8 76%); }
 .feature-visual.nutrition-visual { background: #e9f6ed; }
