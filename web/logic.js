@@ -7,19 +7,30 @@
 })(typeof window !== "undefined" ? window : this, function () {
   "use strict";
 
+  // Inputs from Persian/Arabic keyboards must never be silently treated as
+  // no fever. Either normalize a valid Celsius value or fail closed.
+  function parseTemperature(raw) {
+    if (raw === "" || raw === undefined || raw === null) return null;
+    const clean = String(raw).trim()
+      .replace(/[۰-۹]/g, function (digit) { return String(digit.charCodeAt(0) - 1776); })
+      .replace(/[٠-٩]/g, function (digit) { return String(digit.charCodeAt(0) - 1632); })
+      .replace(/[٫,]/g, ".");
+    if (!/^\\d{1,2}(?:\\.\\d{1,2})?$/.test(clean)) return NaN;
+    return Number(clean);
+  }
+
   function evaluate(input) {
     const age = input && input.ageBand;
     const warnings = input && Array.isArray(input.warnings) ? input.warnings : [];
-    const rawTemp = input && input.temperature;
-    const hasTemp = rawTemp !== "" && rawTemp !== null && rawTemp !== undefined;
-    const temp = hasTemp ? Number(rawTemp) : null;
+    const temp = parseTemperature(input && input.temperature);
+    const hasTemp = temp !== null;
 
     // Red flags must win regardless of whether every field was completed.
     if (warnings.length > 0) {
       return {
         kind: "danger",
         heading: "نیاز به ارزیابی فوری",
-        message: "یکی از نشانه‌های مهم هشدار انتخاب شده است. برای بررسی فوری توسط اورژانس یا تیم درمان اقدام کن. در ایران در موارد اورژانسی با ۱۱۵ تماس بگیر. از این صفحه برای تأخیر در مراجعه استفاده نکن.",
+        message: "یکی از نشانه‌های مهم هشدار انتخاب شده است. فوراً از اورژانس یا تیم درمان کمک بگیر. در ایران با ۱۱۵ و در کشورهای دیگر با شماره اورژانس محل تماس بگیر؛ این فرم نباید مراجعه را به تأخیر بیندازد.",
       };
     }
     if (age !== "under3" && age !== "older") {
@@ -32,7 +43,7 @@
       return {
         kind: "danger",
         heading: "تب در کودک زیر سه ماه؛ ارزیابی فوری",
-        message: "دمای ۳۸ درجه سانتی‌گراد یا بالاتر در کودک زیر سه ماه نیازمند ارزیابی فوری پزشکی است. خودسرانه تب‌بر نده.",
+        message: "دمای ۳۸ درجه سانتی‌گراد یا بالاتر در کودک زیر سه ماه نیازمند ارزیابی فوری پزشکی است. در ایران برای راهنمایی اورژانسی با ۱۱۵ تماس بگیر؛ در کشورهای دیگر با خدمات اورژانس محل تماس بگیر. خودسرانه تب‌بر نده.",
       };
     }
     if (age === "under3") {
@@ -49,5 +60,5 @@
     };
   }
 
-  return { evaluate };
+  return { evaluate, parseTemperature };
 });
