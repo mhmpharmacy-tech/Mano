@@ -25,6 +25,25 @@ function isVerifiedPharmacist(auth, pharmacyId) {
   );
 }
 
+/**
+ * Defense in depth: custom claims can remain valid until an ID token refreshes.
+ * An independently maintained per-pharmacy staff directory provides a live
+ * revocation gate. Only trusted backend onboarding may write this record.
+ */
+function isActivePharmacistDirectoryRecord(record, uid, pharmacyId) {
+  return Boolean(
+    record &&
+      isId(uid) &&
+      isId(pharmacyId) &&
+      record.uid === uid &&
+      record.pharmacyId === pharmacyId &&
+      record.role === "pharmacist" &&
+      record.status === "ACTIVE" &&
+      record.credentialVerified === true &&
+      record.revokedAt == null
+  );
+}
+
 function validateIntake(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const pharmacyId = payload.pharmacyId;
@@ -93,4 +112,4 @@ function buildParentCaseView(caseId, source) {
   };
 }
 
-module.exports = { AGE_BANDS, CATEGORIES, DECISIONS, NEXT_STATUSES, isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass };
+module.exports = { AGE_BANDS, CATEGORIES, DECISIONS, NEXT_STATUSES, isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass, isActivePharmacistDirectoryRecord };
