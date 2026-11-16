@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "product": "MANO Kids static educational web preview",
+  "status": "NOT_APPROVED_FOR_PUBLIC_CLINICAL_RELEASE",
+  "reviewerName": null,
+  "reviewedAt": null,
+  "reviewVersion": null,
+  "contentSections": [
+    {
+      "id": "screening",
+      "risk": "critical",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "references": [
+        "NICE-NG143",
+        "AAP-HealthyChildren"
+      ]
+    },
+    {
+      "id": "medicine",
+      "risk": "critical",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "references": [
+        "AAP-HealthyChildren"
+      ]
+    },
+    {
+      "id": "skin",
+      "risk": "medium",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "references": []
+    },
+    {
+      "id": "nutrition",
+      "risk": "medium",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "references": [
+        "WHO-Growth"
+      ]
+    },
+    {
+      "id": "faq",
+      "risk": "critical",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "references": [
+        "NICE-NG143",
+        "AAP-HealthyChildren"
+      ]
+    }
+  ],
+  "sourceRegister": {
+    "NICE-NG143": {
+      "publisher": "NICE",
+      "url": "https://www.nice.org.uk/guidance/ng143/chapter/Recommendations",
+      "verifiedOn": null
+    },
+    "AAP-HealthyChildren": {
+      "publisher": "American Academy of Pediatrics",
+      "url": "https://www.healthychildren.org/",
+      "verifiedOn": null
+    },
+    "WHO-Growth": {
+      "publisher": "World Health Organization",
+      "url": "https://www.who.int/tools/child-growth-standards",
+      "verifiedOn": null
+    }
+  },
+  "releaseBlockers": [
+    "clinical medical review",
+    "legal and child-data privacy review",
+    "real-device accessibility audit",
+    "HTTPS domain and hosting review",
+    "staff authentication before clinical services"
+  ],
+  "note": "References are pointers for reviewers, not evidence of independent expert sign-off. Automated browser tests do not verify medical accuracy."
+}
