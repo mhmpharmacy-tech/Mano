@@ -1,10 +1,10 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView } = require("../consultation-policy");
+const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass } = require("../consultation-policy");
 
 const auth = { uid: "staff-001", token: { manoStaffVerified:true, manoStaffRole:"pharmacist", manoPharmacyId:"pharmacy_demo" } };
-const goodCase = { pharmacyId:"pharmacy_demo",categoryName:"OTC",ageBandId:"toddler_1_3y",questionSummaryFa:"آیا این دو شربت تداخل دارویی دارند؟",consentAccepted:true,privacyNoticeVersion:"v1",hasUrgentFlag:false };
+const goodCase = { pharmacyId:"pharmacy_demo",categoryName:"OTC",ageBandId:"toddler_1_3y",questionSummaryFa:"آیا این دو شربت تداخل دارویی دارند؟",consentAccepted:true,privacyNoticeVersion:"v1",hasUrgentFlag:false,triagePassId:"pass_123" };
 
 test("IDs cannot traverse paths or use arbitrary document selectors",()=>{
   assert.equal(isId("pharmacy_demo"),true);
@@ -29,6 +29,7 @@ test("Intake accepts only consented, nonurgent, bounded requests",()=>{
   assert.equal(validateIntake({...goodCase,ageBandId:"not_real"}),null);
   assert.equal(validateIntake({...goodCase,questionSummaryFa:"x".repeat(601)}),null);
   assert.equal(validateIntake({...goodCase,pharmacyId:"../bad"}),null);
+  assert.equal(validateIntake({...goodCase,triagePassId:""}),null);
 });
 
 test("The clinical reviewer must be a verified pharmacist, never merely a pharmacy admin", () => {
@@ -93,4 +94,28 @@ test("Parent-visible result never includes private review note, staff identity o
   assert.equal(awaiting.parentReplyFa,null);
   assert.equal(awaiting.sourceFa,null);
   assert.equal(awaiting.decision,null);
+});
+
+
+test("Only a trusted, current, single-use nonurgent triage pass can authorize intake",()=>{
+  const now = Date.now();
+  const verified = {
+    ownerUid:"parent_123",
+    pharmacyId:"pharmacy_demo",
+    classification:"NONURGENT",
+    issuerService:"mano-triage-v1",
+    verified:true,
+    validUntil:{toMillis:()=>now+60000},
+    consumedAt:null,
+  };
+  assert.equal(isValidTriagePass(verified,"parent_123","pharmacy_demo",now),true);
+  assert.equal(isValidTriagePass({...verified,ownerUid:"parent_456"},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass({...verified,pharmacyId:"pharmacy_other"},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass({...verified,classification:"URGENT"},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass({...verified,issuerService:"client"},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass({...verified,verified:false},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass({...verified,consumedAt:{toMillis:()=>now}},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass({...verified,validUntil:{toMillis:()=>now-1}},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass({...verified,validUntil:{toMillis:()=>now}},"parent_123","pharmacy_demo",now),false);
+  assert.equal(isValidTriagePass(null,"parent_123","pharmacy_demo",now),false);
 });
