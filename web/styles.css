@@ -1,3 +1,8 @@
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn.ttf") format("truetype");
+  font-display: swap;
+}
 /* MANO Kids web preview — RTL, mobile-first, no tracking or hidden clinical logic. */
 :root {
   color-scheme: light;
