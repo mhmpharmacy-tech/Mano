@@ -49,8 +49,14 @@ object TriageEngine {
       )
     }
 
-    // Rule 2: Fever >= 38.0 °C in infant younger than 3 months (NEWBORN band)
-    if (flow.id == "fever" && ageBand == AgeBand.NEWBORN && (temperatureCelsius == null || temperatureCelsius >= 38.0)) {
+    // Rule 2: Fever >= 38.0 °C in an infant under three months needs urgent review
+    // regardless of which symptom flow the parent opened. For a "fever" flow
+    // without a measured number, treat possible fever cautiously as urgent.
+    val measuredInfantFever =
+      ageBand == AgeBand.NEWBORN && temperatureCelsius != null && temperatureCelsius >= 38.0
+    val suspectedInfantFever =
+      ageBand == AgeBand.NEWBORN && flow.id == "fever" && temperatureCelsius == null
+    if (measuredInfantFever || suspectedInfantFever) {
       val tempText =
         if (temperatureCelsius != null) {
           "دمای ثبت‌شده ${temperatureCelsius} درجه سانتی‌گراد"
@@ -88,7 +94,7 @@ object TriageEngine {
     val prolongedFever = flow.id == "fever" && (durationHours ?: 0) >= 72
     val prolongedCough = flow.id == "cough" && (durationHours ?: 0) >= 24 * 14
     val youngInfantHighTemp =
-      flow.id == "fever" && ageBand == AgeBand.INFANT_3_12M && (temperatureCelsius ?: 0.0) >= 39.0
+      ageBand == AgeBand.INFANT_3_12M && (temperatureCelsius ?: 0.0) >= 39.0
 
     if (checkedReviewFlags.isNotEmpty() || prolongedFever || prolongedCough || youngInfantHighTemp) {
       val reasonParts = mutableListOf<String>()
