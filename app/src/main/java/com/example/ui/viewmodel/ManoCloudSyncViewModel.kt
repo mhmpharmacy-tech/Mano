@@ -10,7 +10,6 @@ import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.ConsultationRequestDemo
-import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.DoctorVisitDraft
 import com.example.domain.model.SavedSyrupScan
 import com.example.domain.model.VaccineRecord
@@ -237,15 +236,6 @@ class ManoCloudSyncViewModel(
         onSuccess()
       } else {
         _cloudToastFa.value = "خطا در ثبت درخواست ابری: ${result.exceptionOrNull()?.localizedMessage ?: "نامشخص"}"
-      }
-    }
-  }
-
-  fun advanceConsultationStatus(consultationId: String, currentStatus: ConsultationStatus) {
-    viewModelScope.launch {
-      val result = repository.advanceConsultationStatus(consultationId, currentStatus)
-      if (result.isFailure) {
-        _cloudToastFa.value = "امکان تغییر وضعیت وجود ندارد."
       }
     }
   }
