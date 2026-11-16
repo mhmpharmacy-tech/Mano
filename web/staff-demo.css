@@ -24,7 +24,7 @@
 .case-desc { color:#4e6873; display:block; font-size:12px; margin:4px 0 8px; }
 .case-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .case-tag { font-size:10px; border-radius:20px; padding:2px 9px; background:#e9f5f3; color:#27746e; }
-.case-tag.flag { background:#fff1e9; color:#ad4b32; }.case-tag.done { background:#ebf0ff; color:#5c71b8; }
+.case-tag.flag { background:#fff1e9; color:#ad4b32; }.case-tag.done { background:#ebf0ff; color:#405796; }
 .staff-detail { padding:25px 28px; min-height:600px; }
 .detail-title { display:flex; flex-wrap:wrap; align-items:center; gap:10px; justify-content:space-between; }
 .detail-title h2 { margin:0; font-size:21px; }
