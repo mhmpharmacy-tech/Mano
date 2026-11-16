@@ -4,7 +4,7 @@ const crypto = require("node:crypto");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
-const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview } = require("./consultation-policy");
+const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView } = require("./consultation-policy");
 
 if (!admin.apps.length) admin.initializeApp();
 let db = null;
@@ -92,6 +92,7 @@ exports.manoSubmitCase = onCall(config, async (req) => {
     reviewedByUid: null,
     decision: null,
     reviewNoteFa: null,
+    parentReplyFa: null,
     sourceFa: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -115,17 +116,7 @@ exports.manoGetMyCase = onCall(config, async (req) => {
   const snap = await caseRef(pharmacyId, caseId).get();
   if (!snap.exists || snap.get("ownerUid") !== uid) throw new HttpsError("not-found", "Case not found.");
   const c = snap.data();
-  return {
-    caseId,
-    categoryName: c.categoryName,
-    ageBandId: c.ageBandId,
-    status: c.status,
-    decision: c.status === "REVIEWED" ? c.decision : null,
-    reviewNoteFa: c.status === "REVIEWED" ? c.reviewNoteFa : null,
-    sourceFa: c.status === "REVIEWED" ? c.sourceFa : null,
-    updatedAtMs: c.updatedAt && typeof c.updatedAt.toMillis === "function" ? c.updatedAt.toMillis() : null,
-  };
-});
+  return buildParentCaseView(caseId, c);});
 
 // Staff may see only cases under their staff-claim pharmacy. This is not a global search.
 exports.manoListStaffCases = onCall(config, async (req) => {
@@ -172,6 +163,7 @@ exports.manoReviewCase = onCall(config, async (req) => {
     if (change.status === "REVIEWED") {
       changes.decision = change.decision;
       changes.reviewNoteFa = change.reviewNoteFa;
+      changes.parentReplyFa = change.parentReplyFa;
       changes.sourceFa = change.sourceFa;
     }
     tx.update(ref, changes);
@@ -184,6 +176,7 @@ exports.manoReviewCase = onCall(config, async (req) => {
       decision: change.decision,
       // Hash rather than duplicate the clinical note in the immutable audit log.
       noteSha256: change.reviewNoteFa ? crypto.createHash("sha256").update(change.reviewNoteFa, "utf8").digest("hex") : null,
+      replySha256: change.parentReplyFa ? crypto.createHash("sha256").update(change.parentReplyFa, "utf8").digest("hex") : null,
       createdAt: serverTimestamp(),
     });
     return { caseId, status: change.status };
