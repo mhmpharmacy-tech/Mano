@@ -40,11 +40,11 @@ object FeverTimelineWidgetStore {
     val intervalText =
       when {
         snapshot.acetaminophenStatus.minutesRemainingSafeInterval > 0L ->
-          "استامینوفن بعدی: ${FeverDoseTimelineEngine.formatDurationFa(snapshot.acetaminophenStatus.minutesRemainingSafeInterval)} دیگر"
+          "زمان باقی‌مانده تا فاصله حداقلی ثبت‌شده: ${FeverDoseTimelineEngine.formatDurationFa(snapshot.acetaminophenStatus.minutesRemainingSafeInterval)} (مجوز مصرف نیست)"
         snapshot.ibuprofenStatus.minutesRemainingSafeInterval > 0L ->
-          "ایبوپروفن بعدی: ${FeverDoseTimelineEngine.formatDurationFa(snapshot.ibuprofenStatus.minutesRemainingSafeInterval)} دیگر"
+          "زمان باقی‌مانده تا فاصله حداقلی ثبت‌شده: ${FeverDoseTimelineEngine.formatDurationFa(snapshot.ibuprofenStatus.minutesRemainingSafeInterval)} (مجوز مصرف نیست)"
         snapshot.dosePoints.isNotEmpty() ->
-          "فاصله ایمن نوبت فعلی سپری شده"
+          "فاصله زمانی ثبت‌شده سپری شده؛ برای مصرف بعدی با متخصص مشورت کنید"
         else ->
           "برای ثبت سریع دما یا نوبت دارو لمس کنید"
       }
@@ -64,6 +64,17 @@ object FeverTimelineWidgetStore {
       ids.forEach { widgetId ->
         FeverTimelineWidgetProvider.updateAppWidget(context, manager, widgetId)
       }
+    }
+  }
+
+  /** Clear the separate SharedPreferences widget cache and refresh launcher widgets. */
+  fun clearAndUpdateWidgets(context: Context) {
+    val appContext = context.applicationContext
+    appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
+    val manager = AppWidgetManager.getInstance(appContext)
+    val component = ComponentName(appContext, FeverTimelineWidgetProvider::class.java)
+    manager.getAppWidgetIds(component).forEach { widgetId ->
+      FeverTimelineWidgetProvider.updateAppWidget(appContext, manager, widgetId)
     }
   }
 
