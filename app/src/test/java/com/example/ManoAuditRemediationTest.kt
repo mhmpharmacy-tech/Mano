@@ -66,7 +66,7 @@ class ManoAuditRemediationTest {
   }
 
   @Test
-  fun conservativeInfantFallback_blocksIbuprofenWhenExactAgeUnknown_andUnlocksAtSevenMonths() {
+  fun conservativeInfantFallback_keepsPublicAutoDoseLockedForKnownAge() {
     val unspecificInfant =
       ChildProfileDemo(
         aliasFa = "نی‌نی",
@@ -107,7 +107,7 @@ class ManoAuditRemediationTest {
         ageMonths = fromBirthDate,
         weightKg = 8.0f,
       )
-    assertFalse("Ibuprofen should be unlocked once exact age >= 6 months", safeIbuprofen.isBlocked)
+    assertTrue("Public auto-dose remains disabled until clinical review", safeIbuprofen.isBlocked)
   }
 
   @Test
