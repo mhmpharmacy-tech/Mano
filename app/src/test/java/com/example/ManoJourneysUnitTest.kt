@@ -37,6 +37,34 @@ class ManoJourneysUnitTest {
   }
 
   @Test
+  fun triage_underThreeMonthsWithMeasuredFever_inCoughFlowStillEscalatesImmediately() {
+    val coughFlow = repo.symptomFlowById("cough")
+    val result = TriageEngine.evaluate(
+      flow = coughFlow,
+      ageBand = AgeBand.NEWBORN,
+      temperatureCelsius = 38.0,
+      durationHours = 1,
+      selectedRedFlagIds = emptySet(),
+    )
+    assertEquals(TriageOutcome.URGENT_EMERGENCY, result.outcome)
+    assertFalse(result.canShowSelfCare)
+    assertFalse(result.showPharmacistOption)
+  }
+
+  @Test
+  fun triage_infantThreeToTwelveMonthsWithHighMeasuredFever_inOtherFlowNeedsClinicalReview() {
+    val coughFlow = repo.symptomFlowById("cough")
+    val result = TriageEngine.evaluate(
+      flow = coughFlow,
+      ageBand = AgeBand.INFANT_3_12M,
+      temperatureCelsius = 39.0,
+      durationHours = 1,
+      selectedRedFlagIds = emptySet(),
+    )
+    assertEquals(TriageOutcome.NEEDS_TIMELY_REVIEW, result.outcome)
+  }
+
+  @Test
   fun journeyB_threeYearOldWithConstipation_returnsEducationalGuidanceAndPharmacistOption() {
     val constipationFlow = repo.symptomFlowById("constipation")
     val result =
