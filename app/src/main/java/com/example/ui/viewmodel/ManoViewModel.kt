@@ -28,6 +28,11 @@ import com.example.domain.model.TopicCategory
 import com.example.domain.model.TriageEvaluationResult
 import com.example.domain.model.VaccineRecord
 import com.example.domain.model.VaccineReminderSettings
+import com.example.domain.util.ChildProfilePrivacy
+import com.example.notifications.VaccineReminderScheduler
+import com.example.notifications.VaccineNotificationHelper
+import com.example.notifications.HighFeverNotificationHelper
+import com.example.widget.FeverTimelineWidgetStore
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
 import com.example.domain.util.PersianNormalizer
@@ -535,21 +540,45 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
 
   fun exportChildProfileSummary(overrideProfile: ChildProfileDemo? = null) {
     val profile = overrideProfile ?: localChildProfile.value ?: return
-    val json =
-      """
-      {
-        "source": "MANO_KIDS_LOCAL_SUMMARY",
-        "alias": "${profile.aliasFa}",
-        "ageBand": "${profile.ageBand.labelFa}",
-        "birthOrAge": "${profile.birthDateOrAgeFa}",
-        "weightKg": "${profile.weightKgText}",
-        "weightDate": "${profile.weightDateFa}",
-        "allergies": "${profile.allergiesFa}",
-        "currentMedications": "${profile.currentMedsFa}"
+    _uiState.update {
+      it.copy(exportedProfileJson = ChildProfilePrivacy.exportProfileSummaryJson(profile))
+    }
+  }
+
+  /**
+   * Local-only data deletion; never claim the authenticated user's Firestore
+   * records or remote backups have been deleted. UI must confirm this separately.
+   */
+  fun deleteAllLocalChildHealthData() {
+    viewModelScope.launch {
+      try {
+        prefs.clearAllLocalChildHealthData()
+        val context = getApplication<Application>().applicationContext
+        val remindersCancelled = VaccineReminderScheduler.cancelAllForLocalDataRemoval(context)
+        val vaccineNotificationDismissed = VaccineNotificationHelper.dismissLocalReminder(context)
+        val feverNotificationDismissed = HighFeverNotificationHelper.dismissLocalAlert(context)
+        val widgetUpdated = runCatching {
+          FeverTimelineWidgetStore.clearAndUpdateWidgets(context)
+          true
+        }.getOrDefault(false)
+        val ancillaryOk =
+          remindersCancelled && vaccineNotificationDismissed &&
+            feverNotificationDismissed && widgetUpdated
+        _uiState.update {
+          it.copy(
+            exportedProfileJson = null,
+            toastMessageFa =
+              if (ancillaryOk) {
+                "داده‌های سلامت ذخیره‌شده در برنامه روی این دستگاه پاک شدند. داده‌های ابری حذف نشده‌اند."
+              } else {
+                "داده‌های سلامت در حافظه برنامه پاک شدند؛ برای حذف اعلان‌ها یا ویجت ممکن است اقدام دستی لازم باشد. داده‌های ابری حذف نشده‌اند."
+              },
+          )
+        }
+      } catch (_: Exception) {
+        showToast("حذف داده‌ها کامل نشد؛ لطفاً دوباره تلاش کنید.")
       }
-      """
-        .trimIndent()
-    _uiState.update { it.copy(exportedProfileJson = json) }
+    }
   }
 
   fun deleteChildProfileDemo() {
