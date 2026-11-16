@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass } = require("../consultation-policy");
+const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass, isActivePharmacistDirectoryRecord } = require("../consultation-policy");
 
 const auth = { uid: "staff-001", token: { manoStaffVerified:true, manoStaffRole:"pharmacist", manoPharmacyId:"pharmacy_demo" } };
 const goodCase = { pharmacyId:"pharmacy_demo",categoryName:"OTC",ageBandId:"toddler_1_3y",questionSummaryFa:"آیا این دو شربت تداخل دارویی دارند؟",consentAccepted:true,privacyNoticeVersion:"v1",hasUrgentFlag:false,triagePassId:"pass_123" };
@@ -118,4 +118,25 @@ test("Only a trusted, current, single-use nonurgent triage pass can authorize in
   assert.equal(isValidTriagePass({...verified,validUntil:{toMillis:()=>now-1}},"parent_123","pharmacy_demo",now),false);
   assert.equal(isValidTriagePass({...verified,validUntil:{toMillis:()=>now}},"parent_123","pharmacy_demo",now),false);
   assert.equal(isValidTriagePass(null,"parent_123","pharmacy_demo",now),false);
+});
+
+
+test("Live staff record rejects revoked or unlicensed pharmacist even with valid token claims", () => {
+  const record = {
+    uid: "staff-001",
+    pharmacyId: "pharmacy_demo",
+    role: "pharmacist",
+    status: "ACTIVE",
+    credentialVerified: true,
+    revokedAt: null,
+  };
+  assert.equal(isActivePharmacistDirectoryRecord(record, "staff-001", "pharmacy_demo"), true);
+  assert.equal(isActivePharmacistDirectoryRecord(null, "staff-001", "pharmacy_demo"), false);
+  assert.equal(isActivePharmacistDirectoryRecord({...record,uid:"former_staff"}, "staff-001", "pharmacy_demo"), false);
+  assert.equal(isActivePharmacistDirectoryRecord({...record,pharmacyId:"another_pharmacy"}, "staff-001", "pharmacy_demo"), false);
+  assert.equal(isActivePharmacistDirectoryRecord({...record,status:"SUSPENDED"}, "staff-001", "pharmacy_demo"), false);
+  assert.equal(isActivePharmacistDirectoryRecord({...record,status:"REVOKED"}, "staff-001", "pharmacy_demo"), false);
+  assert.equal(isActivePharmacistDirectoryRecord({...record,role:"admin"}, "staff-001", "pharmacy_demo"), false);
+  assert.equal(isActivePharmacistDirectoryRecord({...record,credentialVerified:false}, "staff-001", "pharmacy_demo"), false);
+  assert.equal(isActivePharmacistDirectoryRecord({...record,revokedAt:{seconds:1}}, "staff-001", "pharmacy_demo"), false);
 });
