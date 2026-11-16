@@ -142,61 +142,29 @@ class ManoJourneysUnitTest {
   }
 
   @Test
-  fun liquidDoseVisualizer_calculatesSafeMlByAgeWeightAndBlocksNewborn() {
-    val syrup120 =
-      LiquidDoseVisualizerEngine.evaluate(
-        formulation = LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5,
-        ageMonths = 24,
-        weightKg = 12.0f,
-      )
-    assertFalse(syrup120.isBlocked)
-    assertEquals(6.5f, syrup120.recommendedMl, 0.01f)
-    assertEquals(5.0f, syrup120.minSafeMl, 0.01f)
-    assertEquals(7.5f, syrup120.maxSafeMl, 0.01f)
-
-    val drops100 =
-      LiquidDoseVisualizerEngine.evaluate(
-        formulation = LiquidFormulationId.ACETAMINOPHEN_DROPS_100,
-        ageMonths = 6,
-        weightKg = 8.0f,
-      )
-    assertFalse(drops100.isBlocked)
-    assertEquals(1.0f, drops100.recommendedMl, 0.01f)
-
-    val newbornBlocked =
-      LiquidDoseVisualizerEngine.evaluate(
-        formulation = LiquidFormulationId.ACETAMINOPHEN_DROPS_100,
-        ageMonths = 2,
-        weightKg = 5.0f,
-      )
-    assertTrue(newbornBlocked.isBlocked)
-    assertEquals(0.0f, newbornBlocked.recommendedMl, 0.01f)
-    assertEquals(AlertSeverity.DANGER, newbornBlocked.alertSeverity)
-
-    val infantIbuprofenBlocked =
-      LiquidDoseVisualizerEngine.evaluate(
-        formulation = LiquidFormulationId.IBUPROFEN_SYRUP_100_5,
-        ageMonths = 4,
-        weightKg = 7.0f,
-      )
-    assertTrue(infantIbuprofenBlocked.isBlocked)
-    assertEquals(0.0f, infantIbuprofenBlocked.recommendedMl, 0.01f)
-
-    val toddlerIbuprofen =
-      LiquidDoseVisualizerEngine.evaluate(
-        formulation = LiquidFormulationId.IBUPROFEN_SYRUP_100_5,
-        ageMonths = 12,
-        weightKg = 10.0f,
-      )
-    assertFalse(toddlerIbuprofen.isBlocked)
-    assertEquals(4.0f, toddlerIbuprofen.recommendedMl, 0.01f)
-
-    val draggedKg =
+  fun liquidDoseVisualizer_neverSuggestsPediatricDoseUntilReviewed() {
+    val scenarios = listOf(
+      Triple(LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5, 24, 12.0f),
+      Triple(LiquidFormulationId.ACETAMINOPHEN_DROPS_100, 6, 8.0f),
+      Triple(LiquidFormulationId.ACETAMINOPHEN_DROPS_100, 2, 5.0f),
+      Triple(LiquidFormulationId.IBUPROFEN_SYRUP_100_5, 4, 7.0f),
+      Triple(LiquidFormulationId.IBUPROFEN_SYRUP_100_5, 12, 10.0f),
+      Triple(LiquidFormulationId.CETIRIZINE_SYRUP_5_5, 36, 14.0f),
+    )
+    scenarios.forEach { (formulation, ageMonths, weightKg) ->
+      val result = LiquidDoseVisualizerEngine.evaluate(formulation, ageMonths, weightKg)
+      assertTrue(result.isBlocked)
+      assertEquals(0f, result.recommendedMl, 0.01f)
+      assertEquals(0f, result.minSafeMl, 0.01f)
+      assertEquals(0f, result.maxSafeMl, 0.01f)
+      assertEquals(0, result.recommendedMg)
+      assertTrue(result.alertTitleFa.isNotEmpty())
+    }
+    assertTrue(
       LiquidDoseVisualizerEngine.estimateWeightFromDraggedMl(
-        formulation = LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5,
-        ageMonths = 24,
-        draggedMl = 5.0f,
-      )
-    assertEquals(9.5f, draggedKg!!, 0.01f)
+        LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5, 24, 5f,
+      ) == null
+    )
+  }
   }
 }
