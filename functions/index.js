@@ -4,7 +4,7 @@ const crypto = require("node:crypto");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
-const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView } = require("./consultation-policy");
+const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass } = require("./consultation-policy");
 
 if (!admin.apps.length) admin.initializeApp();
 let db = null;
@@ -74,37 +74,58 @@ exports.manoSubmitCase = onCall(config, async (req) => {
   const content = validateIntake(req.data);
   if (!content) throw new HttpsError("invalid-argument", "Case is invalid or requires immediate clinical escalation.");
 
-  await requireActivePharmacy(content.pharmacyId, true);
-  const ref = db.collection("pharmacies").doc(content.pharmacyId).collection("cases").doc();
+  const pharmacyRef = db.collection("pharmacies").doc(content.pharmacyId);
+  const triagePassRef = pharmacyRef.collection("triagePasses").doc(content.triagePassId);
+  const ref = pharmacyRef.collection("cases").doc();
   const auditRef = ref.collection("audit").doc();
-  const batch = db.batch();
-  batch.create(ref, {
-    schemaVersion: 1,
-    ownerUid: uid,
-    pharmacyId: content.pharmacyId,
-    categoryName: content.categoryName,
-    ageBandId: content.ageBandId,
-    questionSummaryFa: content.questionSummaryFa,
-    consentAccepted: true,
-    privacyNoticeVersion: "v1",
-    hasUrgentFlag: false,
-    status: "PENDING",
-    reviewedByUid: null,
-    decision: null,
-    reviewNoteFa: null,
-    parentReplyFa: null,
-    sourceFa: null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+
+  // The pass must have been issued by a separate, trusted, clinically reviewed
+  // triage service. No such issuer exists in this draft; intake fails closed.
+  // Check and consume pass atomically, preventing replay and closing races.
+  await db.runTransaction(async (tx) => {
+    const [pharmacy, pass] = await Promise.all([
+      tx.get(pharmacyRef),
+      tx.get(triagePassRef),
+    ]);
+    if (!pharmacy.exists || pharmacy.get("active") !== true || pharmacy.get("acceptingCases") !== true) {
+      throw new HttpsError("failed-precondition", "Pharmacy is not accepting consultation requests.");
+    }
+    if (!pass.exists || !isValidTriagePass(pass.data(), uid, content.pharmacyId)) {
+      throw new HttpsError("failed-precondition", "A valid, unused, server-issued nonurgent triage pass is required.");
+    }
+
+    tx.create(ref, {
+      schemaVersion: 1,
+      ownerUid: uid,
+      pharmacyId: content.pharmacyId,
+      categoryName: content.categoryName,
+      ageBandId: content.ageBandId,
+      questionSummaryFa: content.questionSummaryFa,
+      consentAccepted: true,
+      privacyNoticeVersion: "v1",
+      triagePassId: content.triagePassId,
+      status: "PENDING",
+      reviewedByUid: null,
+      decision: null,
+      reviewNoteFa: null,
+      parentReplyFa: null,
+      sourceFa: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    tx.update(triagePassRef, {
+      consumedAt: serverTimestamp(),
+      consumedByCaseId: ref.id,
+    });
+    tx.create(auditRef, {
+      event: "CASE_CREATED",
+      actorType: "parent",
+      actorUid: uid,
+      toStatus: "PENDING",
+      triageIssuer: "mano-triage-v1",
+      createdAt: serverTimestamp(),
+    });
   });
-  batch.create(auditRef, {
-    event: "CASE_CREATED",
-    actorType: "parent",
-    actorUid: uid,
-    toStatus: "PENDING",
-    createdAt: serverTimestamp(),
-  });
-  await batch.commit();
   return { caseId: ref.id, status: "PENDING" };
 });
 
