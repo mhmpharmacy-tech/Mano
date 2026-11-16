@@ -52,3 +52,14 @@ test("Original brand assets are copied locally and web preview avoids patient-da
   assert.match(html, /noindex,nofollow/);
   assert.match(html, /مشاوره واقعی داروساز/);
 });
+test("Staff workspace uses synthetic fixture only and never submits records", () => {
+  const html = fs.readFileSync(path.join(root, "staff-demo.html"), "utf8");
+  const script = fs.readFileSync(path.join(root, "staff-demo.js"), "utf8");
+  for (const id of ["case-list", "case-detail", "review-form", "filter-category", "filter-status", "filter-safety", "filter-contact", "review-confirm"]) {
+    assert.ok(html.includes('id="' + id + '"'), "Missing staff control " + id);
+  }
+  assert.match(html, /noindex,nofollow/);
+  assert.match(html, /داده ساختگی/);
+  assert.ok(!/\bfetch\s*\(|\bXMLHttpRequest\b|\blocalStorage\b|\bsessionStorage\b/.test(script), "Demo must not persist or transmit health data");
+  assert.ok(script.includes('c.safety && decision === "education"'), "Safety-flag cases must not silently approve educational resolution");
+});
