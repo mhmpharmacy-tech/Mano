@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.annotation.SuppressLint
+import java.io.ByteArrayInputStream
 import android.net.Uri
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -92,6 +93,31 @@ import kotlin.math.abs
 
 private const val ASSET_VIRTUAL_HOST = "appassets.androidplatform.net"
 private const val STUDIO_ENTRY_URL = "https://$ASSET_VIRTUAL_HOST/assets/three/index.html"
+
+// Strict local resource allowlist: these six versioned files are bundled with the APK.
+// Never allow navigation, remote scripts, unexpected local assets or path traversal
+// while a JavaScript bridge is exposed to the studio document.
+private val STUDIO_ALLOWED_ASSET_FILES =
+  setOf("index.html", "scene.js", "three.module.min.js", "three.core.min.js", "OrbitControls.js", "RoomEnvironment.js")
+
+internal fun isTrustedThreeStudioAssetUri(uri: Uri): Boolean {
+  if (uri.scheme != "https" || uri.encodedAuthority != ASSET_VIRTUAL_HOST) return false
+  if (uri.encodedQuery != null || uri.encodedFragment != null) return false
+  val assetPrefix = "/assets/three/"
+  val rawPath = uri.encodedPath ?: return false
+  if (!rawPath.startsWith(assetPrefix)) return false
+  return rawPath.removePrefix(assetPrefix) in STUDIO_ALLOWED_ASSET_FILES
+}
+
+private fun blockedThreeStudioResource(statusCode: Int = 403): WebResourceResponse =
+  WebResourceResponse(
+    "text/plain",
+    "UTF-8",
+    statusCode,
+    if (statusCode == 404) "Not Found" else "Forbidden",
+    mapOf("Cache-Control" to "no-store"),
+    ByteArrayInputStream(ByteArray(0)),
+  )
 
 private data class GuidedWorkbenchStep(
   val stepNumber: Int,
@@ -348,6 +374,12 @@ fun Pediatric3DStudioScreen(
           settings.allowFileAccess = false
           settings.allowContentAccess = false
           settings.mediaPlaybackRequiresUserGesture = true
+          settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+          settings.javaScriptCanOpenWindowsAutomatically = false
+          settings.setSupportMultipleWindows(false)
+          settings.allowFileAccessFromFileURLs = false
+          settings.allowUniversalAccessFromFileURLs = false
+          settings.setGeolocationEnabled(false)
           settings.cacheMode = WebSettings.LOAD_DEFAULT
 
           addJavascriptInterface(
@@ -364,30 +396,34 @@ fun Pediatric3DStudioScreen(
 
           webViewClient =
             object : WebViewClient() {
+              override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?,
+              ): Boolean =
+                // Block navigation even to other local scripts; the only top-level
+                // document allowed to hold AndroidBridge is the packaged studio.
+                request?.url?.toString() != STUDIO_ENTRY_URL
+
+              @Suppress("DEPRECATION")
+              override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean =
+                url != STUDIO_ENTRY_URL
+
               override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?,
-              ): WebResourceResponse? {
-                val uri: Uri = request?.url ?: return null
-                if (uri.host != ASSET_VIRTUAL_HOST) return null
-                val rawPath = uri.path ?: return null
-                if (!rawPath.startsWith("/assets/")) return null
-                val assetPath = rawPath.removePrefix("/assets/")
+              ): WebResourceResponse {
+                val uri = request?.url ?: return blockedThreeStudioResource()
+                if (!isTrustedThreeStudioAssetUri(uri)) return blockedThreeStudioResource()
+                val assetPath = uri.encodedPath!!.removePrefix("/assets/")
                 return runCatching {
-                  val mime =
-                    when {
-                      assetPath.endsWith(".html") -> "text/html"
-                      assetPath.endsWith(".js") || assetPath.endsWith(".mjs") -> "application/javascript"
-                      assetPath.endsWith(".css") -> "text/css"
-                      else -> "application/octet-stream"
-                    }
+                  val mime = if (assetPath.endsWith(".html")) "text/html" else "application/javascript"
                   val stream = ctx.assets.open(assetPath)
-                  val headers = mapOf("Access-Control-Allow-Origin" to "*")
-                  WebResourceResponse(mime, "UTF-8", 200, "OK", headers, stream)
-                }.getOrNull()
+                  WebResourceResponse(mime, "UTF-8", 200, "OK", emptyMap(), stream)
+                }.getOrElse { blockedThreeStudioResource(statusCode = 404) }
               }
 
               override fun onPageFinished(view: WebView?, url: String?) {
+                if (url != STUDIO_ENTRY_URL) return
                 pageLoaded = true
                 runJs("window.Mano3D && window.Mano3D.setThemeMode($isDark);")
                 runJs("window.Mano3D && window.Mano3D.setScene('$activeScene');")
