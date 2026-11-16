@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#087b80">
+  <meta name="description" content="مانو کیدز؛ راهنمای آموزشی سلامت کودک برای خانواده‌ها، نشانه‌های هشدار و آشنایی با مصرف ایمن دارو. خدمات بالینی هنوز در مرحله آماده‌سازی است.">
+  <meta name="robots" content="noindex,nofollow">
+  <title>MANO Kids | راهنمای سلامت کودک</title>
+  <link rel="icon" type="image/png" href="./assets/mano_icon_fg.png">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">رفتن به محتوای اصلی</a>
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand" href="#home" aria-label="مانو کیدز، صفحه اصلی">
+      <img src="./assets/mano_icon_fg.png" alt="" width="43" height="43">
+      <span><strong>MANO <em>Kids</em></strong><small>همراه آگاهی و مراقبت</small></span>
+    </a>
+    <nav class="desktop-nav" aria-label="ناوبری اصلی">
+      <a href="#pathways">موضوعات</a><a href="#screening">علائم هشدار</a><a href="#faq">پرسش‌های رایج</a><a href="#pharmacist">داروساز</a>
+    </nav>
+    <a class="header-cta" href="#screening">از کجا شروع کنم؟ <span aria-hidden="true">←</span></a>
+    <button id="menu-button" class="menu-button" aria-label="بازکردن فهرست" aria-expanded="false" aria-controls="mobile-nav"><span></span><span></span><span></span></button>
+  </div>
+  <nav class="mobile-nav" id="mobile-nav" aria-label="ناوبری موبایل" hidden>
+    <a href="#pathways">موضوعات</a><a href="#screening">علائم هشدار</a><a href="#faq">پرسش‌های رایج</a><a href="#pharmacist">داروساز</a>
+  </nav>
+</header>
+<main id="main">
+  <section id="home" class="hero">
+    <div class="shell hero-layout">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="status-dot"></span> آگاهی بهتر، مراقبت مطمئن‌تر</span>
+        <h1>سؤال درباره <mark>سلامت کودکت</mark> داری؟<br>مانو کمک می‌کند مسیر بعدی را بشناسی.</h1>
+        <p>از تب و سرفه تا پوست، تغذیه و داروهای رایج کودک؛ اطلاعات قابل‌فهم، نشانه‌های مهم مراجعه و پرسش‌هایی که بهتر است از داروساز بپرسی.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#screening">بررسی نشانه‌های هشدار <span aria-hidden="true">←</span></a>
+          <a class="btn secondary" href="#pathways">دیدن موضوعات</a>
+        </div>
+        <div class="hero-trust"><span>راهنمای آموزشی، نه تشخیص</span><span>بدون دوز خودکار دارو</span><span>بدون نیاز به ثبت‌نام</span></div>
+      </div>
+      <div class="hero-art" aria-label="کاراکتر اصلی مانو">
+        <span class="orbit orbit-one" aria-hidden="true"></span><span class="orbit orbit-two" aria-hidden="true"></span>
+        <div class="mascot-halo"></div>
+        <img class="hero-mascot" src="./assets/mano_pose_welcome.png" alt="ربات مانو، همراه راهنمای سلامت کودک">
+        <div class="float-tag tag-one"><span class="tag-ico">+</span><span>پرسش روشن‌تر</span></div>
+        <div class="float-tag tag-two"><span class="tag-ico">✓</span><span>قدم بعدی</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="shell">
+    <aside class="notice-bar" role="note">
+      <span class="notice-mark" aria-hidden="true">!</span>
+      <div><strong>اطلاع مهم درباره نسخه فعلی</strong><span>محتوا در انتظار بازبینی نهایی علمی است؛ مشاوره واقعی داروساز، ثبت پرونده و محاسبه دوز در این پیش‌نمایش فعال نیست.</span></div>
+      <a href="#about">جزئیات</a>
+    </aside>
+  </div>
+
+  <section class="section" id="pathways">
+    <div class="shell">
+      <div class="section-heading">
+        <div><span class="overline">منو را بر اساس دغدغه‌ات انتخاب کن</span><h2>امروز در چه زمینه‌ای کمک می‌خواهی؟</h2></div>
+        <label class="search" for="topic-search"><span aria-hidden="true">⌕</span><input id="topic-search" type="search" placeholder="جست‌وجو: تب، سرفه، دارو، پوست..." autocomplete="off"><span class="kbd">جست‌وجو</span></label>
+      </div>
+      <div id="topic-count" class="result-count" aria-live="polite">۶ دسته برای مرور</div>
+      <div class="path-grid" id="path-grid">
+        <a href="#screening" class="path-card tone-teal" data-keywords="تب سرفه علائم بیماری اورژانس خطر حساسیت">
+          <span class="path-icon" aria-hidden="true">✚</span><span class="path-copy"><strong>علائم و نشانه‌ها</strong><small>چه زمانی باید مراجعه کنیم؟</small></span><span class="path-arrow" aria-hidden="true">↖</span>
+        </a>
+        <a href="#medicine" class="path-card tone-blue" data-keywords="دارو شربت قطره استامینوفن ایبوپروفن مکمل دوز">
+          <span class="path-icon" aria-hidden="true">◈</span><span class="path-copy"><strong>داروهای کودک</strong><small>مصرف ایمن، غلظت و خطاهای رایج</small></span><span class="path-arrow" aria-hidden="true">↖</span>
+        </a>
+        <a href="#skin" class="path-card tone-peach" data-keywords="پوست اگزما پوشک سوختگی راش خشکی">
+          <span class="path-icon" aria-hidden="true">✿</span><span class="path-copy"><strong>پوست و مراقبت روزمره</strong><small>راش پوشک، خشکی و مراقبت پوستی</small></span><span class="path-arrow" aria-hidden="true">↖</span>
+        </a>
+        <a href="#nutrition" class="path-card tone-mint" data-keywords="تغذیه رشد وزن شیر شیرخشک غذا یبوست اشتها">
+          <span class="path-icon" aria-hidden="true">✧</span><span class="path-copy"><strong>رشد و تغذیه</strong><small>پرسش‌های مربوط به غذا و رشد</small></span><span class="path-arrow" aria-hidden="true">↖</span>
+        </a>
+        <a href="#faq" class="path-card tone-lilac" data-keywords="سوال پرسش جواب راهنما متداول کودکان">
+          <span class="path-icon" aria-hidden="true">؟</span><span class="path-copy"><strong>پرسش‌های متداول</strong><small>پاسخ‌های کوتاه و قابل‌فهم</small></span><span class="path-arrow" aria-hidden="true">↖</span>
+        </a>
+        <a href="#pharmacist" class="path-card tone-sand" data-keywords="داروساز مشاوره داروخانه ارتباط پیگیری">
+          <span class="path-icon" aria-hidden="true">⌁</span><span class="path-copy"><strong>ارتباط با داروساز</strong><small>آماده‌کردن پرسش برای مشاوره</small></span><span class="path-arrow" aria-hidden="true">↖</span>
+        </a>
+      </div>
+      <p id="no-matches" class="empty" hidden>دسته‌ای با این عبارت پیدا نشد. یک واژه کوتاه‌تر مثل «تب» یا «دارو» را امتحان کن.</p>
+    </div>
+  </section>
+
+  <section class="section screening-section" id="screening">
+    <div class="shell split">
+      <div class="intro-column">
+        <span class="overline">علائم هشدار</span>
+        <h2>قبل از هر کاری، نشانه‌های مهم را بشناس</h2>
+        <p>این راهنمای کوتاه فقط نشانه‌های عمومی نیاز به ارزیابی فوری را یادآوری می‌کند؛ نبود این نشانه‌ها به معنی سالم‌بودن یا بی‌نیازی از ویزیت نیست.</p>
+        <img class="illustration" src="./assets/img_symptom_care_banner.jpg" alt="تصویر آموزشی مراقبت کودک" loading="lazy">
+        <p class="source-line">مبنای اولیه: توصیه‌های عمومی AAP و NICE؛ محتوای فارسی نیازمند بازبینی بالینی نهایی است.</p>
+      </div>
+      <div class="screening-card">
+        <div class="card-heading"><span class="number">۰۱</span><div><h3>بررسی سریع شرایط هشدار</h3><p>اطلاعات واردشده ذخیره یا ارسال نمی‌شوند.</p></div></div>
+        <form id="redflags-form" novalidate>
+          <label for="child-age">گروه سنی کودک</label>
+          <select id="child-age" required>
+            <option value="">انتخاب کن</option><option value="under3">کمتر از ۳ ماه</option><option value="older">۳ ماه و بیشتر</option>
+          </select>
+          <label for="child-temp">دمای اندازه‌گیری‌شده (اختیاری، درجه سانتی‌گراد)</label>
+          <input id="child-temp" type="number" min="30" max="45" step="0.1" inputmode="decimal" placeholder="مثلاً 38.0">
+          <fieldset><legend>آیا یکی از موارد زیر وجود دارد؟</legend>
+            <label class="check-row"><input type="checkbox" name="warning" value="breath"> دشواری شدید در تنفس یا کبودی لب‌ها</label>
+            <label class="check-row"><input type="checkbox" name="warning" value="conscious"> کاهش سطح هوشیاری یا پاسخ‌ندادن</label>
+            <label class="check-row"><input type="checkbox" name="warning" value="seizure"> تشنج</label>
+          </fieldset>
+          <button type="submit" class="btn primary full">نمایش راهنمای اولیه <span aria-hidden="true">←</span></button>
+        </form>
+        <div id="screening-result" class="screening-result" aria-live="polite" role="status" hidden></div>
+        <p class="form-footnote">اگر حال عمومی کودک نگران‌کننده است، برای دریافت راهنمایی منتظر تکمیل این فرم نمان.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="medicine">
+    <div class="shell feature-layout">
+      <div class="feature-copy"><span class="overline">داروهای کودک</span><h2>قبل از مصرف، اطلاعات روی دارو را دقیق بخوان</h2>
+        <p>هم‌نام بودن دو شربت به معنی یکسان‌بودن غلظت آن‌ها نیست. از نام ماده مؤثره، شکل دارویی و غلظت روی بسته‌بندی مطمئن شو.</p>
+        <div class="mini-points"><span>مقدار دارو را از حدس یا قاشق خانگی تعیین نکن</span><span>داروهای ترکیبی ممکن است ماده مؤثره تکراری داشته باشند</span><span>برای دوز و تداخل، تأیید حرفه‌ای لازم است</span></div>
+        <a class="text-link" href="#pharmacist">پرسش مناسب برای داروساز آماده کن <span aria-hidden="true">←</span></a>
+      </div>
+      <div class="feature-visual medicine-visual"><img src="./assets/mascot_medicine.png" alt="مانو در موضوع آگاهی دارویی" loading="lazy"><span class="feature-label">بدون محاسبه خودکار دوز</span></div>
+    </div>
+  </section>
+
+  <section class="section alt" id="skin">
+    <div class="shell feature-layout reverse">
+      <div class="feature-copy"><span class="overline">پوست کودک</span><h2>برای مراقبت پوست کودک، از مشاهده درست شروع کن</h2>
+        <p>محل ضایعه، زمان شروع، خارش یا درد، تب و تغییرات اخیر محصولات را یادداشت کن. تشخیص نوع راش تنها از یک تصویر همیشه ممکن نیست.</p>
+        <div class="mini-points"><span>راش پوشک و تحریک پوستی</span><span>خشکی و مراقبت از پوست حساس</span><span>چه زمانی ضایعه نیازمند معاینه است؟</span></div>
+      </div>
+      <div class="feature-visual skin-visual"><img src="./assets/mascot_skin.png" alt="کاراکتر مانو در بخش مراقبت پوست کودک" loading="lazy"><span class="feature-label">اطلاعات آموزشی</span></div>
+    </div>
+  </section>
+
+  <section class="section" id="nutrition">
+    <div class="shell feature-layout">
+      <div class="feature-copy"><span class="overline">رشد و تغذیه</span><h2>هر کودک، مسیر رشد خودش را دارد</h2>
+        <p>رشد را با یک عدد وزن یا یک وعده غذایی قضاوت نکن. سن، روند رشد، علائم همراه و سابقه تغذیه باید کنار هم بررسی شوند.</p>
+        <div class="mini-points"><span>کم‌اشتهایی و دغدغه‌های تغذیه‌ای</span><span>شیر، غذای کمکی و پرسش‌های متداول</span><span>درباره روند رشد با متخصص مشورت کن</span></div>
+      </div>
+      <div class="feature-visual nutrition-visual"><img src="./assets/img_nutrition_banner.jpg" alt="تصویر مرتبط با تغذیه کودک" loading="lazy"><span class="feature-label">بدون برنامه غذایی خودکار</span></div>
+    </div>
+  </section>
+
+  <section class="section alt" id="faq">
+    <div class="shell faq-layout">
+      <div><span class="overline">پرسش‌های متداول</span><h2>پاسخ‌های کوتاه به دغدغه‌های رایج</h2><p>برای تصمیم‌های پزشکی، وضعیت خاص فرزندت باید توسط متخصص بررسی شود.</p></div>
+      <div class="faq-list">
+        <details><summary>برای کودک زیر سه ماه با تب چه کار کنم؟</summary><p>تب ۳۸ درجه سانتی‌گراد یا بالاتر در کودک زیر سه ماه نیازمند ارزیابی فوری پزشکی است. خودسرانه داروی تب‌بر نده.</p></details>
+        <details><summary>آیا شربت و قطره استامینوفن یک غلظت دارند؟</summary><p>خیر، غلظت فرآورده‌ها ممکن است متفاوت باشد. نام دارو و مقدار ماده مؤثره در هر میلی‌لیتر را از روی بسته بررسی کن؛ مقدار مصرف باید با نظر پزشک یا داروساز مشخص شود.</p></details>
+        <details><summary>آیا با عکس می‌توان نوع راش پوستی را قطعی تشخیص داد؟</summary><p>خیر. ظاهر ضایعه به تنهایی کافی نیست و گاهی شرح‌حال یا معاینه ضرورت دارد؛ به‌ویژه اگر تب، درد شدید، بی‌حالی یا بدترشدن سریع وجود داشته باشد.</p></details>
+        <details><summary>آیا مانو در حال حاضر مشاوره آنلاین واقعی ارائه می‌کند؟</summary><p>خیر. این نسخه یک پیش‌نمایش آموزشی است. پنل امن مشاوره و فرایند بررسی داروساز هنوز به سرویس عملیاتی متصل نشده‌اند.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="pharmacist">
+    <div class="shell">
+      <div class="consult-card">
+        <div class="consult-content"><span class="overline">همکاری با داروساز</span><h2>برای یک مشاوره بهتر، سؤال را روشن‌تر آماده کن</h2>
+          <p>این نسخه هنوز درخواست یا پرونده‌ای برای داروخانه ارسال نمی‌کند. می‌توانی قالب بدون مشخصات هویتی زیر را کپی و در مراجعه حضوری استفاده کنی.</p>
+          <button id="copy-question" class="btn primary" type="button">کپی قالب پرسش <span aria-hidden="true">↗</span></button>
+          <span id="copy-feedback" class="copy-feedback" role="status" aria-live="polite"></span>
+        </div>
+        <div class="consult-image"><img src="./assets/mano_pose_listen.png" alt="مانو در حال گوش دادن" loading="lazy"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section compact" id="about">
+    <div class="shell about-panel"><div><h2>مانو در این نسخه چه کار نمی‌کند؟</h2><p>تشخیص بیماری، تجویز یا محاسبه دوز، ثبت داده سلامت کودک، ارسال درخواست مشاوره، تأیید داروساز و پیگیری خودکار در این وب‌سایت فعال نیستند. تعامل‌های این صفحه فقط روی دستگاه خودت پردازش می‌شوند.</p></div><div class="reference-links"><a target="_blank" rel="noopener noreferrer" href="https://www.nice.org.uk/guidance/ng143/chapter/Recommendations">NICE: Fever in under 5s ↗</a><a target="_blank" rel="noopener noreferrer" href="https://www.healthychildren.org/">AAP: HealthyChildren ↗</a></div></div>
+  </section>
+</main>
+<footer class="footer"><div class="shell footer-inner"><div class="footer-brand"><strong>MANO Kids</strong><span>اطلاع‌رسانی مسئولانه برای سلامت کودک</span></div><p>© 2026 MANO Kids · نسخه آزمایشی آموزشی · نیازمند بازبینی بالینی</p><a href="#home">بازگشت به بالا ↑</a></div></footer>
+</body>
+</html>
