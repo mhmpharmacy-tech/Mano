@@ -159,3 +159,27 @@ test("Responsive widths: public and staff pages never spill horizontally", async
   }
   await page.close();
 });
+
+
+test("Accessibility audit: WCAG 2.1 A/AA critical and serious issues", async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  for (const target of [parentUrl, staffUrl]) {
+    await page.goto(target);
+    await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+    const violations = await page.evaluate(async () => {
+      const result = await window.axe.run(document, {
+        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }
+      });
+      return result.violations.map(v => ({
+        id: v.id, impact: v.impact, description: v.description,
+        nodes: v.nodes.map(n => ({target: n.target, failure: n.failureSummary})).slice(0, 10)
+      }));
+    });
+    fs.mkdirSync(out, { recursive: true });
+    fs.writeFileSync(path.join(out, target === parentUrl ? "a11y-parent.json" : "a11y-staff.json"),
+      JSON.stringify(violations, null, 2));
+    const blocking = violations.filter(v => v.impact === "critical" || v.impact === "serious");
+    assert.deepEqual(blocking, [], "Serious accessibility barriers on " + target);
+  }
+  await page.close();
+});
