@@ -18,6 +18,19 @@ object VaccineReminderScheduler {
   const val NEXT_TRIGGER_WORK_NAME = "mano_vaccine_next_trigger"
   private const val IMMEDIATE_UNNOTIFIED_DELAY_MS = 5_000L
 
+  /**
+   * Best-effort cancellation when the parent removes all local child data.
+   * WorkManager cancellation is asynchronous; the DataStore reminder setting is
+   * also disabled to ensure a subsequently running worker will not notify.
+   */
+  fun cancelAllForLocalDataRemoval(context: Context): Boolean =
+    runCatching {
+      val manager = WorkManager.getInstance(context.applicationContext)
+      manager.cancelUniqueWork(PERIODIC_WORK_NAME)
+      manager.cancelUniqueWork(NEXT_TRIGGER_WORK_NAME)
+      true
+    }.getOrDefault(false)
+
   fun computeNextScheduleDelayMs(
     summary: VaccineDashboardSummary,
     settings: VaccineReminderSettings,

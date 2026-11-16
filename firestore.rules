@@ -226,21 +226,9 @@ service cloud.firestore {
                        incoming().updatedAt <= request.time &&
                        isValidConsultation(incoming());
 
-      allow update: if isOwner(userId) &&
-                       isValidId(consultationId) &&
-                       isValidConsultation(incoming()) &&
-                       incoming().userId == existing().userId &&
-                       incoming().createdAt == existing().createdAt &&
-                       existing().status != 'REVIEWED' &&
-                       (
-                         (existing().status == 'PENDING' && incoming().status == 'RECEIVED') ||
-                         (existing().status == 'RECEIVED' && incoming().status == 'REVIEWED')
-                       ) &&
-                       incoming().updatedAt is timestamp &&
-                       incoming().updatedAt <= request.time &&
-                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
-
-      allow delete: if isOwner(userId) && isValidId(consultationId);
+      // Parent may submit and read PENDING requests, but never alter review state.
+      // Only the trusted backend using the Admin SDK may update or delete cases.
+      allow update, delete: if false;
     }
 
     match /users/{userId}/bookmarks/{bookmarkId} {

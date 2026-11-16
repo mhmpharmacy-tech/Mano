@@ -168,50 +168,45 @@ test("Owner can create, list, update, and delete dose logs; cross-user and inval
 
 // --- PHARMACIST CONSULTATIONS ---
 
-test("Consultation enforces PENDING start, sequential status progression, and terminal REVIEWED lock", async () => {
+test("Consultations: only trusted backend may advance clinical review status", async () => {
   const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const bobDb = testEnv.authenticatedContext(BOB_UID).firestore();
   const ts = validPastDate();
   const docRef = aliceDb.collection(`users/${ALICE_UID}/consultations`).doc("cons_1");
 
-  // Cannot skip directly to REVIEWED on create
-  await assertFails(
-    aliceDb.collection(`users/${ALICE_UID}/consultations`).doc("cons_bad").set({
-      userId: ALICE_UID,
-      categoryName: "OTC",
-      ageBandId: "toddler_1_3y",
-      questionSummaryFa: "آیا مصرف قطره هم‌زمان مجاز است؟",
-      hasUrgentFlag: false,
-      consentAccepted: true,
-      status: "REVIEWED",
-      createdAt: ts,
-      updatedAt: ts,
-    })
-  );
+  await assertFails(docRef.set({
+    userId: ALICE_UID, categoryName: "OTC", ageBandId: "toddler_1_3y",
+    questionSummaryFa: "آیا مصرف دارو مجاز است؟", hasUrgentFlag: false,
+    consentAccepted: true, status: "REVIEWED", createdAt: ts, updatedAt: ts,
+  }));
+  await assertSucceeds(docRef.set({
+    userId: ALICE_UID, categoryName: "OTC", ageBandId: "toddler_1_3y",
+    questionSummaryFa: "آیا مصرف هم‌زمان شربت و قطره آهن تداخل دارد؟",
+    hasUrgentFlag: false, consentAccepted: true, status: "PENDING",
+    createdAt: ts, updatedAt: ts,
+  }));
 
-  // Valid PENDING create succeeds
-  await assertSucceeds(
-    docRef.set({
-      userId: ALICE_UID,
-      categoryName: "OTC",
-      ageBandId: "toddler_1_3y",
-      questionSummaryFa: "آیا مصرف هم‌زمان شربت و قطره آهن تداخل دارد؟",
-      hasUrgentFlag: false,
-      consentAccepted: true,
-      status: "PENDING",
-      createdAt: ts,
-      updatedAt: ts,
-    })
-  );
+  await assertFails(docRef.update({status: "RECEIVED", updatedAt: validPastDate()}));
+  await assertFails(docRef.update({status: "REVIEWED", updatedAt: validPastDate()}));
+  await assertFails(docRef.delete());
+  await assertFails(bobDb.collection(`users/${ALICE_UID}/consultations`).doc("cons_1").get());
 
-  // Cannot jump PENDING -> REVIEWED directly
-  await assertFails(docRef.update({ status: "REVIEWED", updatedAt: validPastDate() }));
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().doc(`users/${ALICE_UID}/consultations/cons_1`).update({
+      status: "RECEIVED", updatedAt: validPastDate(),
+    });
+  });
+  await assertSucceeds(docRef.get());
+  await assertFails(docRef.update({status: "REVIEWED", updatedAt: validPastDate()}));
 
-  // PENDING -> RECEIVED -> REVIEWED succeeds
-  await assertSucceeds(docRef.update({ status: "RECEIVED", updatedAt: validPastDate() }));
-  await assertSucceeds(docRef.update({ status: "REVIEWED", updatedAt: validPastDate() }));
-
-  // Once REVIEWED, further updates locked
-  await assertFails(docRef.update({ status: "PENDING", updatedAt: validPastDate() }));
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().doc(`users/${ALICE_UID}/consultations/cons_1`).update({
+      status: "REVIEWED", updatedAt: validPastDate(),
+    });
+  });
+  await assertSucceeds(docRef.get());
+  await assertFails(docRef.update({status: "PENDING", updatedAt: validPastDate()}));
+  await assertFails(docRef.delete());
 });
 
 // --- ARTICLE BOOKMARKS ---

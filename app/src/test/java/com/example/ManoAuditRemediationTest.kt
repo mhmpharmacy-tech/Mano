@@ -59,23 +59,31 @@ class ManoAuditRemediationTest {
     val repo = ManoPreferencesRepository(context)
     runBlocking {
       repo.setThemeMode(ManoThemeMode.SYSTEM)
-      repo.saveLocalChildProfile(null)
+      repo.setLocalChildProfile(null)
       repo.clearLocalFeverLogs()
       repo.clearLocalDoseLogs()
     }
   }
 
   @Test
-  fun conservativeInfantFallback_blocksIbuprofenWhenExactAgeUnknown_andUnlocksAtSevenMonths() {
+  fun conservativeInfantFallback_keepsPublicAutoDoseLockedForKnownAge() {
     val unspecificInfant =
       ChildProfileDemo(
         aliasFa = "نی‌نی",
         birthDateOrAgeFa = AgeBand.INFANT_3_12M.labelFa,
         ageBand = AgeBand.INFANT_3_12M,
         weightKgText = "7.5",
+        weightDateFa = "امروز",
+        allergiesFa = "ندارد",
+        currentMedsFa = "ندارد",
         consentGranted = true,
       )
 
+    assertNull("Band label must not be parsed as exact 12 months", LiquidDoseVisualizerEngine.parseAgeMonthsFromText(AgeBand.INFANT_3_12M.labelFa))
+    assertNull("Hyphenated ranges are not exact age", LiquidDoseVisualizerEngine.parseAgeMonthsFromText("3-12 ماه"))
+    assertNull("Year-based ranges are not exact age", LiquidDoseVisualizerEngine.parseAgeMonthsFromText("۱ تا ۳ سال"))
+    assertEquals(7, LiquidDoseVisualizerEngine.parseAgeMonthsFromText("۷ ماه"))
+    assertEquals(27, LiquidDoseVisualizerEngine.parseAgeMonthsFromText("۲ سال و ۳ ماه"))
     val conservativeMonths = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(unspecificInfant)
     assertEquals(3, conservativeMonths)
 
@@ -107,7 +115,7 @@ class ManoAuditRemediationTest {
         ageMonths = fromBirthDate,
         weightKg = 8.0f,
       )
-    assertFalse("Ibuprofen should be unlocked once exact age >= 6 months", safeIbuprofen.isBlocked)
+    assertTrue("Public auto-dose remains disabled until clinical review", safeIbuprofen.isBlocked)
   }
 
   @Test
@@ -125,9 +133,12 @@ class ManoAuditRemediationTest {
         ageBand = AgeBand.TODDLER_1_3Y,
         ageMonthsExact = 18,
         weightKgText = "11.0",
+        weightDateFa = "امروز",
+        allergiesFa = "ندارد",
+        currentMedsFa = "ندارد",
         consentGranted = true,
       )
-    repo.saveLocalChildProfile(profile)
+    repo.setLocalChildProfile(profile)
     assertEquals(profile, repo.localChildProfile.first())
 
     val fever =
@@ -139,7 +150,7 @@ class ManoAuditRemediationTest {
         timestampMs = 1_750_000_000_000L,
         caregiverFa = "مادر",
         noteFa = "اندازه‌گیری دقیق",
-        isCloud = false,
+        isSyncedCloud = false,
       )
     val dose =
       TimelineDosePoint(
@@ -147,15 +158,14 @@ class ManoAuditRemediationTest {
         medicationSlug = "acetaminophen-pediatric",
         medicationNameFa = "استامینوفن",
         dosageFormFa = "شربت ۱۲۰/۵",
-        volumeMl = 5.0f,
         volumeMlText = "5.0 mL",
-        timeLabelFa = "۱۴:۳۵",
+        givenAtLabelFa = "۱۴:۳۵",
         timestampMs = 1_750_000_300_000L,
         noteFa = "با سرنگ",
-        isCloud = false,
+        isSyncedCloud = false,
       )
-    repo.saveLocalFeverLogs(listOf(fever))
-    repo.saveLocalDoseLogs(listOf(dose))
+    repo.addLocalFeverLog(fever)
+    repo.addLocalDoseLog(dose)
     assertEquals(listOf(fever), repo.localFeverLogs.first())
     assertEquals(listOf(dose), repo.localDoseLogs.first())
 
@@ -164,7 +174,7 @@ class ManoAuditRemediationTest {
     repo.toggleMilestoneCheck("ms_walk_15m")
     assertFalse("ms_walk_15m" in repo.checkedMilestoneIds.first())
 
-    repo.saveLocalChildProfile(null)
+    repo.setLocalChildProfile(null)
     repo.clearLocalFeverLogs()
     repo.clearLocalDoseLogs()
     assertNull(repo.localChildProfile.first())

@@ -233,7 +233,7 @@ object FeverDoseTimelineEngine {
         minutesRemainingSafeInterval = 0L,
         lastDoseSummaryFa = null,
         severity = AlertSeverity.INFO,
-        statusMessageFa = "در ۲۴ ساعت گذشته نوبتی ثبت نشده است (حداقل فاصله ایمن معمول: هر $minIntervalHours ساعت).",
+        statusMessageFa = "در ۲۴ ساعت گذشته نوبتی ثبت نشده است. این دفترچه، زمان یا مقدار نوبت بعدی را تعیین نمی‌کند.",
       )
     }
 
@@ -249,10 +249,10 @@ object FeverDoseTimelineEngine {
             "هشدار سقف ۲۴ ساعته: $count نوبت در ۲۴ ساعت اخیر ثبت شده (سقف رایج $maxDoses24h نوبت). پیش از هر دوز جدید با پزشک یا داروساز مشورت کنید."
         remainingMin > 0L ->
           AlertSeverity.DANGER to
-            "حداقل فاصله $minIntervalHours ساعته هنوز کامل نشده! ${formatDurationFa(remainingMin)} تا زمان ایمن بعدی باقی مانده تا از دوز تکراری جلوگیری شود."
+            "از آخرین مصرف کمتر از $minIntervalHours ساعت گذشته است؛ ${formatDurationFa(remainingMin)} تا تکمیل این فاصله باقی مانده. این عدد مجوز مصرف در آن زمان نیست."
         else ->
-          AlertSeverity.SUCCESS to
-            "حداقل فاصله $minIntervalHours ساعته سپری شده (${count} از $maxDoses24h نوبت در ۲۴ ساعت اخیر)."
+          AlertSeverity.INFO to
+            "فاصله زمانی $minIntervalHours ساعته از آخرین نوبت ثبت‌شده سپری شده است؛ این به معنی ایمن یا مجاز بودن مصرف نوبت بعدی نیست. با پزشک یا داروساز درباره نیاز به دارو مشورت کنید."
       }
 
     return AntipyreticIntervalStatus(

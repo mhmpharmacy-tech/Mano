@@ -47,7 +47,6 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.example.R
 import com.example.ui.theme.DarkSage
 import com.example.ui.theme.HairlineBorder
 import com.example.ui.theme.LocalManoDarkTheme
@@ -79,6 +78,14 @@ import kotlinx.coroutines.withContext
 
 private const val TAG = "ManoGoogleAuth"
 
+// Google Services generates this resource only when a configured Firebase project
+// supplies the OAuth web client ID. CI and offline previews must fail closed.
+private fun getGoogleWebClientId(context: Context): String {
+  val id = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+  if (id == 0) return ""
+  return runCatching { context.getString(id) }.getOrDefault("").trim()
+}
+
 fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
   val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
     trySend(firebaseAuth.currentUser)
@@ -100,7 +107,7 @@ fun attemptAutoSignIn(
   }
   val clientId =
     try {
-      context.getString(R.string.default_web_client_id)
+      getGoogleWebClientId(context)
     } catch (_: Exception) {
       onUnauthenticated()
       return
@@ -147,11 +154,16 @@ fun onGoogleSignInClicked(
 ) {
   val clientId =
     try {
-      context.getString(R.string.default_web_client_id)
+      getGoogleWebClientId(context)
     } catch (_: Exception) {
       onAuthError("تنظیمات ورود با گوگل یافت نشد.")
       return
     }
+
+  if (clientId.isBlank()) {
+    onAuthError("ورود گوگل هنوز برای این نسخه تنظیم نشده است.")
+    return
+  }
 
   val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
   val request = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
