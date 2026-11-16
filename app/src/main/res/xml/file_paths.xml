@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="shared_care_cards" path="shared_cards/" />
+    <cache-path name="visit_draft_pdfs" path="visit_draft_pdfs/" />
+    <cache-path name="scanned_syrups" path="scanned_syrups/" />
+</paths>

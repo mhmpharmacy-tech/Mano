@@ -1,0 +1,415 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny all reads and writes by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidAgeBand(ageBandId) {
+      return ageBandId in ['newborn', 'infant_3_12m', 'toddler_1_3y', 'preschool_3_6y', 'school_6_plus'];
+    }
+
+    function isValidConsultationCategory(cat) {
+      return cat in ['SYMPTOMS', 'OTC', 'SKIN', 'SCALP_HAIR', 'SUPPLEMENT'];
+    }
+
+    function isValidConsultationStatus(status) {
+      return status in ['PENDING', 'RECEIVED', 'REVIEWED'];
+    }
+
+    function isValidChildProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.aliasFa is string && data.aliasFa.size() >= 1 && data.aliasFa.size() <= 60 &&
+             data.birthDateOrAgeFa is string && data.birthDateOrAgeFa.size() >= 1 && data.birthDateOrAgeFa.size() <= 60 &&
+             data.ageBandId is string && isValidAgeBand(data.ageBandId) &&
+             data.weightKgText is string && data.weightKgText.size() <= 20 &&
+             data.weightDateFa is string && data.weightDateFa.size() <= 40 &&
+             data.allergiesFa is string && data.allergiesFa.size() <= 300 &&
+             data.currentMedsFa is string && data.currentMedsFa.size() <= 300 &&
+             data.consentGranted is bool && data.consentGranted == true;
+    }
+
+    function isValidDoseLog(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.medicationSlug is string && data.medicationSlug.size() >= 1 && data.medicationSlug.size() <= 80 &&
+             data.medicationNameFa is string && data.medicationNameFa.size() >= 1 && data.medicationNameFa.size() <= 140 &&
+             data.dosageFormFa is string && data.dosageFormFa.size() >= 1 && data.dosageFormFa.size() <= 80 &&
+             data.volumeMlText is string && data.volumeMlText.size() >= 1 && data.volumeMlText.size() <= 30 &&
+             data.givenAtLabelFa is string && data.givenAtLabelFa.size() >= 1 && data.givenAtLabelFa.size() <= 60 &&
+             data.noteFa is string && data.noteFa.size() <= 300;
+    }
+
+    function isValidConsultation(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.categoryName is string && isValidConsultationCategory(data.categoryName) &&
+             data.ageBandId is string && isValidAgeBand(data.ageBandId) &&
+             data.questionSummaryFa is string && data.questionSummaryFa.size() >= 8 && data.questionSummaryFa.size() <= 600 &&
+             data.hasUrgentFlag is bool && data.hasUrgentFlag == false &&
+             data.consentAccepted is bool && data.consentAccepted == true &&
+             data.status is string && isValidConsultationStatus(data.status);
+    }
+
+    function isValidBookmark(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.articleSlug is string && data.articleSlug.size() >= 1 && data.articleSlug.size() <= 100 &&
+             data.articleSlug.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidFeverLog(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.tempCelsius is number && data.tempCelsius >= 34.0 && data.tempCelsius <= 43.0 &&
+             data.siteFa is string && data.siteFa.size() >= 1 && data.siteFa.size() <= 40 &&
+             data.recordedAtLabelFa is string && data.recordedAtLabelFa.size() >= 1 && data.recordedAtLabelFa.size() <= 60 &&
+             data.caregiverFa is string && data.caregiverFa.size() >= 1 && data.caregiverFa.size() <= 40 &&
+             data.noteFa is string && data.noteFa.size() <= 300;
+    }
+
+    function isValidVisitDraft(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.titleFa is string && data.titleFa.size() >= 1 && data.titleFa.size() <= 120 &&
+             data.symptomContextFa is string && data.symptomContextFa.size() <= 300 &&
+             data.timelineSummaryFa is string && data.timelineSummaryFa.size() >= 1 && data.timelineSummaryFa.size() <= 800 &&
+             data.draftTextFa is string && data.draftTextFa.size() >= 1 && data.draftTextFa.size() <= 6000 &&
+             data.parentNoteFa is string && data.parentNoteFa.size() <= 500 &&
+             data.modelName is string && data.modelName.size() >= 1 && data.modelName.size() <= 60;
+    }
+
+    function isValidVaccineRecord(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.vaccineId is string && data.vaccineId.size() >= 1 && data.vaccineId.size() <= 80 &&
+             data.vaccineId.matches('^[a-zA-Z0-9_\\-]+$') &&
+             data.customDueDateEpochMs is int && data.customDueDateEpochMs >= 0 &&
+             data.administeredDateEpochMs is int && data.administeredDateEpochMs >= 0 &&
+             data.isDeferred is bool &&
+             data.facilityOrLotFa is string && data.facilityOrLotFa.size() <= 120 &&
+             data.noteFa is string && data.noteFa.size() <= 300;
+    }
+
+    function isValidSyrupScan(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.drugNameFa is string && data.drugNameFa.size() >= 1 && data.drugNameFa.size() <= 140 &&
+             data.activeIngredientKey in ['ACETAMINOPHEN', 'IBUPROFEN', 'CETIRIZINE', 'UNKNOWN'] &&
+             data.dosageForm in ['DROPS', 'SYRUP', 'SUSPENSION', 'UNKNOWN'] &&
+             data.mgAmount is number && data.mgAmount > 0 && data.mgAmount <= 2000 &&
+             data.perMlAmount is number && data.perMlAmount > 0 && data.perMlAmount <= 100 &&
+             data.mgPerMl is number && data.mgPerMl > 0 && data.mgPerMl <= 1000 &&
+             data.matchedFormulationId in [
+               'acetaminophen_drops_100',
+               'acetaminophen_syrup_120_5',
+               'acetaminophen_syrup_160_5',
+               'ibuprofen_syrup_100_5',
+               'cetirizine_syrup_5_5',
+               'CUSTOM_UNVERIFIED'
+             ] &&
+             data.confidenceLevel in ['HIGH', 'MEDIUM', 'LOW'] &&
+             data.concentrationDisplayFa is string && data.concentrationDisplayFa.size() >= 1 && data.concentrationDisplayFa.size() <= 80 &&
+             data.safetyNoteFa is string && data.safetyNoteFa.size() <= 400 &&
+             data.confirmedByParent is bool && data.confirmedByParent == true;
+    }
+
+    match /users/{userId}/profiles/{profileId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(profileId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(profileId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'aliasFa', 'birthDateOrAgeFa', 'ageBandId',
+                         'weightKgText', 'weightDateFa', 'allergiesFa', 'currentMedsFa',
+                         'consentGranted', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'aliasFa', 'birthDateOrAgeFa', 'ageBandId',
+                         'weightKgText', 'weightDateFa', 'allergiesFa', 'currentMedsFa',
+                         'consentGranted', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidChildProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(profileId) &&
+                       isValidChildProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'aliasFa', 'birthDateOrAgeFa', 'ageBandId',
+                         'weightKgText', 'weightDateFa', 'allergiesFa', 'currentMedsFa',
+                         'consentGranted', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(profileId);
+    }
+
+    match /users/{userId}/doseLogs/{logId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(logId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(logId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'medicationSlug', 'medicationNameFa', 'dosageFormFa',
+                         'volumeMlText', 'givenAtLabelFa', 'noteFa', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'medicationSlug', 'medicationNameFa', 'dosageFormFa',
+                         'volumeMlText', 'givenAtLabelFa', 'noteFa', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidDoseLog(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(logId) &&
+                       isValidDoseLog(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'dosageFormFa', 'volumeMlText', 'givenAtLabelFa', 'noteFa', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(logId);
+    }
+
+    match /users/{userId}/consultations/{consultationId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(consultationId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(consultationId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       incoming().keys().hasAll([
+                         'userId', 'categoryName', 'ageBandId', 'questionSummaryFa',
+                         'hasUrgentFlag', 'consentAccepted', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'categoryName', 'ageBandId', 'questionSummaryFa',
+                         'hasUrgentFlag', 'consentAccepted', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidConsultation(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(consultationId) &&
+                       isValidConsultation(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       existing().status != 'REVIEWED' &&
+                       (
+                         (existing().status == 'PENDING' && incoming().status == 'RECEIVED') ||
+                         (existing().status == 'RECEIVED' && incoming().status == 'REVIEWED')
+                       ) &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(consultationId);
+    }
+
+    match /users/{userId}/bookmarks/{bookmarkId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(bookmarkId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(bookmarkId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().articleSlug == bookmarkId &&
+                       incoming().keys().hasAll(['userId', 'articleSlug', 'createdAt']) &&
+                       incoming().keys().hasOnly(['userId', 'articleSlug', 'createdAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidBookmark(incoming());
+
+      allow update: if false;
+      allow delete: if isOwner(userId) && isValidId(bookmarkId);
+    }
+
+    match /users/{userId}/feverLogs/{logId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(logId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(logId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'tempCelsius', 'siteFa', 'recordedAtLabelFa',
+                         'caregiverFa', 'noteFa', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'tempCelsius', 'siteFa', 'recordedAtLabelFa',
+                         'caregiverFa', 'noteFa', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidFeverLog(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(logId) &&
+                       isValidFeverLog(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'tempCelsius', 'siteFa', 'recordedAtLabelFa', 'caregiverFa', 'noteFa', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(logId);
+    }
+
+    match /users/{userId}/visitDrafts/{draftId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(draftId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(draftId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'titleFa', 'symptomContextFa', 'timelineSummaryFa',
+                         'draftTextFa', 'parentNoteFa', 'modelName', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'titleFa', 'symptomContextFa', 'timelineSummaryFa',
+                         'draftTextFa', 'parentNoteFa', 'modelName', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidVisitDraft(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(draftId) &&
+                       isValidVisitDraft(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().modelName == existing().modelName &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'titleFa', 'draftTextFa', 'parentNoteFa', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(draftId);
+    }
+
+    match /users/{userId}/vaccineRecords/{recordId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(recordId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(recordId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().vaccineId == recordId &&
+                       incoming().keys().hasAll([
+                         'userId', 'vaccineId', 'customDueDateEpochMs', 'administeredDateEpochMs',
+                         'isDeferred', 'facilityOrLotFa', 'noteFa', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'vaccineId', 'customDueDateEpochMs', 'administeredDateEpochMs',
+                         'isDeferred', 'facilityOrLotFa', 'noteFa', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidVaccineRecord(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(recordId) &&
+                       isValidVaccineRecord(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().vaccineId == existing().vaccineId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'customDueDateEpochMs', 'administeredDateEpochMs', 'isDeferred',
+                         'facilityOrLotFa', 'noteFa', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(recordId);
+    }
+
+    match /users/{userId}/syrupScans/{scanId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(scanId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(scanId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'drugNameFa', 'activeIngredientKey', 'dosageForm',
+                         'mgAmount', 'perMlAmount', 'mgPerMl', 'matchedFormulationId',
+                         'confidenceLevel', 'concentrationDisplayFa', 'safetyNoteFa',
+                         'confirmedByParent', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'drugNameFa', 'activeIngredientKey', 'dosageForm',
+                         'mgAmount', 'perMlAmount', 'mgPerMl', 'matchedFormulationId',
+                         'confidenceLevel', 'concentrationDisplayFa', 'safetyNoteFa',
+                         'confirmedByParent', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidSyrupScan(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(scanId) &&
+                       isValidSyrupScan(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'drugNameFa', 'activeIngredientKey', 'dosageForm',
+                         'mgAmount', 'perMlAmount', 'mgPerMl', 'matchedFormulationId',
+                         'confidenceLevel', 'concentrationDisplayFa', 'safetyNoteFa',
+                         'confirmedByParent', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(scanId);
+    }
+  }
+}

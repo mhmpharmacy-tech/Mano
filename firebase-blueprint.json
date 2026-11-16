@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "ChildProfile": {
+      "title": "ChildProfile",
+      "description": "Consent-gated child profile record owned by an authenticated parent user for age filtering and clinical visit preparation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "aliasFa": { "type": "string", "description": "Parent-chosen child nickname or alias." },
+        "birthDateOrAgeFa": { "type": "string", "description": "Approximate age or birth period string." },
+        "ageBandId": {
+          "type": "string",
+          "enum": ["newborn", "infant_3_12m", "toddler_1_3y", "preschool_3_6y", "school_6_plus"],
+          "description": "Pediatric age band identifier."
+        },
+        "weightKgText": { "type": "string", "description": "Optional parent-recorded weight in kg." },
+        "weightDateFa": { "type": "string", "description": "Optional date of weight measurement." },
+        "allergiesFa": { "type": "string", "description": "Known allergies note." },
+        "currentMedsFa": { "type": "string", "description": "Current medications note." },
+        "consentGranted": { "type": "boolean", "description": "Explicit parental consent flag (must be true)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "aliasFa", "birthDateOrAgeFa", "ageBandId", "consentGranted", "createdAt", "updatedAt"]
+    },
+    "MedicationDoseLog": {
+      "title": "MedicationDoseLog",
+      "description": "Parent-logged record of an already-administered medication volume in mL (non-prescribing logbook).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "medicationSlug": { "type": "string", "description": "Identifier slug of the monograph or custom entry." },
+        "medicationNameFa": { "type": "string", "description": "Display Persian medication name." },
+        "dosageFormFa": { "type": "string", "description": "Recorded liquid concentration or dosage form." },
+        "volumeMlText": { "type": "string", "description": "Parent-recorded mL volume or drops given." },
+        "givenAtLabelFa": { "type": "string", "description": "Time label entered or formatted for the dose." },
+        "noteFa": { "type": "string", "description": "Optional parent observation note." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "medicationSlug", "medicationNameFa", "dosageFormFa", "volumeMlText", "givenAtLabelFa", "createdAt", "updatedAt"]
+    },
+    "PharmacistConsultation": {
+      "title": "PharmacistConsultation",
+      "description": "Non-emergency parent question submitted for pharmacist review workflow.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "categoryName": {
+          "type": "string",
+          "enum": ["SYMPTOMS", "OTC", "SKIN", "SCALP_HAIR", "SUPPLEMENT"],
+          "description": "Consultation category enum name."
+        },
+        "ageBandId": {
+          "type": "string",
+          "enum": ["newborn", "infant_3_12m", "toddler_1_3y", "preschool_3_6y", "school_6_plus"],
+          "description": "Child age band identifier."
+        },
+        "questionSummaryFa": { "type": "string", "description": "Parent question text without real identity PII." },
+        "hasUrgentFlag": { "type": "boolean", "description": "Urgent symptoms check (must be false for non-emergency submissions)." },
+        "consentAccepted": { "type": "boolean", "description": "Explicit acknowledgment (must be true)." },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "RECEIVED", "REVIEWED"],
+          "description": "Consultation workflow status."
+        },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "categoryName", "ageBandId", "questionSummaryFa", "hasUrgentFlag", "consentAccepted", "status", "createdAt", "updatedAt"]
+    },
+    "ArticleBookmark": {
+      "title": "ArticleBookmark",
+      "description": "Cloud-synced bookmarked educational article slug for the authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "articleSlug": { "type": "string", "description": "Bookmarked educational article slug." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "articleSlug", "createdAt"]
+    },
+    "FeverLog": {
+      "title": "FeverLog",
+      "description": "Parent-logged body temperature reading in Celsius with site and caregiver tag for 24-hour fever tracking.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "tempCelsius": { "type": "number", "description": "Measured temperature in Celsius (34.0 to 43.0)." },
+        "siteFa": { "type": "string", "description": "Measurement site in Persian (e.g. زیربغلی، پیشانی، گوشی)." },
+        "recordedAtLabelFa": { "type": "string", "description": "Human-readable time label." },
+        "caregiverFa": { "type": "string", "description": "Caregiver who measured/logged it (e.g. مادر، پدر)." },
+        "noteFa": { "type": "string", "description": "Optional parent observation note." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "tempCelsius", "siteFa", "recordedAtLabelFa", "caregiverFa", "createdAt", "updatedAt"]
+    },
+    "DoctorVisitDraft": {
+      "title": "DoctorVisitDraft",
+      "description": "Gemini-generated and parent-editable text summary draft prepared from fever/dose timeline and symptom tracker data for pediatrician visits.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "titleFa": { "type": "string", "description": "Short Persian title for the saved visit draft." },
+        "symptomContextFa": { "type": "string", "description": "Compact summary of active symptoms, duration, and checked red flags." },
+        "timelineSummaryFa": { "type": "string", "description": "Compact summary of 24h temperature readings and medication doses." },
+        "draftTextFa": { "type": "string", "description": "Generated and optionally edited Persian visit preparation draft." },
+        "parentNoteFa": { "type": "string", "description": "Optional parent question or note included in generation." },
+        "modelName": { "type": "string", "description": "Gemini model identifier used to synthesize the draft." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "titleFa", "symptomContextFa", "timelineSummaryFa", "draftTextFa", "parentNoteFa", "modelName", "createdAt", "updatedAt"]
+    },
+    "VaccineRecord": {
+      "title": "VaccineRecord",
+      "description": "User-owned pediatric vaccination record storing due date overrides, administered date, deferred status, and center/lot note.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "vaccineId": { "type": "string", "description": "Catalog identifier matching the document ID." },
+        "customDueDateEpochMs": { "type": "integer", "description": "Parent-registered due date in epoch millis (0 if derived from birth date)." },
+        "administeredDateEpochMs": { "type": "integer", "description": "Administered date in epoch millis (0 if not yet administered)." },
+        "isDeferred": { "type": "boolean", "description": "Whether the dose is deferred on medical advice." },
+        "facilityOrLotFa": { "type": "string", "description": "Optional health center name or vaccine lot number." },
+        "noteFa": { "type": "string", "description": "Optional parent observation note." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "vaccineId", "customDueDateEpochMs", "administeredDateEpochMs", "isDeferred", "facilityOrLotFa", "noteFa", "createdAt", "updatedAt"]
+    },
+    "SyrupScan": {
+      "title": "SyrupScan",
+      "description": "Parent-confirmed scanned pediatric liquid medication concentration record captured via Gemini Vision for quick syringe auto-fill.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the parent owner." },
+        "drugNameFa": { "type": "string", "description": "Detected and optionally edited Persian/Latin bottle title." },
+        "activeIngredientKey": {
+          "type": "string",
+          "enum": ["ACETAMINOPHEN", "IBUPROFEN", "CETIRIZINE", "UNKNOWN"],
+          "description": "Normalized active ingredient key."
+        },
+        "dosageForm": {
+          "type": "string",
+          "enum": ["DROPS", "SYRUP", "SUSPENSION", "UNKNOWN"],
+          "description": "Liquid dosage form classification."
+        },
+        "mgAmount": { "type": "number", "description": "Numerator drug strength in mg (e.g. 120)." },
+        "perMlAmount": { "type": "number", "description": "Denominator volume in mL (e.g. 5 or 1)." },
+        "mgPerMl": { "type": "number", "description": "Normalized concentration in mg/mL." },
+        "matchedFormulationId": {
+          "type": "string",
+          "enum": [
+            "acetaminophen_drops_100",
+            "acetaminophen_syrup_120_5",
+            "acetaminophen_syrup_160_5",
+            "ibuprofen_syrup_100_5",
+            "cetirizine_syrup_5_5",
+            "CUSTOM_UNVERIFIED"
+          ],
+          "description": "Matched calibrated LiquidFormulationId or CUSTOM_UNVERIFIED."
+        },
+        "confidenceLevel": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"],
+          "description": "AI extraction confidence tier."
+        },
+        "concentrationDisplayFa": { "type": "string", "description": "Human-readable concentration string (e.g. 120 mg / 5 mL)." },
+        "safetyNoteFa": { "type": "string", "description": "Clinical safety or mix-up warning note." },
+        "confirmedByParent": { "type": "boolean", "description": "Must be true before persisting verified scan." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": [
+        "userId",
+        "drugNameFa",
+        "activeIngredientKey",
+        "dosageForm",
+        "mgAmount",
+        "perMlAmount",
+        "mgPerMl",
+        "matchedFormulationId",
+        "confidenceLevel",
+        "concentrationDisplayFa",
+        "safetyNoteFa",
+        "confirmedByParent",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/ChildProfile" },
+      "description": "User-owned child profile records."
+    },
+    "/users/{userId}/doseLogs/{logId}": {
+      "schema": { "$ref": "#/entities/MedicationDoseLog" },
+      "description": "User-owned medication administration log entries."
+    },
+    "/users/{userId}/feverLogs/{logId}": {
+      "schema": { "$ref": "#/entities/FeverLog" },
+      "description": "User-owned 24-hour child temperature log entries."
+    },
+    "/users/{userId}/visitDrafts/{draftId}": {
+      "schema": { "$ref": "#/entities/DoctorVisitDraft" },
+      "description": "User-owned Gemini doctor visit summary drafts."
+    },
+    "/users/{userId}/consultations/{consultationId}": {
+      "schema": { "$ref": "#/entities/PharmacistConsultation" },
+      "description": "User-owned non-emergency pharmacist consultation requests."
+    },
+    "/users/{userId}/bookmarks/{bookmarkId}": {
+      "schema": { "$ref": "#/entities/ArticleBookmark" },
+      "description": "User-owned synced educational article bookmarks."
+    },
+    "/users/{userId}/vaccineRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/VaccineRecord" },
+      "description": "User-owned pediatric vaccination tracking records."
+    },
+    "/users/{userId}/syrupScans/{scanId}": {
+      "schema": { "$ref": "#/entities/SyrupScan" },
+      "description": "User-owned verified pediatric bottle concentration scan records."
+    }
+  }
+}
