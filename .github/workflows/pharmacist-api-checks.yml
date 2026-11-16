@@ -1,0 +1,28 @@
+name: MANO pharmacist API contract tests
+on:
+  pull_request:
+    paths:
+      - 'functions/**'
+      - '.github/workflows/pharmacist-api-checks.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - '.github/workflows/pharmacist-api-checks.yml'
+permissions:
+  contents: read
+jobs:
+  policy-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install project dependencies
+        run: npm install --prefix functions --no-audit --no-fund --no-package-lock
+      - name: Syntax and pure-policy tests
+        run: |
+          npm run lint --prefix functions
+          npm test --prefix functions
