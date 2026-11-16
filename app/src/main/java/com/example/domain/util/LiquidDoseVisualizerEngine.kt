@@ -204,6 +204,10 @@ object LiquidDoseVisualizerEngine {
   fun parseAgeMonthsFromText(raw: String): Int? {
     val clean = PersianNormalizer.normalize(raw).trim()
     if (clean.isEmpty()) return null
+    // A band label ("۳ تا ۱۲ ماه", "1-3 years") is not an exact age.
+    // Parsing its upper bound as the child's age can bypass infant safeguards.
+    val rangePattern = Regex("""\b\d+\s*(?:تا|الی|[-–—])\s*\d+\b""")
+    if (rangePattern.containsMatchIn(clean)) return null
     val yearsMatch = Regex("""(\d+)\s*سال""").find(clean)
     val monthsMatch = Regex("""(\d+)\s*ماه""").find(clean)
     val years = yearsMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
