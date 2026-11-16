@@ -36,6 +36,12 @@
   }
 
   if (search) {
+    search.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && search.value) {
+        search.value = "";
+        search.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
     search.addEventListener("input", function () {
       const q = normalizePersian(search.value);
       let visible = 0;
@@ -62,7 +68,9 @@
       });
       const response = window.ManoWarning.evaluate({ ageBand: ageBand, temperature: temperature, warnings: warnings });
       result.hidden = false;
-      result.className = "screening-result" + (response.kind === "danger" ? " alert" : "");
+      const urgent = response.kind === "danger";
+      result.className = "screening-result" + (urgent ? " alert" : "");
+      result.setAttribute("role", urgent ? "alert" : "status");
       result.replaceChildren();
 
       const title = document.createElement("strong");
@@ -71,7 +79,16 @@
       paragraph.textContent = response.message;
       paragraph.style.margin = "0";
       result.append(title, paragraph);
-      result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      if (urgent) {
+        const action = document.createElement("a");
+        action.href = "tel:115";
+        action.className = "urgent-call";
+        action.textContent = "در ایران: تماس با اورژانس ۱۱۵";
+        action.setAttribute("aria-label", "در ایران تماس تلفنی با اورژانس ۱۱۵");
+        result.append(action);
+      }
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      result.scrollIntoView({ behavior: prefersReducedMotion ? "instant" : "smooth", block: "nearest" });
     });
   }
 
