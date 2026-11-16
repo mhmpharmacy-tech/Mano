@@ -64,7 +64,9 @@ jobs:
         run: npm install --no-save firebase-tools
       - name: Build Android debug app
         run: gradle :app:assembleDebug --no-daemon --stacktrace
-      - name: Run Robolectric unit and Firebase integration tests with local emulators
+      - name: Verify Android 3D WebView sandbox separately
+        run: gradle :app:testDebugUnitTest --tests com.example.ManoStudioWebViewSecurityTest --no-daemon --stacktrace
+      - name: Run full Robolectric and Firebase integration test suite
         run: npx firebase emulators:exec --project demo-no-project --only firestore,auth "gradle :app:testDebugUnitTest --no-daemon --stacktrace"
       - name: Upload test results for review
         if: always()
