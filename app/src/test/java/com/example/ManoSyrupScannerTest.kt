@@ -97,8 +97,8 @@ class ManoSyrupScannerTest {
     assertEquals(LiquidFormulationId.ACETAMINOPHEN_DROPS_100, result.matchedFormulation)
     assertEquals(AlertSeverity.DANGER, result.warningSeverity)
     assertNotNull(result.mixUpWarningFa)
-    assertTrue(result.canAutoFillSyringe)
-    assertEquals(1.0f, result.dosePreview!!.recommendedMl, 0.05f)
+    assertFalse(result.canAutoFillSyringe)
+    assertEquals(0.0f, result.dosePreview!!.recommendedMl, 0.01f)
   }
 
   @Test
