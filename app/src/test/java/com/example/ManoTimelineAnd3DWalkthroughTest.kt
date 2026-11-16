@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -295,7 +296,7 @@ class ManoTimelineAnd3DWalkthroughTest {
   }
 
   @Test
-  fun syringeLabCard_triggers3DHandoffWithCalculatedDose() {
+  fun syringeLabCard_blocksUnreviewedAutomatedHandoff() {
     var handoffMl: Float? = null
     composeTestRule.setContent {
       ManoKidsTheme {
@@ -319,15 +320,13 @@ class ManoTimelineAnd3DWalkthroughTest {
     }
 
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("syringe_open_3d_dose_btn").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-
-    assertNotNull(handoffMl)
-    assertTrue((handoffMl ?: 0f) > 0f)
+    composeTestRule.onNodeWithTag("syringe_open_3d_dose_btn").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("syringe_dose_alert_banner").performScrollTo().assertIsDisplayed()
+    assertNull(handoffMl)
   }
 
   @Test
-  fun pediatric3DStudio_prefillSyncsTargetBannerAndFourStepWalkthrough() {
+  fun pediatric3DStudio_neverShowsPersonalizedDoseEvenWithPrefill() {
     composeTestRule.setContent {
       ManoKidsTheme {
         Pediatric3DStudioScreen(
@@ -340,6 +339,8 @@ class ManoTimelineAnd3DWalkthroughTest {
     }
 
     composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("studio_training_only_warning").assertIsDisplayed()
+    composeTestRule.onNodeWithText("شبیه‌ساز آموزشی", substring = true).assertIsDisplayed()
     composeTestRule.onNodeWithTag("studio_3d_target_sync_banner").assertIsDisplayed()
     composeTestRule.onNodeWithTag("studio_3d_guided_steps_row").assertIsDisplayed()
     composeTestRule.onNodeWithTag("studio_3d_shake_bottle_btn").assertIsDisplayed()
