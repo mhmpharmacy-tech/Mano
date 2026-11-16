@@ -115,7 +115,8 @@
     visible.forEach(function (c) {
       const button = el("button","case-button");
       button.type = "button";
-      button.setAttribute("role", "listitem");
+      const item = el("div", "case-listitem");
+      item.setAttribute("role", "listitem");
       button.setAttribute("aria-pressed", String(c.id === activeId));
       const heading = el("div","case-heading");
       heading.append(el("strong","",c.alias),el("span","",c.id));
@@ -128,7 +129,8 @@
         activeId = c.id;
         render();
       });
-      list.append(button);
+      item.append(button);
+      list.append(item);
     });
   }
 
