@@ -65,6 +65,37 @@ class ManoJourneysUnitTest {
   }
 
   @Test
+  fun triage_feverDurationUsesConservativeAgeDependentContactThresholds() {
+    val feverFlow = repo.symptomFlowById("fever")
+    val infant = TriageEngine.evaluate(
+      flow = feverFlow,
+      ageBand = AgeBand.INFANT_3_12M,
+      temperatureCelsius = 37.8,
+      durationHours = 25,
+      selectedRedFlagIds = emptySet(),
+    )
+    assertEquals(TriageOutcome.NEEDS_TIMELY_REVIEW, infant.outcome)
+
+    val preschoolShort = TriageEngine.evaluate(
+      flow = feverFlow,
+      ageBand = AgeBand.PRESCHOOL_3_6Y,
+      temperatureCelsius = 38.0,
+      durationHours = 25,
+      selectedRedFlagIds = emptySet(),
+    )
+    assertEquals(TriageOutcome.GENERAL_EDUCATIONAL, preschoolShort.outcome)
+
+    val preschoolProlonged = TriageEngine.evaluate(
+      flow = feverFlow,
+      ageBand = AgeBand.PRESCHOOL_3_6Y,
+      temperatureCelsius = 38.0,
+      durationHours = 73,
+      selectedRedFlagIds = emptySet(),
+    )
+    assertEquals(TriageOutcome.NEEDS_TIMELY_REVIEW, preschoolProlonged.outcome)
+  }
+
+  @Test
   fun journeyB_threeYearOldWithConstipation_returnsEducationalGuidanceAndPharmacistOption() {
     val constipationFlow = repo.symptomFlowById("constipation")
     val result =
