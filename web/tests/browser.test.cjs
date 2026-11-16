@@ -105,6 +105,24 @@ test("Public warning form: under-three-month fever and red flag have urgent prio
   await page.locator('input[name="warning"][value="breath"]').check();
   await page.locator('#redflags-form button[type="submit"]').click();
   assert.match(await page.locator("#screening-result").innerText(), /اورژانس|فوری/);
+  assert.equal(await page.locator(".urgent-call").getAttribute("href"), "tel:115");
+
+  await page.locator('input[name="warning"][value="breath"]').uncheck();
+  await page.locator("#child-age").selectOption("under3");
+  await page.locator("#child-temp").fill("۳۸٫۰");
+  await page.locator('#redflags-form button[type="submit"]').click();
+  assert.match(await page.locator("#screening-result").innerText(), /فوری/);
+  assert.ok(await page.locator(".urgent-call").isVisible());
+
+  await page.locator("#child-temp").fill("۳۸/۵");
+  await page.locator('#redflags-form button[type="submit"]').click();
+  assert.match(await page.locator("#screening-result").innerText(), /بررسی/);
+  assert.equal(await page.locator(".urgent-call").count(), 0);
+
+  await page.locator("#topic-search").fill("شربت");
+  assert.equal(await page.locator(".path-card:visible").count(), 1);
+  await page.locator("#topic-search").press("Escape");
+  assert.equal(await page.locator(".path-card:visible").count(), 6);
   await page.close();
 });
 
