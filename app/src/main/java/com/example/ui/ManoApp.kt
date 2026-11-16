@@ -1460,6 +1460,7 @@ fun ManoApp(
                       viewModel.deleteChildProfileDemo()
                     }
                   },
+                  onDeleteAllLocalChildData = viewModel::deleteAllLocalChildHealthData,
                   currentUser = currentUser,
                   onCloudAuthSuccess = { viewModel.showToast("اتصال به حساب گوگل انجام شد.") },
                   onCloudAuthError = { msg -> viewModel.showToast(msg) },
