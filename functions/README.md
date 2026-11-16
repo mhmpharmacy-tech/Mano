@@ -5,7 +5,7 @@ This is a draft architecture implementation, not a ready-to-use clinical service
 ## Runtime
 - Firebase Cloud Functions v2, Node 22, Firebase Admin SDK.
 - Callable endpoints with Firebase Authentication and App Check enforcement.
-- Entire service disabled by default; activation requires MANO_CLINICAL_SERVICE_ENABLED=true only after formal review.
+- Entire service disabled by default; activation requires MANO_CLINICAL_SERVICE_ENABLED=true only after formal review. A valid MANO_FIRESTORE_DATABASE_ID must also be configured to target the intended named Firestore database; the service never silently defaults to another database.
 - Multi-tenant storage: pharmacies/{pharmacyId}/cases/{caseId}.
 - Public Firestore rules do not grant access to this namespace; only Admin SDK within the trusted Cloud Functions service may read or write.
 - Staff role requires verified server-issued custom claims: manoStaffVerified=true, manoStaffRole=pharmacist|admin, and manoPharmacyId matching case pharmacy.
