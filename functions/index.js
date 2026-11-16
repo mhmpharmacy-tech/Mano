@@ -3,10 +3,11 @@
 const crypto = require("node:crypto");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
 const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview } = require("./consultation-policy");
 
 if (!admin.apps.length) admin.initializeApp();
-const db = admin.firestore();
+let db = null;
 const serverTimestamp = admin.firestore.FieldValue.serverTimestamp;
 const config = {
   region: "europe-west1",
@@ -21,6 +22,11 @@ function requireEnabled() {
   if (process.env.MANO_CLINICAL_SERVICE_ENABLED !== "true") {
     throw new HttpsError("failed-precondition", "Clinical consultation intake is not enabled.");
   }
+  const databaseId = process.env.MANO_FIRESTORE_DATABASE_ID;
+  if (!databaseId || !/^[A-Za-z0-9_-]{3,128}$/.test(databaseId)) {
+    throw new HttpsError("failed-precondition", "Clinical Firestore database ID is not configured.");
+  }
+  if (!db) db = getFirestore(admin.app(), databaseId);
 }
 
 function requireUser(req) {
