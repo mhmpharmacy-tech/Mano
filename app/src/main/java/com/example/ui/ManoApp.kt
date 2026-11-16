@@ -1415,14 +1415,6 @@ fun ManoApp(
                       viewModel.submitAskPharmacistDemo()
                     }
                   },
-                  onAdvanceStatus = { id, status ->
-                    val activeCloudVm = cloudVm
-                    if (currentUser != null && activeCloudVm != null) {
-                      activeCloudVm.advanceConsultationStatus(id, status)
-                    } else {
-                      viewModel.advanceDemoRequestStatus(id)
-                    }
-                  },
                   currentUser = currentUser,
                   onCloudAuthSuccess = { viewModel.showToast("اتصال به حساب گوگل انجام شد.") },
                   onCloudAuthError = { msg -> viewModel.showToast(msg) },
