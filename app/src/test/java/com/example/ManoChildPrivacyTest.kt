@@ -106,7 +106,7 @@ class ManoChildPrivacyTest {
       TimelineTempPoint(
         id="fever1", tempCelsius=38.1f, siteFa="زیربغلی",
         timeLabelFa="۱۴:۳۰", timestampMs=1_750_000_000_000L,
-        caregiverFa="مادر", noteFa="اطلاعات خصوصی",
+        caregiverFa="مادر", noteFa="اطلاعات خصوصی", isSyncedCloud=false,
       )
     )
     p.addLocalDoseLog(
@@ -114,7 +114,7 @@ class ManoChildPrivacyTest {
         id="dose1", medicationSlug="test-drug", medicationNameFa="داروی آزمایشی",
         dosageFormFa="شربت", volumeMlText="مقدار آزمایشی",
         givenAtLabelFa="۱۴:۳۰", timestampMs=1_750_000_000_000L,
-        noteFa="اطلاعات خصوصی",
+        noteFa="اطلاعات خصوصی", isSyncedCloud=false,
       )
     )
     assertEquals(profile, p.localChildProfile.first())
