@@ -249,7 +249,7 @@ class ManoSyrupScannerTest {
   }
 
   @Test
-  fun homeAndScannerFlow_manualCalibrationAndParentConfirm_opens3DStudioWithScannedBottle() {
+  fun homeAndScannerFlow_parentConfirmationDoesNotUnlockAutomatedDosing() {
     composeTestRule.waitForIdle()
     // 1. Verify Home screen quick-launch scanner card & outer galactic scanner satellite
     composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_syrup_scanner_card"))
@@ -269,19 +269,10 @@ class ManoSyrupScannerTest {
     composeTestRule.onNodeWithTag("scanner_mixup_alert").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("scanner_autofill_3d_btn").performScrollTo().assertIsNotEnabled()
 
-    // 4. Confirm label -> auto-fill button unlocks -> click launches 3D Studio with scanned bottle banner
+    // 4. Confirmation verifies the label only. It must never unlock automatic medication dosing.
     composeTestRule.onNodeWithTag("scanner_parent_confirm_checkbox").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("scanner_autofill_3d_btn").performScrollTo().assertIsEnabled().performClick()
-    composeTestRule.waitForIdle()
-
-    composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("studio_3d_scanned_bottle_banner").assertIsDisplayed()
-    composeTestRule
-      .onNode(
-        hasText("قطره استامینوفن", substring = true) and
-          hasAnyAncestor(hasTestTag("studio_3d_scanned_bottle_banner"))
-      )
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag("scanner_autofill_3d_btn").performScrollTo().assertIsNotEnabled()
+    composeTestRule.onNodeWithTag("scanner_matched_ask_pharmacist_btn").performScrollTo().assertIsDisplayed()
   }
 }
