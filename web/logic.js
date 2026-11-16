@@ -15,7 +15,7 @@
       .replace(/[۰-۹]/g, function (digit) { return String(digit.charCodeAt(0) - 1776); })
       .replace(/[٠-٩]/g, function (digit) { return String(digit.charCodeAt(0) - 1632); })
       .replace(/[٫,]/g, ".");
-    if (!/^\\d{1,2}(?:\\.\\d{1,2})?$/.test(clean)) return NaN;
+    if (!/^\d{1,2}(?:\.\d{1,2})?$/.test(clean)) return NaN;
     return Number(clean);
   }
 
