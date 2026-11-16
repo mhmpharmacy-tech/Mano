@@ -59,7 +59,7 @@ class ManoAuditRemediationTest {
     val repo = ManoPreferencesRepository(context)
     runBlocking {
       repo.setThemeMode(ManoThemeMode.SYSTEM)
-      repo.saveLocalChildProfile(null)
+      repo.setLocalChildProfile(null)
       repo.clearLocalFeverLogs()
       repo.clearLocalDoseLogs()
     }
@@ -73,6 +73,9 @@ class ManoAuditRemediationTest {
         birthDateOrAgeFa = AgeBand.INFANT_3_12M.labelFa,
         ageBand = AgeBand.INFANT_3_12M,
         weightKgText = "7.5",
+        weightDateFa = "امروز",
+        allergiesFa = "ندارد",
+        currentMedsFa = "ندارد",
         consentGranted = true,
       )
 
@@ -125,9 +128,12 @@ class ManoAuditRemediationTest {
         ageBand = AgeBand.TODDLER_1_3Y,
         ageMonthsExact = 18,
         weightKgText = "11.0",
+        weightDateFa = "امروز",
+        allergiesFa = "ندارد",
+        currentMedsFa = "ندارد",
         consentGranted = true,
       )
-    repo.saveLocalChildProfile(profile)
+    repo.setLocalChildProfile(profile)
     assertEquals(profile, repo.localChildProfile.first())
 
     val fever =
@@ -139,7 +145,7 @@ class ManoAuditRemediationTest {
         timestampMs = 1_750_000_000_000L,
         caregiverFa = "مادر",
         noteFa = "اندازه‌گیری دقیق",
-        isCloud = false,
+        isSyncedCloud = false,
       )
     val dose =
       TimelineDosePoint(
@@ -147,15 +153,14 @@ class ManoAuditRemediationTest {
         medicationSlug = "acetaminophen-pediatric",
         medicationNameFa = "استامینوفن",
         dosageFormFa = "شربت ۱۲۰/۵",
-        volumeMl = 5.0f,
         volumeMlText = "5.0 mL",
-        timeLabelFa = "۱۴:۳۵",
+        givenAtLabelFa = "۱۴:۳۵",
         timestampMs = 1_750_000_300_000L,
         noteFa = "با سرنگ",
-        isCloud = false,
+        isSyncedCloud = false,
       )
-    repo.saveLocalFeverLogs(listOf(fever))
-    repo.saveLocalDoseLogs(listOf(dose))
+    repo.addLocalFeverLog(fever)
+    repo.addLocalDoseLog(dose)
     assertEquals(listOf(fever), repo.localFeverLogs.first())
     assertEquals(listOf(dose), repo.localDoseLogs.first())
 
@@ -164,7 +169,7 @@ class ManoAuditRemediationTest {
     repo.toggleMilestoneCheck("ms_walk_15m")
     assertFalse("ms_walk_15m" in repo.checkedMilestoneIds.first())
 
-    repo.saveLocalChildProfile(null)
+    repo.setLocalChildProfile(null)
     repo.clearLocalFeverLogs()
     repo.clearLocalDoseLogs()
     assertNull(repo.localChildProfile.first())
