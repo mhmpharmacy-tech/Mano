@@ -121,7 +121,8 @@ class ManoTimelineAnd3DWalkthroughTest {
     assertEquals(38.6f, snapshot.peakTemp24h ?: 0f, 0.01f)
     assertEquals(37.9f, snapshot.latestTempCelsius ?: 0f, 0.01f)
     assertEquals(AlertSeverity.DANGER, snapshot.acetaminophenStatus.severity)
-    assertEquals(AlertSeverity.SUCCESS, snapshot.ibuprofenStatus.severity)
+    assertEquals(AlertSeverity.INFO, snapshot.ibuprofenStatus.severity)
+    assertTrue(snapshot.ibuprofenStatus.statusMessageFa.contains("به معنی ایمن یا مجاز بودن"))
 
     val merged = FeverDoseTimelineEngine.mergedChronologicalEvents(snapshot)
     assertEquals(4, merged.size)
