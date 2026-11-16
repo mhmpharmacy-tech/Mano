@@ -13,6 +13,26 @@ const parentUrl = pathToFileURL(path.join(root, "index.html")).href;
 const staffUrl = pathToFileURL(path.join(root, "staff-demo.html")).href;
 let browser;
 
+async function settleVisuals(page) {
+  // Full-page screenshots may skip images using loading="lazy" if the
+  // user has not scrolled to them. Load every actual visual first.
+  const images = page.locator("img");
+  const total = await images.count();
+  for (let i = 0; i < total; i++) {
+    const item = images.nth(i);
+    await item.scrollIntoViewIfNeeded();
+    const ready = await item.evaluate(async (img) => {
+      try { await img.decode(); return img.naturalWidth > 0; } catch (_) { return false; }
+    });
+    assert.ok(ready, "Image must load before visual QA screenshot #" + i);
+  }
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
+  });
+  await page.waitForFunction(() => window.scrollY < 3);
+}
+
 test.before(async () => {
   fs.mkdirSync(out, { recursive: true });
   browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
@@ -41,6 +61,7 @@ test("Desktop: original MANO assets, functional category search, no JS errors", 
   assert.equal(await page.locator("#path-grid > .path-card:visible").count(), 0);
   assert.ok(await page.locator("#no-matches").isVisible());
   await page.locator("#topic-search").fill("");
+  await settleVisuals(page);
   await page.screenshot({ path: path.join(out, "home-desktop.png"), fullPage: true, animations: "disabled" });
   assert.deepEqual(errors, []);
   await page.close();
@@ -63,7 +84,7 @@ test("Mobile: RTL menu, content, and layout fit 390px", async () => {
   }));
   assert.ok(dimensions.page <= dimensions.viewport + 2,
     "Mobile width overflow: " + JSON.stringify(dimensions));
-  await page.locator("html").evaluate(el => el.scrollTo ? el.scrollTo(0, 0) : window.scrollTo(0, 0));
+  await settleVisuals(page);
   await page.screenshot({ path: path.join(out, "home-mobile.png"), fullPage: true, animations: "disabled" });
   assert.deepEqual(errors, []);
   await page.close();
@@ -110,6 +131,7 @@ test("Staff demo: filters, flag warning, simulated reviewer decision and reset",
   await page.locator("#review-decision").selectOption("refer");
   await page.locator('#review-form button[type="submit"]').click();
   assert.match(await page.locator("#review-message").innerText(), /هیچ داده‌ای روی سرور/);
+  await settleVisuals(page);
   await page.screenshot({ path: path.join(out, "staff-demo-desktop.png"), fullPage: true, animations: "disabled" });
 
   await page.locator("#reset-demo").click();
