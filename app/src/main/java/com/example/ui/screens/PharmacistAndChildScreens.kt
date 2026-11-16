@@ -93,7 +93,6 @@ fun AskPharmacistScreen(
   onUrgentFlagChange: (Boolean) -> Unit,
   onConsentChange: (Boolean) -> Unit,
   onSubmit: () -> Unit,
-  onAdvanceStatus: (String, ConsultationStatus) -> Unit,
   currentUser: FirebaseUser? = null,
   onCloudAuthSuccess: () -> Unit = {},
   onCloudAuthError: (String) -> Unit = {},
@@ -238,12 +237,11 @@ fun AskPharmacistScreen(
               Text("${req.followUp.scheduleFa}: ${req.followUp.guidanceFa}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (req.status != ConsultationStatus.REVIEWED) {
-              OutlinedButton(
-                onClick = { onAdvanceStatus(req.id, req.status) },
-                modifier = Modifier.minimumInteractiveComponentSize(),
-              ) {
-                Text("به‌روزرسانی وضعیت پیگیری")
-              }
+              Text(
+                "این وضعیت فقط پس از بررسی داروساز به‌روزرسانی می‌شود.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
             }
           }
         }
