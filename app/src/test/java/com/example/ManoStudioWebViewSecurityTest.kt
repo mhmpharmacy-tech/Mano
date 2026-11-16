@@ -2,6 +2,7 @@ package com.example
 
 import android.app.Application
 import android.net.Uri
+import androidx.test.core.app.ApplicationProvider
 import com.example.ui.screens.isTrustedThreeStudioAssetUri
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -55,4 +56,19 @@ class ManoStudioWebViewSecurityTest {
       assertFalse("Unexpected URL must be rejected: $url", isTrustedThreeStudioAssetUri(Uri.parse(url)))
     }
   }
+  @Test
+  fun packagedStudioDocumentForbidsNetworkScriptsFramesAndRequests() {
+    val html =
+      ApplicationProvider.getApplicationContext<Application>()
+        .assets.open("three/index.html").bufferedReader().use { it.readText() }
+    assertTrue(html.contains("Content-Security-Policy"))
+    assertTrue(html.contains("default-src 'none'"))
+    assertTrue(html.contains("script-src 'self'"))
+    assertTrue(html.contains("connect-src 'none'"))
+    assertTrue(html.contains("frame-src 'none'"))
+    assertTrue(html.contains("form-action 'none'"))
+    assertFalse(html.contains("<iframe"))
+    assertFalse(html.contains("https://cdn."))
+  }
+
 }
