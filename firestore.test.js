@@ -486,6 +486,7 @@ test("Pharmacist API namespace is inaccessible from all client identities", asyn
     await adminDb.doc(base + "/cases/CASE_123").set({ ownerUid: ALICE_UID, status: "PENDING" });
     await adminDb.doc(base + "/cases/CASE_123/audit/AUDIT_123").set({ actorUid: "staff", event: "TEST" });
     await adminDb.doc(base + "/triagePasses/PASS_123").set({ ownerUid: ALICE_UID, classification: "NONURGENT" });
+    await adminDb.doc(base + "/staff/STAFF_123").set({ uid: "STAFF_123", role: "pharmacist", status: "ACTIVE", credentialVerified: true });
   });
 
   for (const db of [aliceDb, bobDb, anonymousDb]) {
@@ -494,7 +495,9 @@ test("Pharmacist API namespace is inaccessible from all client identities", asyn
     await assertFails(db.doc(base + "/cases/CASE_123").get());
     await assertFails(db.doc(base + "/cases/CASE_123/audit/AUDIT_123").get());
     await assertFails(db.doc(base + "/triagePasses/PASS_123").get());
+    await assertFails(db.doc(base + "/staff/STAFF_123").get());
     await assertFails(db.doc(base + "/cases/CASE_NEW").set({ ownerUid: ALICE_UID, status: "REVIEWED" }));
     await assertFails(db.doc(base + "/triagePasses/PASS_NEW").set({ ownerUid: ALICE_UID, verified: true }));
+    await assertFails(db.doc(base + "/staff/STAFF_NEW").set({ uid: ALICE_UID, role: "pharmacist", credentialVerified: true, status: "ACTIVE" }));
   }
 });
