@@ -470,3 +470,34 @@ test("Owner can create, read, update, and delete confirmed syrupScans; unconfirm
 });
 
 
+
+
+// --- FUTURE STAFF CLINICAL API: NO DIRECT CLIENT ACCESS ---
+
+test("Pharmacist API namespace is inaccessible from all client identities", async () => {
+  const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const bobDb = testEnv.authenticatedContext(BOB_UID).firestore();
+  const anonymousDb = testEnv.unauthenticatedContext().firestore();
+
+  const base = "pharmacies/pharm_123";
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    await adminDb.doc(base).set({ active: true, acceptingCases: true });
+    await adminDb.doc(base + "/cases/CASE_123").set({ ownerUid: ALICE_UID, status: "PENDING" });
+    await adminDb.doc(base + "/cases/CASE_123/audit/AUDIT_123").set({ actorUid: "staff", event: "TEST" });
+    await adminDb.doc(base + "/triagePasses/PASS_123").set({ ownerUid: ALICE_UID, classification: "NONURGENT" });
+    await adminDb.doc(base + "/staff/STAFF_123").set({ uid: "STAFF_123", role: "pharmacist", status: "ACTIVE", credentialVerified: true });
+  });
+
+  for (const db of [aliceDb, bobDb, anonymousDb]) {
+    await assertFails(db.doc(base).get());
+    await assertFails(db.collection(base + "/cases").get());
+    await assertFails(db.doc(base + "/cases/CASE_123").get());
+    await assertFails(db.doc(base + "/cases/CASE_123/audit/AUDIT_123").get());
+    await assertFails(db.doc(base + "/triagePasses/PASS_123").get());
+    await assertFails(db.doc(base + "/staff/STAFF_123").get());
+    await assertFails(db.doc(base + "/cases/CASE_NEW").set({ ownerUid: ALICE_UID, status: "REVIEWED" }));
+    await assertFails(db.doc(base + "/triagePasses/PASS_NEW").set({ ownerUid: ALICE_UID, verified: true }));
+    await assertFails(db.doc(base + "/staff/STAFF_NEW").set({ uid: ALICE_UID, role: "pharmacist", credentialVerified: true, status: "ACTIVE" }));
+  }
+});
