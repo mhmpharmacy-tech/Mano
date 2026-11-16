@@ -13,6 +13,10 @@ on:
       - 'firestore.test.js'
       - 'firestore.rules'
       - '.github/workflows/pharmacist-api-checks.yml'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 jobs:
