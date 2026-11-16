@@ -31,12 +31,32 @@ function validateIntake(payload) {
   const categoryName = payload.categoryName;
   const ageBandId = payload.ageBandId;
   const questionSummaryFa = typeof payload.questionSummaryFa === "string" ? payload.questionSummaryFa.trim() : "";
-  if (!isId(pharmacyId)) return null;
+  const triagePassId = payload.triagePassId;
+  if (!isId(pharmacyId) || !isId(triagePassId)) return null;
   if (!AGE_BANDS.has(ageBandId) || !CATEGORIES.has(categoryName)) return null;
   if (questionSummaryFa.length < 12 || questionSummaryFa.length > 600) return null;
   if (payload.consentAccepted !== true || payload.privacyNoticeVersion !== "v1") return null;
   if (payload.hasUrgentFlag !== false) return null; // emergency / referral must not enter a delayed asynchronous queue
-  return { pharmacyId, categoryName, ageBandId, questionSummaryFa };
+  return { pharmacyId, categoryName, ageBandId, questionSummaryFa, triagePassId };
+}
+
+/**
+ * Triage passes are produced only by a future trusted clinically reviewed service.
+ * An untrusted client's hasUrgentFlag=false alone is never a clinical clearance.
+ * Until such a service is implemented, intake fails closed.
+ */
+function isValidTriagePass(pass, ownerUid, pharmacyId, nowMs = Date.now()) {
+  if (!pass || !isId(ownerUid) || !isId(pharmacyId)) return false;
+  const until = pass.validUntil && typeof pass.validUntil.toMillis === "function"
+    ? pass.validUntil.toMillis()
+    : NaN;
+  return pass.ownerUid === ownerUid &&
+    pass.pharmacyId === pharmacyId &&
+    pass.classification === "NONURGENT" &&
+    pass.issuerService === "mano-triage-v1" &&
+    pass.verified === true &&
+    !pass.consumedAt &&
+    Number.isFinite(until) && until > nowMs;
 }
 
 function validateStaffReview(payload, oldStatus) {
@@ -73,4 +93,4 @@ function buildParentCaseView(caseId, source) {
   };
 }
 
-module.exports = { AGE_BANDS, CATEGORIES, DECISIONS, NEXT_STATUSES, isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView };
+module.exports = { AGE_BANDS, CATEGORIES, DECISIONS, NEXT_STATUSES, isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass };
