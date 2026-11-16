@@ -21,6 +21,7 @@ Visit http://localhost:8080/. No build steps, backend, or credentials required.
 - Local-only copyable questionnaire template for in-person pharmacist consultations.
 - No APIs, no patient account, no clinical data storage, no automatic prescriptions or dosing, no real pharmacist submission. **Do not say the service is live.**
 - Search, navigation, FAQ and controls function without third-party libraries.
+- `web/staff-demo.html`: a separate **synthetic-only** pharmacist panel with category, status, safety and last-contact filters, comparison of previous/current notes, simulated safety-gated review and printable summary. No real patient data or server integration.
 
 ## Test
 
