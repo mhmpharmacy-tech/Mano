@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview } = require("../consultation-policy");
+const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView } = require("../consultation-policy");
 
 const auth = { uid: "staff-001", token: { manoStaffVerified:true, manoStaffRole:"pharmacist", manoPharmacyId:"pharmacy_demo" } };
 const goodCase = { pharmacyId:"pharmacy_demo",categoryName:"OTC",ageBandId:"toddler_1_3y",questionSummaryFa:"آیا این دو شربت تداخل دارویی دارند؟",consentAccepted:true,privacyNoticeVersion:"v1",hasUrgentFlag:false };
@@ -30,17 +30,67 @@ test("Intake accepts only consented, nonurgent, bounded requests",()=>{
   assert.equal(validateIntake({...goodCase,questionSummaryFa:"x".repeat(601)}),null);
   assert.equal(validateIntake({...goodCase,pharmacyId:"../bad"}),null);
 });
-test("Staff must receive before marking a case reviewed",()=>{
-  assert.deepEqual(validateStaffReview({status:"RECEIVED"},"PENDING"),{status:"RECEIVED",decision:null,reviewNoteFa:null,sourceFa:null});
-  assert.equal(validateStaffReview({status:"REVIEWED",decision:"REFER",reviewNoteFa:"نیازمند ارزیابی حضوری",sourceFa:"NICE NG143"},"PENDING"),null);
+
+test("The clinical reviewer must be a verified pharmacist, never merely a pharmacy admin", () => {
+  const admin = { uid:"admin-001", token:{...auth.token,manoStaffRole:"admin"} };
+  assert.equal(isVerifiedPharmacist(admin,"pharmacy_demo"),false);
+});
+
+const reviewedPayload = Object.freeze({
+  status:"REVIEWED",
+  decision:"REFER",
+  reviewNoteFa:"یادداشت داخلی فقط جهت مرور بالینی داروساز.",
+  parentReplyFa:"این پیام برای خانواده نوشته شده و باید فقط پس از تأیید ارسال شود.",
+  parentReplyApproved:true,
+  sourceFa:"NICE NG143",
+});
+
+test("Staff must receive before review and explicitly approve public reply",()=>{
+  assert.deepEqual(
+    validateStaffReview({status:"RECEIVED"},"PENDING"),
+    {status:"RECEIVED",decision:null,reviewNoteFa:null,parentReplyFa:null,sourceFa:null}
+  );
+  assert.equal(validateStaffReview(reviewedPayload,"PENDING"),null);
   assert.equal(validateStaffReview({status:"PENDING"},"RECEIVED"),null);
-  assert.equal(validateStaffReview({status:"REVIEWED",decision:"REFER",reviewNoteFa:"توضیح کوتاه",sourceFa:"NICE NG143"},"RECEIVED"),null);
-  const reviewed=validateStaffReview({status:"REVIEWED",decision:"REFER",reviewNoteFa:"نیازمند ارزیابی حضوری توسط پزشک معالج است.",sourceFa:"NICE NG143"},"RECEIVED");
-  assert.equal(reviewed.status,"REVIEWED");
-  assert.equal(reviewed.decision,"REFER");
   assert.equal(validateStaffReview({status:"RECEIVED"},"REVIEWED"),null);
+  assert.equal(validateStaffReview({...reviewedPayload,parentReplyApproved:false},"RECEIVED"),null);
+  assert.equal(validateStaffReview({...reviewedPayload,parentReplyFa:""},"RECEIVED"),null);
+  const review = validateStaffReview(reviewedPayload,"RECEIVED");
+  assert.equal(review.status,"REVIEWED");
+  assert.equal(review.decision,"REFER");
+  assert.equal(review.reviewNoteFa,reviewedPayload.reviewNoteFa);
+  assert.equal(review.parentReplyFa,reviewedPayload.parentReplyFa);
 });
 test("Forged reviewer notes and invalid workflow states cannot pass",()=>{
-  assert.equal(validateStaffReview({status:"REVIEWED",decision:"OTHER",reviewNoteFa:"بیش از بیست حرف آزمایشی برای تست",sourceFa:"NICE NG143"},"RECEIVED"),null);
-  assert.equal(validateStaffReview({status:"REVIEWED",decision:"EDUCATION",reviewNoteFa:"بیش از بیست حرف آزمایشی برای تست",sourceFa:""},"RECEIVED"),null);
+  assert.equal(validateStaffReview({...reviewedPayload,decision:"OTHER"},"RECEIVED"),null);
+  assert.equal(validateStaffReview({...reviewedPayload,sourceFa:""},"RECEIVED"),null);
+  assert.equal(validateStaffReview({...reviewedPayload,reviewNoteFa:"too short"},"RECEIVED"),null);
+});
+test("Parent-visible result never includes private review note, staff identity or raw Firestore fields",()=>{
+  const record = {
+    categoryName:"OTC",
+    ageBandId:"toddler_1_3y",
+    status:"REVIEWED",
+    decision:"REFER",
+    reviewNoteFa:"CONFIDENTIAL STAFF NOTE",
+    parentReplyFa:"پیام صریح تأییدشده و مخصوص والد اینجا نشان داده می‌شود.",
+    sourceFa:"NICE NG143",
+    reviewedByUid:"staff_private_uid",
+    ownerUid:"parent_uid",
+    pharmacyId:"pharmacy_demo",
+    updatedAt:{toMillis:()=>456},
+    audit:{sensitive:"data"}
+  };
+  const view = buildParentCaseView("case_test",record);
+  assert.equal(view.parentReplyFa,record.parentReplyFa);
+  assert.equal(view.updatedAtMs,456);
+  assert.equal(view.reviewNoteFa,undefined);
+  assert.equal(Object.hasOwn(view,"reviewNoteFa"),false);
+  assert.equal(Object.hasOwn(view,"reviewedByUid"),false);
+  assert.equal(Object.hasOwn(view,"ownerUid"),false);
+  assert.equal(Object.hasOwn(view,"audit"),false);
+  const awaiting = buildParentCaseView("case_test",{...record,status:"RECEIVED"});
+  assert.equal(awaiting.parentReplyFa,null);
+  assert.equal(awaiting.sourceFa,null);
+  assert.equal(awaiting.decision,null);
 });
