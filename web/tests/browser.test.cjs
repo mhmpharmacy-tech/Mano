@@ -139,3 +139,23 @@ test("Staff demo: filters, flag warning, simulated reviewer decision and reset",
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+
+test("Responsive widths: public and staff pages never spill horizontally", async () => {
+  const page = await browser.newPage({ viewport: { width: 320, height: 780 } });
+  for (const target of [parentUrl, staffUrl]) {
+    await page.goto(target);
+    for (const width of [320, 360, 390, 430, 768, 1024]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.evaluate(() => document.fonts.ready);
+      const box = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+        mainWidth: document.querySelector("main")?.getBoundingClientRect().width || 0,
+      }));
+      assert.ok(box.scrollWidth <= box.viewportWidth + 2,
+        "Responsive overflow at " + width + " on " + target + ": " + JSON.stringify(box));
+    }
+  }
+  await page.close();
+});
