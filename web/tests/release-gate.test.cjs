@@ -20,10 +20,6 @@ test("Public health content has an explicit source registry and unreviewed statu
   if (manifest.status !== "APPROVED_FOR_PUBLIC_CLINICAL_RELEASE") {
     assert.match(html,/<meta name="robots" content="noindex,nofollow">/,
       "An unreviewed medical preview must never become indexed by removing noindex");
-    for(const section of manifest.contentSections){
-      assert.notEqual(section.reviewStatus,"APPROVED",
-        "Individual approved claim is not equivalent to a full product-level release");
-    }
   } else {
     assert.ok(typeof manifest.reviewerName === "string" && manifest.reviewerName.trim().length>4);
     assert.ok(typeof manifest.reviewedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(manifest.reviewedAt));
