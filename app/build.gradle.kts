@@ -149,7 +149,8 @@ dependencies {
 }
 
 tasks.withType<Test> {
-  failFast = true
+  // Gather the entire safety regression report instead of hiding later failures.
+  failFast = false
   timeout.set(Duration.ofMinutes(2))
   testLogging {
     events("passed", "failed", "skipped")
