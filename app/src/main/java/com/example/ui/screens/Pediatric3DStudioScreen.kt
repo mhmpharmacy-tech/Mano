@@ -113,8 +113,8 @@ private val guidedWorkbenchSteps =
     ),
     GuidedWorkbenchStep(
       stepNumber = 3,
-      shortTitleFa = "۳. خط هدف سرنگ",
-      instructionFa = "لغزنده سرنگ را حرکت دهید تا پیستون دقیقاً روی حلقه سبز هدف قرار بگیرد و حباب هوا خارج شود.",
+      shortTitleFa = "۳. خواندن درجات",
+      instructionFa = "با لغزنده، خواندن درجات سرنگ را تمرین کنید. مقدار نمایش‌داده‌شده صرفاً مثال آموزشی است و دوز دارو نیست.",
     ),
     GuidedWorkbenchStep(
       stepNumber = 4,
@@ -143,7 +143,7 @@ private val guidedWeighingSteps =
     GuidedWorkbenchStep(
       stepNumber = 4,
       shortTitleFa = "۴. قفل عدد و ثبت وزن",
-      instructionFa = "تا قفل شدن عدد روی نمایشگر (LOCKED) صبر کنید؛ وزن دقیق مبنای ایمن محاسبه دوز داروی کودک است.",
+      instructionFa = "تا ثابت شدن عدد روی نمایشگر صبر کنید. ثبت وزن برای ارزیابی توسط متخصص مفید است؛ مانو در این نسخه دوز محاسبه نمی‌کند.",
     ),
   )
 
@@ -177,24 +177,9 @@ fun Pediatric3DStudioScreen(
   val sliderMinMl = if (isDropsMode) 0.1f else 0.5f
   val sliderMaxMl = if (isDropsMode) 3.0f else 20.0f
 
-  val syncedTargetMl: Float? =
-    remember(prefillMl, childProfile, childBirthDateEpochMs, matchedFormulation) {
-      when {
-        prefillMl > 0f -> prefillMl.coerceIn(sliderMinMl, sliderMaxMl)
-        childProfile != null || matchedFormulation != null -> {
-          val ageM = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile, childBirthDateEpochMs)
-          val weightKg = LiquidDoseVisualizerEngine.initialWeightKgFromProfile(childProfile)
-          val eval =
-            LiquidDoseVisualizerEngine.evaluate(
-              formulation = matchedFormulation ?: LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5,
-              ageMonths = ageM,
-              weightKg = weightKg,
-            )
-          if (!eval.isBlocked && eval.recommendedMl > 0f) eval.recommendedMl.coerceIn(sliderMinMl, sliderMaxMl) else null
-        }
-        else -> null
-      }
-    }
+  // Training-only view: never accept a personalized dose target, including route prefills.
+  // The manual syringe slider teaches reading graduations, not medication dosing.
+  val syncedTargetMl: Float? = null
 
   val childWeightKg =
     remember(childProfile) {
@@ -226,11 +211,11 @@ fun Pediatric3DStudioScreen(
   var feverAlert by remember(prefillFever, latestTempCelsius) {
     mutableStateOf(prefillFever || (latestTempCelsius != null && latestTempCelsius >= 38.0f))
   }
-  var dockExpanded by remember(prefillMl, initialScene) {
-    mutableStateOf(prefillMl > 0f || initialScene == "weighing")
+  var dockExpanded by remember(initialScene) {
+    mutableStateOf(initialScene == "weighing")
   }
-  var guidedStep by remember(prefillMl) {
-    mutableIntStateOf(if (prefillMl > 0f) 3 else 0)
+  var guidedStep by remember(initialScene) {
+    mutableIntStateOf(0)
   }
   var weighingStep by remember(initialScene) {
     mutableIntStateOf(1)
@@ -415,7 +400,7 @@ fun Pediatric3DStudioScreen(
       },
     )
 
-    // Top status & live child dose/temp sync pill
+    // Top status and training-only warning
     Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -446,6 +431,20 @@ fun Pediatric3DStudioScreen(
             color = MaterialTheme.colorScheme.onSurface,
           )
         }
+      }
+
+      Surface(
+        color = manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 0.96f, darkAlpha = 0.20f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, cautionAccent.copy(alpha = 0.4f)),
+        modifier = Modifier.testTag("studio_training_only_warning"),
+      ) {
+        Text(
+          text = "شبیه‌ساز آموزشی؛ عدد سرنگ، دوز پیشنهادی برای کودک نیست. محاسبه دوز غیرفعال است.",
+          style = MaterialTheme.typography.labelSmall,
+          color = cautionAccent,
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        )
       }
 
       if (syncedTargetMl != null || latestTempCelsius != null) {
@@ -491,16 +490,16 @@ fun Pediatric3DStudioScreen(
 
       if (prefillScannedDrugFa.isNotBlank()) {
         Surface(
-          color = manoTintedSurface(SuccessSurface, DarkSage, lightAlpha = 0.94f, darkAlpha = 0.24f),
+          color = manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 0.94f, darkAlpha = 0.24f),
           shape = RoundedCornerShape(14.dp),
-          border = BorderStroke(1.dp, successAccent.copy(alpha = 0.45f)),
+          border = BorderStroke(1.dp, cautionAccent.copy(alpha = 0.45f)),
           modifier = Modifier.testTag("studio_3d_scanned_bottle_banner"),
         ) {
           val concText = matchedFormulation?.concentrationLabelFa?.let { " • $it" }.orEmpty()
           Text(
-            text = "برچسب تاییدشده اسکنر: $prefillScannedDrugFa$concText",
+            text = "نام استخراج‌شده از تصویر (تأیید داروساز انجام نشده): $prefillScannedDrugFa$concText",
             style = MaterialTheme.typography.labelSmall,
-            color = successAccent,
+            color = cautionAccent,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
           )
@@ -663,7 +662,7 @@ fun Pediatric3DStudioScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
               ) {
                 Text(
-                  text = "حجم سرنگ خوراکی: ${String.format(Locale.US, "%.1f", syringeMl)} mL",
+                  text = "حجم نمایشی سرنگ (صرفاً تمرین): ${String.format(Locale.US, "%.1f", syringeMl)} mL",
                   style = MaterialTheme.typography.labelLarge,
                   color = if (isTargetMatched) successAccent else MaterialTheme.colorScheme.primary,
                 )
