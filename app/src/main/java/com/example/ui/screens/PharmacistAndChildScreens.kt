@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.VerifiedUser
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -258,6 +259,7 @@ fun MyChildScreen(
   onSaveProfile: (String, String, AgeBand, String, String, String, String, Boolean) -> Unit,
   onExportSummary: () -> Unit,
   onDeleteProfile: () -> Unit,
+  onDeleteAllLocalChildData: () -> Unit,
   currentUser: FirebaseUser? = null,
   onCloudAuthSuccess: () -> Unit = {},
   onCloudAuthError: (String) -> Unit = {},
@@ -273,6 +275,7 @@ fun MyChildScreen(
   var allergies by remember(profile) { mutableStateOf(profile?.allergiesFa ?: "") }
   var currentMeds by remember(profile) { mutableStateOf(profile?.currentMedsFa ?: "") }
   var consent by remember(profile) { mutableStateOf(profile?.consentGranted ?: false) }
+  var showDeleteAllLocalConfirm by remember { mutableStateOf(false) }
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
@@ -296,9 +299,9 @@ fun MyChildScreen(
               Text(
                 text =
                   if (currentUser != null) {
-                    "همگام‌سازی امن با حساب گوگل فعال است؛ اطلاعات فقط پس از رضایت والد در مسیر خصوصی کاربر ذخیره می‌شود."
+                    "حساب گوگل متصل است. داده‌های همگام‌شده در فضای ابری باقی می‌مانند و با حذف محلی پاک نمی‌شوند."
                   } else {
-                    "اطلاعات به‌صورت دائمی روی دستگاه ذخیره می‌شود و پس از ورود با حساب گوگل به فضای ابری منتقل می‌گردد."
+                    "اطلاعات در حافظه داخلی برنامه روی این دستگاه ذخیره می‌شوند؛ در صورت ورود و فعال‌شدن همگام‌سازی ممکن است به فضای ابری منتقل شوند."
                   },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -312,7 +315,7 @@ fun MyChildScreen(
         CloudSyncAuthCard(
           currentUser = currentUser,
           titleFa = "ورود با گوگل برای همگام‌سازی پروفایل کودک",
-          descriptionFa = "با اتصال حساب گوگل، پروفایل کودک به‌صورت اختصاصی و ایمن در فضای ابری ذخیره می‌شود.",
+          descriptionFa = "ورود به حساب گوگل امکان همگام‌سازی پروفایل کودک را فراهم می‌کند. داده‌های ابری جدا از داده‌های محلی نگهداری می‌شوند.",
           onAuthSuccess = onCloudAuthSuccess,
           onAuthError = onCloudAuthError,
           onSignedOut = onSignedOut,
@@ -374,7 +377,7 @@ fun MyChildScreen(
             checked = consent,
             onCheckedChange = { consent = it },
             title = "رضایت آگاهانه استفاده از پروفایل کودک",
-            description = "این داده‌ها فقط روی دستگاه و (در صورت ورود) در حساب خصوصی گوگل برای محاسبه دوز و فیلتر سنی نگهداری می‌شوند و به ابزار ردیاب تبلیغاتی ارسال نمی‌گردند.",
+            description = "این اطلاعات برای نمایش و ثبت سابقه کودک نگهداری می‌شوند. دوزدهی خودکار در این نسخه غیرفعال است. در صورت ورود به حساب، ممکن است داده‌ها همگام‌سازی شوند.",
           )
 
           Button(
@@ -403,7 +406,7 @@ fun MyChildScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = DangerCrimson, contentColor = PureWhite),
                 modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("delete_child_btn"),
               ) {
-                Text("حذف کامل")
+                Text("حذف فقط پروفایل")
               }
             }
             OutlinedButton(
@@ -430,6 +433,53 @@ fun MyChildScreen(
           }
         }
       }
+
+      item {
+        SectionCard {
+          Text("مدیریت حریم خصوصی کودک", style = MaterialTheme.typography.titleMedium)
+          Text(
+            "این گزینه فقط اطلاعات سلامت ذخیره‌شده در خود برنامه روی این دستگاه را پاک می‌کند؛ از جمله سوابق تب و دارو، واکسن، اسکن شربت، برنامه تغذیه و پیش‌نویس‌های مراجعه. داده‌های ابری پاک نمی‌شوند. حذف فیزیکی نسخه‌های پشتیبان یا فایل‌های صادرشده تضمین نمی‌شود.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          if (currentUser != null) {
+            Text(
+              "ابتدا از حساب ابری خارج شوید؛ در غیر این صورت داده‌ها ممکن است دوباره همگام‌سازی شوند. برای پاک‌کردن داده‌های ابری، باید درخواست جداگانه داشته باشید.",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.error,
+            )
+          }
+          OutlinedButton(
+            onClick = { showDeleteAllLocalConfirm = true },
+            enabled = currentUser == null,
+            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("delete_all_local_child_data_btn"),
+          ) {
+            Text("حذف همه اطلاعات سلامت محلی این دستگاه")
+          }
+        }
+      }
+    }
+
+    if (showDeleteAllLocalConfirm) {
+      AlertDialog(
+        onDismissRequest = { showDeleteAllLocalConfirm = false },
+        title = { Text("تأیید حذف اطلاعات محلی کودک") },
+        text = {
+          Text("پروفایل، سوابق دارو و تب، واکسن، اسکن شربت و سایر اطلاعات سلامت ذخیره‌شده در برنامه روی این دستگاه حذف می‌شوند. این اقدام برگشت‌پذیر نیست؛ داده‌های ابری، نسخه‌های پشتیبان و فایل‌های صادرشده حذف نمی‌شوند.")
+        },
+        confirmButton = {
+          TextButton(
+            onClick = {
+              showDeleteAllLocalConfirm = false
+              onDeleteAllLocalChildData()
+            },
+            modifier = Modifier.testTag("delete_all_local_confirm_btn"),
+          ) { Text("بله، داده‌های محلی حذف شوند") }
+        },
+        dismissButton = {
+          TextButton(onClick = { showDeleteAllLocalConfirm = false }) { Text("انصراف") }
+        },
+      )
     }
   }
 }
