@@ -4,7 +4,7 @@ const crypto = require("node:crypto");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
-const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass } = require("./consultation-policy");
+const { isId, isVerifiedPharmacist, validateIntake, validateStaffReview, buildParentCaseView, isValidTriagePass, isActivePharmacistDirectoryRecord } = require("./consultation-policy");
 
 if (!admin.apps.length) admin.initializeApp();
 let db = null;
@@ -41,6 +41,19 @@ function requireStaff(req, pharmacyId) {
     throw new HttpsError("permission-denied", "Verified pharmacist role for this pharmacy is required.");
   }
   return req.auth.uid;
+}
+
+function staffRef(pharmacyId, uid) {
+  return db.collection("pharmacies").doc(pharmacyId).collection("staff").doc(uid);
+}
+
+async function requireActiveStaffDirectory(req, pharmacyId) {
+  const uid = requireStaff(req, pharmacyId);
+  const staff = await staffRef(pharmacyId, uid).get();
+  if (!staff.exists || !isActivePharmacistDirectoryRecord(staff.data(), uid, pharmacyId)) {
+    throw new HttpsError("permission-denied", "Active, credential-verified pharmacist membership required.");
+  }
+  return uid;
 }
 
 async function requireActivePharmacy(pharmacyId, intake = false) {
@@ -146,7 +159,7 @@ exports.manoListStaffCases = onCall(config, async (req) => {
   requireUser(req);
   const pharmacyId = req.data && req.data.pharmacyId;
   if (!isId(pharmacyId)) throw new HttpsError("invalid-argument", "Invalid pharmacy ID.");
-  requireStaff(req, pharmacyId);
+  await requireActiveStaffDirectory(req, pharmacyId);
   await requireActivePharmacy(pharmacyId);
   const snapshot = await db.collection("pharmacies").doc(pharmacyId)
     .collection("cases").orderBy("createdAt", "desc").limit(25).get();
@@ -164,7 +177,7 @@ exports.manoListStaffCases = onCall(config, async (req) => {
   }) };
 });
 
-// Only verified pharmacist or admin of this exact pharmacy may transition a case.
+// Only an actively verified pharmacist of this exact pharmacy may transition a case.
 // Clinical approval is auditable and cannot be forged with direct Firestore client writes.
 exports.manoReviewCase = onCall(config, async (req) => {
   requireEnabled();
@@ -172,10 +185,16 @@ exports.manoReviewCase = onCall(config, async (req) => {
   const reviewerUid = requireStaff(req, pharmacyId);
   await requireActivePharmacy(pharmacyId);
   const ref = caseRef(pharmacyId, caseId);
+  const staff = staffRef(pharmacyId, reviewerUid);
   const auditRef = ref.collection("audit").doc();
 
   const result = await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
+    // Read staff membership inside the transaction to block revoked pharmacists
+    // before their approval is committed, even if a stale ID token still has claims.
+    const [snap, staffDoc] = await Promise.all([tx.get(ref), tx.get(staff)]);
+    if (!staffDoc.exists || !isActivePharmacistDirectoryRecord(staffDoc.data(), reviewerUid, pharmacyId)) {
+      throw new HttpsError("permission-denied", "Pharmacist membership is inactive or no longer verified.");
+    }
     if (!snap.exists) throw new HttpsError("not-found", "Case not found.");
     const previousStatus = snap.get("status");
     const change = validateStaffReview(req.data, previousStatus);
