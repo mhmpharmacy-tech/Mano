@@ -27,3 +27,27 @@ jobs:
           node --check web/staff-demo.js
       - name: Behavior and asset checks
         run: node --test web/tests/smoke.test.cjs
+
+  browser-qa:
+    name: Real Chromium responsive and safety flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run browser E2E tests
+        run: node --test web/tests/browser.test.cjs
+      - name: Upload web screenshots and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mano-kids-chromium-screenshots
+          path: web/browser-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
