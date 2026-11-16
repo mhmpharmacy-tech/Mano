@@ -663,7 +663,8 @@ fun SyrupScannerScreen(
                   }
                 val warnBody =
                   if (ext.dosePreview?.isBlocked == true) {
-                    ext.dosePreview.alertBodyFa
+                    listOfNotNull(ext.dosePreview.alertBodyFa, ext.mixUpWarningFa)
+                      .distinct().joinToString(" ")
                   } else {
                     ext.mixUpWarningFa ?: ext.safetyNoteFa
                   }
@@ -796,6 +797,14 @@ fun SyrupScannerScreen(
                       },
                     fontWeight = FontWeight.Bold,
                   )
+                }
+                OutlinedButton(
+                  onClick = onOpenAskPharmacist,
+                  modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("scanner_matched_ask_pharmacist_btn"),
+                ) {
+                  Icon(Icons.Rounded.LocalPharmacy, contentDescription = null, modifier = Modifier.size(18.dp))
+                  Spacer(Modifier.width(8.dp))
+                  Text("درباره غلظت و مقدار مصرف از داروساز بپرسید")
                 }
               }
 
