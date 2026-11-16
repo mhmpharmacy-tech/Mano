@@ -151,7 +151,10 @@ dependencies {
 tasks.withType<Test> {
   // Gather the entire safety regression report instead of hiding later failures.
   failFast = false
-  timeout.set(Duration.ofMinutes(2))
+  // A cold GitHub Actions runner runs the full Compose/Robolectric + Firebase suite.
+  // The previous two-minute *whole task* timeout killed a still-running suite.
+  // Keep a finite ceiling and use focused security tests as a separate CI gate.
+  timeout.set(Duration.ofMinutes(12))
   testLogging {
     events("passed", "failed", "skipped")
   }
