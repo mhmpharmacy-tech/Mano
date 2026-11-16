@@ -7,7 +7,7 @@
 :root {
   color-scheme: light;
   --ink: #183746;
-  --muted: #637d88;
+  --muted: #506a76;
   --teal: #087d81;
   --teal-deep: #08636c;
   --sky: #e4f4fa;
@@ -37,8 +37,8 @@ img { max-width: 100%; display: block; }
 .brand { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; }
 .brand img { width: 44px; height: 44px; object-fit: contain; }
 .brand strong { display: block; letter-spacing: .2px; font-family: Tahoma, sans-serif; color: #07566a; font-size: 20px; line-height: 1.3; }
-.brand em { color: #d6a45d; font-style: normal; }
-.brand small { display: block; font-size: 10px; color: #67838a; letter-spacing: 0; }
+.brand em { color: #98702e; font-style: normal; }
+.brand small { display: block; font-size: 10px; color: #526e75; letter-spacing: 0; }
 .desktop-nav { display: flex; align-items: center; gap: clamp(14px, 2.4vw, 34px); font-size: 13px; font-weight: 700; color: #526c76; }
 .desktop-nav a:hover,.mobile-nav a:hover { color: var(--teal); }
 .header-cta { display: inline-flex; gap: 12px; align-items: center; color: var(--teal-deep); background: #eaf7f6; border: 1px solid #c9e6e3; padding: 9px 19px; border-radius: 999px; font-size: 13px; font-weight: 800; white-space: nowrap; }
@@ -52,7 +52,7 @@ img { max-width: 100%; display: block; }
 .hero-layout { min-height: 565px; display: grid; grid-template-columns: 1.14fr .86fr; gap: 30px; align-items: center; }
 .hero-copy { padding-block: 56px 65px; position: relative; z-index: 2; }
 .eyebrow,.overline { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--teal); }
-.eyebrow { border-radius: 999px; padding: 6px 13px; background: #dff3ed; }
+.eyebrow { border-radius: 999px; padding: 6px 13px; background: #dff3ed; color: #08636c; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #3bab8d; }
 .hero h1 { font-size: clamp(29px, 3.9vw, 53px); line-height: 1.62; letter-spacing: -.8px; margin: 18px 0 18px; max-width: 680px; font-weight: 900; }
 .hero h1 mark { color: var(--teal); background: none; }
@@ -76,7 +76,7 @@ img { max-width: 100%; display: block; }
 .tag-one { top: 22%; right: 0; }.tag-two { bottom: 20%; left: 0; }
 .notice-bar { margin-top: -19px; position: relative; z-index: 3; background: #fff; box-shadow: var(--shadow); border: 1px solid #f2e4cf; border-radius: 16px; padding: 16px 23px; display: flex; align-items: center; gap: 15px; }
 .notice-mark { width: 34px; height: 34px; display: grid; place-items: center; flex-shrink: 0; background: #fff2db; color: #ac6d18; border-radius: 50%; font-weight: 900; }
-.notice-bar div { flex: 1; }.notice-bar strong { display: block; font-size: 12px; color: #946321; }.notice-bar span:not(.notice-mark) { display: block; font-size: 12px; color: #6f7f83; }
+.notice-bar div { flex: 1; }.notice-bar strong { display: block; font-size: 12px; color: #946321; }.notice-bar span:not(.notice-mark) { display: block; font-size: 12px; color: #536a70; }
 .notice-bar a { color: var(--teal); font-weight: 800; font-size: 12px; white-space: nowrap; }
 
 .section { padding: 85px 0; scroll-margin-top: 80px; }
@@ -89,8 +89,8 @@ img { max-width: 100%; display: block; }
 .search:focus-within { border-color: #88c6c2; box-shadow: 0 0 0 3px #0b9c8b19; }
 .search>span:first-child { font-size: 28px; color: #699093; line-height: 1; }
 .search input { border: 0; outline: 0; min-width: 0; width: 100%; color: var(--ink); background: transparent; font-size: 12px; }
-.kbd { color: #869ca2; font-size: 10px; white-space: nowrap; }
-.result-count { margin: 20px 0 12px; font-size: 12px; color: #799096; }
+.kbd { color: #546a72; font-size: 10px; white-space: nowrap; }
+.result-count { margin: 20px 0 12px; font-size: 12px; color: #526d74; }
 .path-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
 .path-card { position: relative; padding: 21px 17px; min-height: 160px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #e5efed; background: var(--paper); border-radius: 18px; transition: transform .2s, border-color .2s, box-shadow .2s; }
 .path-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: #c0ded9; }
