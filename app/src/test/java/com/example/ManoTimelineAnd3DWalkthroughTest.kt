@@ -588,7 +588,7 @@ class ManoTimelineAnd3DWalkthroughTest {
     composeTestRule.onNodeWithTag("weighing_posture_toddler").performClick()
     composeTestRule.onNodeWithTag("weighing_next_step_btn").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("LOCKED", substring = true).assertIsDisplayed()
+    composeTestRule.onNodeWithText("مانو در این نسخه دوز محاسبه نمی‌کند", substring = true).assertIsDisplayed()
   }
 
   @Test
