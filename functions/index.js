@@ -116,7 +116,8 @@ exports.manoGetMyCase = onCall(config, async (req) => {
   const snap = await caseRef(pharmacyId, caseId).get();
   if (!snap.exists || snap.get("ownerUid") !== uid) throw new HttpsError("not-found", "Case not found.");
   const c = snap.data();
-  return buildParentCaseView(caseId, c);});
+  return buildParentCaseView(caseId, c);
+});
 
 // Staff may see only cases under their staff-claim pharmacy. This is not a global search.
 exports.manoListStaffCases = onCall(config, async (req) => {
