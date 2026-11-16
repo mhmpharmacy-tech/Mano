@@ -79,6 +79,11 @@ class ManoAuditRemediationTest {
         consentGranted = true,
       )
 
+    assertNull("Band label must not be parsed as exact 12 months", LiquidDoseVisualizerEngine.parseAgeMonthsFromText(AgeBand.INFANT_3_12M.labelFa))
+    assertNull("Hyphenated ranges are not exact age", LiquidDoseVisualizerEngine.parseAgeMonthsFromText("3-12 ماه"))
+    assertNull("Year-based ranges are not exact age", LiquidDoseVisualizerEngine.parseAgeMonthsFromText("۱ تا ۳ سال"))
+    assertEquals(7, LiquidDoseVisualizerEngine.parseAgeMonthsFromText("۷ ماه"))
+    assertEquals(27, LiquidDoseVisualizerEngine.parseAgeMonthsFromText("۲ سال و ۳ ماه"))
     val conservativeMonths = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(unspecificInfant)
     assertEquals(3, conservativeMonths)
 
