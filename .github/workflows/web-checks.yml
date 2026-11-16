@@ -9,6 +9,10 @@ on:
     paths:
       - 'web/**'
       - '.github/workflows/web-checks.yml'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 jobs:
