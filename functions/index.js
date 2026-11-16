@@ -37,10 +37,11 @@ function requireUser(req) {
 }
 
 function requireStaff(req, pharmacyId) {
+  const uid = requireUser(req);
   if (!isVerifiedPharmacist(req.auth, pharmacyId)) {
     throw new HttpsError("permission-denied", "Verified pharmacist role for this pharmacy is required.");
   }
-  return req.auth.uid;
+  return uid;
 }
 
 function staffRef(pharmacyId, uid) {
