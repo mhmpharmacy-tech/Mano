@@ -9,6 +9,7 @@ This is a draft architecture implementation, not a ready-to-use clinical service
 - Multi-tenant storage: pharmacies/{pharmacyId}/cases/{caseId}.
 - Public Firestore rules do not grant access to this namespace; only Admin SDK within the trusted Cloud Functions service may read or write.
 - Staff role requires verified server-issued custom claims: manoStaffVerified=true, manoStaffRole=pharmacist, and manoPharmacyId matching case pharmacy. Administrative accounts cannot approve clinical case decisions.
+- The same UID must also have an **active, credential-verified directory record** at `pharmacies/{pharmacyId}/staff/{uid}` with fields `uid`, `pharmacyId`, `role: "pharmacist"`, `status: "ACTIVE"`, `credentialVerified: true`, `revokedAt: null`. The inbox verifies this record live on every request; review transactions read it within the transaction before committing. An old valid custom-claim token does not override a revoked staff directory record.
 - Workflow: PENDING -> RECEIVED -> REVIEWED, with append-only audit event on each transition.
 - Parent only reads own case via callable function. Intake requires a server-issued single-use `NONURGENT` triage pass, not merely the client-selected `hasUrgentFlag=false` value.
 
@@ -36,7 +37,7 @@ Run from repository root:
 ## Mandatory prelaunch gates
 1. Do not deploy or enable until clinical and security/privacy reviewers have approved data collection.
 2. Publish an approved consent notice v1; establish retention, erasure, access logs and incident response. Staff internal notes and parent-facing replies must be separately authored, reviewed and stored. No clinical response is posted without explicit pharmacist attestation.
-3. Create and revoke staff custom claims through a trusted administrative onboarding process; clients cannot mint their own claims.
+3. Create/revoke staff custom claims **and** active staff directory records through a trusted administrative onboarding process; clients cannot mint their own claims or modify membership. Verify pharmacist credentials and provide an immediate suspension process. Integration tests must verify a revoked record denies both inbox and review even when a cached token retains the old claims.
 4. Provision pharmacy registry documents out of band with verified ownership (active=true, acceptingCases=true).
 5. Add server-side rate limiting, spam prevention, alerts, role revocation propagation and independent security testing. App Check does not replace these.
 6. Test Firebase Emulator integration, permission denials, tenant separation, transaction races, ownership and audit immutability.
