@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { evaluate } = require("../logic.js");
+const { evaluate, parseTemperature } = require("../logic.js");
 const root = path.resolve(__dirname, "..");
 
 test("Immediate warning sign overrides missing age and temperature", () => {
@@ -13,6 +13,20 @@ test("Immediate warning sign overrides missing age and temperature", () => {
 test("Child under 3 months with >=38 C fever requires urgent review", () => {
   assert.equal(evaluate({ ageBand: "under3", temperature: "38.0", warnings: [] }).kind, "danger");
   assert.equal(evaluate({ ageBand: "under3", temperature: "39.3", warnings: [] }).kind, "danger");
+});
+test("Persian and Arabic numerals are parsed without silencing an infant fever", () => {
+  for (const value of ["۳۸٫۰", "٣٨,٠", "۳۸.۰", "38.0"]) {
+    assert.equal(parseTemperature(value), 38);
+    const result = evaluate({ ageBand: "under3", temperature: value, warnings: [] });
+    assert.equal(result.kind, "danger", "Expected urgent infant fever for " + value);
+  }
+  assert.equal(parseTemperature("٣٨,٥"), 38.5);
+  assert.equal(parseTemperature(""), null);
+  for (const invalid of ["۳۸/۵", "۳۸ درجه", "1e2", "NaN", "38..0", ""]) {
+    if (invalid !== "") assert.equal(Number.isNaN(parseTemperature(invalid)), true, invalid);
+  }
+  assert.equal(evaluate({ ageBand: "under3", temperature: "۳۸/۵", warnings: [] }).kind, "invalid");
+  assert.equal(evaluate({ ageBand: "", temperature: "نامشخص", warnings: ["breath"] }).kind, "danger");
 });
 test("Missing age without emergency sign never returns false reassurance", () => {
   assert.equal(evaluate({ ageBand: "", temperature: "", warnings: [] }).kind, "invalid");
