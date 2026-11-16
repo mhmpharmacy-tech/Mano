@@ -43,10 +43,10 @@ img { max-width: 100%; display: block; }
 .desktop-nav a:hover,.mobile-nav a:hover { color: var(--teal); }
 .header-cta { display: inline-flex; gap: 12px; align-items: center; color: var(--teal-deep); background: #eaf7f6; border: 1px solid #c9e6e3; padding: 9px 19px; border-radius: 999px; font-size: 13px; font-weight: 800; white-space: nowrap; }
 .header-cta:hover { background: #d9f0ee; }
-.menu-button { display: none; background: transparent; border: 0; padding: 10px; flex-direction: column; gap: 4px; }
+.menu-button { display: none; background: transparent; border: 0; padding: 10px; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; flex-direction: column; gap: 4px; }
 .menu-button span { width: 21px; height: 2px; background: var(--ink); border-radius: 1px; }
 .mobile-nav { padding: 8px 24px 20px; border-top: 1px solid var(--border); }
-.mobile-nav a { display: block; padding: 7px 0; font-size: 14px; }
+.mobile-nav a { display: block; padding: 10px 0; font-size: 14px; }
 
 .hero { overflow: hidden; background: radial-gradient(circle at 22% 45%, #dff2ee 0%, transparent 35%), linear-gradient(112deg, #f8fbf8, #edf9f7 66%, #eaf6f7); }
 .hero-layout { min-height: 565px; display: grid; grid-template-columns: 1.14fr .86fr; gap: 30px; align-items: center; }
@@ -190,19 +190,19 @@ img { max-width: 100%; display: block; }
   .shell { width: min(100% - 30px, 1200px); }
   .hero-copy { padding-top: 37px; }
   .hero h1 { font-size: 28px; line-height: 1.7; }
-  .hero-copy>p { font-size: 13px; line-height: 2.1; }
+  .hero-copy>p { font-size: 14px; line-height: 2.05; color: #4b6b78; }
   .eyebrow { font-size: 10px; }
   .hero-art { min-height: 295px; }
   .hero-mascot { max-height: 270px; }
   .float-tag { font-size: 10px; padding: 5px 7px; }.tag-one { right: 0; }.tag-two { left: 0; }
   .hero-trust { gap: 9px; font-size: 10px; }
-  .btn { padding: 9px 16px; font-size: 12px; }
+  .btn { padding: 9px 16px; font-size: 12px; min-height: 44px; }
   .notice-bar { align-items: start; padding: 14px; }
-  .notice-bar a { align-self: center; }.notice-bar span:not(.notice-mark) { font-size: 10px; }
+  .notice-bar a { align-self: center; }.notice-bar span:not(.notice-mark) { font-size: 11px; }
   .notice-mark { width: 29px; height: 29px; }
   .section { padding: 61px 0; }.section h2 { font-size: 24px; }
   .path-grid { gap: 10px; }.path-card { min-height: 156px; padding: 13px 11px; border-radius: 14px; }
-  .path-icon { width: 39px; height: 39px; }.path-copy strong { font-size: 12px; }.path-copy small { font-size: 10px; }
+  .path-icon { width: 39px; height: 39px; }.path-copy strong { font-size: 13px; }.path-copy small { font-size: 11px; }
   .path-arrow { bottom: 11px; left: 11px; font-size: 13px; }
   .screening-card { padding: 20px 17px; }.screening-card h3 { font-size: 16px; }
   .consult-card { display: block; }.consult-content { padding: 28px 21px 0; }
