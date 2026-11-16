@@ -91,7 +91,16 @@ object TriageEngine {
     // Rule 3: Timely clinician review flags (non-immediate red flags or prolonged duration)
     val checkedReviewFlags =
       flow.redFlags.filter { it.id in selectedRedFlagIds && !it.isImmediateEmergency }
-    val prolongedFever = flow.id == "fever" && (durationHours ?: 0) >= 72
+    // AAP parent advice: contact clinician after >24h fever if younger than 2y,
+    // or >72h if 2y+. Age band 1-3 years spans that boundary, so use
+    // the more conservative threshold until exact age is available.
+    // Duration alone does not establish serious illness (NICE NG143).
+    val feverReviewHours =
+      when (ageBand) {
+        AgeBand.NEWBORN, AgeBand.INFANT_3_12M, AgeBand.TODDLER_1_3Y -> 24
+        AgeBand.PRESCHOOL_3_6Y, AgeBand.SCHOOL_6_PLUS -> 72
+      }
+    val prolongedFever = flow.id == "fever" && (durationHours ?: 0) > feverReviewHours
     val prolongedCough = flow.id == "cough" && (durationHours ?: 0) >= 24 * 14
     val youngInfantHighTemp =
       ageBand == AgeBand.INFANT_3_12M && (temperatureCelsius ?: 0.0) >= 39.0
@@ -101,9 +110,9 @@ object TriageEngine {
       if (checkedReviewFlags.isNotEmpty()) {
         reasonParts += checkedReviewFlags.joinToString("، ") { it.labelFa }
       }
-      if (prolongedFever) reasonParts += "تداوم تب بیش از ۷۲ ساعت"
+      if (prolongedFever) reasonParts += "تداوم تب بیش از $feverReviewHours ساعت و نیاز به تماس با پزشک"
       if (prolongedCough) reasonParts += "تداوم سرفه بیش از ۲ هفته"
-      if (youngInfantHighTemp) reasonParts += "تب ۳۹ درجه یا بالاتر در شیرخوار ۳ تا ۱۲ ماه"
+      if (youngInfantHighTemp) reasonParts += "دمای ۳۹ درجه یا بالاتر با سن دقیق نامشخص در بازه ۳ تا ۱۲ ماه؛ نیاز به بررسی سن واقعی و سایر علائم"
 
       return TriageEvaluationResult(
         outcome = TriageOutcome.NEEDS_TIMELY_REVIEW,
