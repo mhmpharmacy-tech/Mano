@@ -117,7 +117,7 @@ object ManoSourcesAndClinicalSeed {
             "تداوم تب بیش از ۷۲ ساعت یا بدتر شدن حال عمومی کودک",
             "کاهش واضح ادرار یا امتناع کامل از نوشیدن مایعات",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcAapFever, srcNiceFever),
       ),
       SymptomFlow(
@@ -146,7 +146,7 @@ object ManoSourcesAndClinicalSeed {
             "بروز استفراغ، تب، تورم شکم یا وجود خون در مدفوع",
             "تداوم یبوست بیش از یک تا دو هفته یا کاهش وزن و بی‌اشتهایی واضح",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcAapFever),
       ),
       SymptomFlow(
@@ -175,7 +175,7 @@ object ManoSourcesAndClinicalSeed {
             "هرگونه دشواری در تنفس یا ناتوانی در شیر خوردن و صحبت کردن",
             "سرفه‌ای که بیش از ۲ هفته طول بکشد یا با خس‌خس مداوم همراه باشد",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcNiceFever, srcAapMedication),
       ),
       SymptomFlow(
@@ -202,7 +202,7 @@ object ManoSourcesAndClinicalSeed {
             "پیدایش تاول، چرک، خونریزی یا ضایعات نقطه‌ای قرمز روشن در چین‌های پوستی",
             "همراهی با تب یا تداوم بیش از ۳ روز بدون بهبود",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcAapFever),
       ),
       SymptomFlow(
@@ -229,7 +229,7 @@ object ManoSourcesAndClinicalSeed {
             "بروز نشانه‌های کم‌آبی یا استفراغ مکرر در نوزاد زیر ۶ ماه",
             "مدفوع خونی یا تداوم اسهال شدید",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcNiceFever, srcAapMedication),
       ),
     )
@@ -267,7 +267,7 @@ object ManoSourcesAndClinicalSeed {
             "مخزن نبولایزر و بخور را پس از هر بار استفاده کاملاً بشویید و خشک کنید تا قارچ و باکتری رشد نکند.",
             "هیچ دارویی را خودسرانه در نبولایزر نریزید و دستگاه بخور را درمان تنگی نفس تلقی نکنید.",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcNiceFever),
       ),
       DeviceGuide(
@@ -285,7 +285,7 @@ object ManoSourcesAndClinicalSeed {
           listOf(
             "در نوزاد زیر ۳ ماه هر دمای ۳۸.۰ درجه سانتی‌گراد یا بالاتر نیازمند ارزیابی فوری است.",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcAapFever, srcNiceFever),
       ),
       DeviceGuide(
@@ -303,7 +303,7 @@ object ManoSourcesAndClinicalSeed {
           listOf(
             "هرگز در تاریکی و بدون خواندن برچسب غلظت دارو، به کودک دارو ندهید.",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcAapMedication),
       ),
       DeviceGuide(
@@ -320,7 +320,7 @@ object ManoSourcesAndClinicalSeed {
           listOf(
             "آب شیر جوشانده‌نشده برای شست‌وشوی بینی استفاده نشود؛ مکش شدید می‌تواند مخاط بینی را متورم‌تر کند.",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcNiceFever),
       ),
       DeviceGuide(
@@ -337,7 +337,7 @@ object ManoSourcesAndClinicalSeed {
           listOf(
             "یک عدد وزن یا قد به تنهایی مبنای قضاوت رشد نیست؛ تاریخ و شرایط اندازه‌گیری را ثبت کنید.",
           ),
-        review = approvedReviewMeta,
+        review = pendingReviewMeta,
         sources = listOf(srcWhoGrowth),
       ),
     )
