@@ -30,6 +30,8 @@ jobs:
           node --check web/app.js
           node --check web/staff-demo.js
           node --check web/modules.js
+          node --check web/review.js
+          node --check web/tools/review-queue.cjs
       - name: Behavior and asset checks
         run: node --test web/tests/smoke.test.cjs web/tests/release-gate.test.cjs web/tests/quality-gates.test.cjs
 
