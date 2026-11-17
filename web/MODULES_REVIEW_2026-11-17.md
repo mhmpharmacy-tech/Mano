@@ -27,3 +27,8 @@ Status: NO GO for patient-data or clinical production. No separate human expert 
 - NAPPY: NHS — https://www.nhs.uk/baby/caring-for-a-newborn/nappy-rash/ — Symptoms and care
 
 Clinical content is draft. International sources do not establish product availability, local dosing authorization or Iranian clinical pathways. Validate on the exact local label and with licensed clinical reviewers. No deployment, main merge or live patient data collection.
+
+## Second-pass safeguards
+- FDA direct overdose/liver risk source: https://www.fda.gov/consumers/consumer-updates/dont-overuse-acetaminophen (search excerpt); NHS pediatric ibuprofen cautions: https://www.nhs.uk/medicines/ibuprofen-for-children/ (search excerpt). Both are tagged as requiring human clinical verification.
+- Source labels are human-readable; field and label are grouped together for mobile/desktop.
+- CSP blocks module form submission and network connect APIs; no external clinical images are requested. Native details and static educational table remain readable without JavaScript. No claim of complete hosted privacy or accessibility audit.

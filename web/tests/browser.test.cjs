@@ -312,3 +312,19 @@ test("MANO Drug, Growth and Skin: functional filters, synthetic chart and respon
  }
  assert.deepEqual(errors,[]);await page.close();
 });
+
+test("Module fallbacks: clinical content remains readable without JavaScript",async()=>{
+ const context=await browser.newContext({javaScriptEnabled:false,viewport:{width:320,height:800}});
+ const page=await context.newPage();
+ for(const name of ["mano-drug","mano-skin"]){
+  await page.goto(pathToFileURL(path.join(root,name+".html")).href);
+  assert.ok(await page.locator("#module-search").isDisabled());
+  assert.ok(await page.locator("[data-entry] summary").first().isVisible());
+  await page.locator("[data-entry] summary").first().click();
+  assert.ok(await page.locator("[data-entry] details[open]").first().isVisible());
+ }
+ await page.goto(pathToFileURL(path.join(root,"mano-growth.html")).href);
+ assert.ok(await page.locator("#growth-example").isDisabled());
+ assert.equal(await page.locator("#growth-rows tr").count(),5);
+ await context.close();
+});

@@ -298,6 +298,22 @@
       "sourceConsultedOn": "2026-11-17",
       "coverage": "Relevant public guidance examined; independent review pending",
       "locator": "Symptoms and care"
+    },
+    "MODULE_FDA_APAP": {
+      "publisher": "FDA",
+      "url": "https://www.fda.gov/consumers/consumer-updates/dont-overuse-acetaminophen",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Search excerpt supports hepatotoxicity and lack of early symptoms; human reviewer pending",
+      "locator": "Don't Overuse Acetaminophen"
+    },
+    "MODULE_NHS_IBU": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/medicines/ibuprofen-for-children/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Search excerpt supports contraindications and renal cautions; human reviewer pending",
+      "locator": "Who can and cannot take ibuprofen; side effects"
     }
   },
   "releaseBlockers": [
@@ -543,6 +559,10 @@
             {
               "source": "MODULE_OTC",
               "locator": "Combination products and age cautions"
+            },
+            {
+              "source": "MODULE_FDA_APAP",
+              "locator": "Overdose, possible absence of early symptoms and liver damage"
             }
           ],
           "iranLabelVerified": false
@@ -557,6 +577,10 @@
             {
               "source": "MODULE_OTC",
               "locator": "Combination products and age cautions"
+            },
+            {
+              "source": "MODULE_NHS_IBU",
+              "locator": "Who can and cannot take ibuprofen; side effects"
             }
           ],
           "iranLabelVerified": false

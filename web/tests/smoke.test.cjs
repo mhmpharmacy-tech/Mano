@@ -148,3 +148,5 @@ test("Three modules remain draft, source-linked and not clinical tools",()=>{
  const script=fs.readFileSync(path.join(root,"modules.js"),"utf8");
  assert.ok(!/\bfetch\s*\(|\bXMLHttpRequest\b|\blocalStorage\b|\bsessionStorage\b|\bsendBeacon\b/.test(script));
 });
+
+test("Module pages cannot submit forms or start clinical network requests",()=>{for(const name of ["mano-drug","mano-growth","mano-skin"]){const html=fs.readFileSync(path.join(root,name+".html"),"utf8");assert.ok(html.includes("connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'"));assert.ok(!/<form\b|name="(?:patient|child|weight|age)"/.test(html));}});
