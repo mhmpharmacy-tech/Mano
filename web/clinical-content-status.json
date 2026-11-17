@@ -314,6 +314,70 @@
       "sourceConsultedOn": "2026-11-17",
       "coverage": "Search excerpt supports contraindications and renal cautions; human reviewer pending",
       "locator": "Who can and cannot take ibuprofen; side effects"
+    },
+    "NUT_WHO": {
+      "publisher": "WHO",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/infant-and-young-child-feeding",
+      "locator": "Complementary feeding",
+      "coverage": "Relevant full web-page section opened; clinical review pending",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "NUT_CDC_SOLIDS": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/when-what-and-how-to-introduce-solid-foods.html",
+      "locator": "Introduction of complementary foods",
+      "coverage": "Search excerpt reviewed; verify full page before clinical release",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "NUT_CDC_CHOKING": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html/",
+      "locator": "Choking prevention; foods and preparation; March 11, 2026",
+      "coverage": "Relevant full web-page sections opened",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "NUT_CDC_AVOID": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/foods-and-drinks-to-avoid-or-limit.html",
+      "locator": "Honey before 12 months; added sugar; April 14, 2026",
+      "coverage": "Relevant full web-page sections opened",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "CARE_SLEEP": {
+      "publisher": "AAP / HealthyChildren",
+      "url": "https://www.healthychildren.org/english/ages-stages/baby/sleep/pages/a-parents-guide-to-safe-sleep.aspx?form=HealthyChildren",
+      "locator": "Back to sleep; firm, flat sleep surface; loose bedding",
+      "coverage": "Full web page opened; relevant sections searched; human review pending",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "CARE_DEHYDRATION": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/conditions/dehydration/",
+      "locator": "Urgent advice; immediate action required",
+      "coverage": "Relevant full web-page sections opened",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "CARE_POISON": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/conditions/Poisoning/",
+      "locator": "Immediate advice; while waiting for medical help; prevention",
+      "coverage": "Relevant full web-page sections opened",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "CONNECT_TEACHBACK": {
+      "publisher": "AHRQ",
+      "url": "https://www.ahrq.gov/patient-safety/reports/engage/interventions/teachback-mod.html",
+      "locator": "Slides 11, 13, 15 and 16: teach-back",
+      "coverage": "Relevant full web-page sections opened",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
     }
   },
   "releaseBlockers": [
@@ -723,6 +787,182 @@
           "diagnosticImage": false
         }
       ]
+    },
+    {
+      "path": "mano-nutrition.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "clinicalUseEnabled": false,
+      "entries": [
+        {
+          "id": "start-food",
+          "claims": [
+            {
+              "source": "NUT_WHO",
+              "locator": "Complementary feeding"
+            },
+            {
+              "source": "NUT_CDC_SOLIDS",
+              "locator": "Introduction of complementary foods"
+            }
+          ]
+        },
+        {
+          "id": "responsive",
+          "claims": [
+            {
+              "source": "NUT_WHO",
+              "locator": "Complementary feeding"
+            }
+          ]
+        },
+        {
+          "id": "choking",
+          "claims": [
+            {
+              "source": "NUT_CDC_CHOKING",
+              "locator": "Choking prevention; foods and preparation; March 11, 2026"
+            }
+          ]
+        },
+        {
+          "id": "honey",
+          "claims": [
+            {
+              "source": "NUT_CDC_AVOID",
+              "locator": "Honey before 12 months; added sugar; April 14, 2026"
+            }
+          ]
+        },
+        {
+          "id": "formula",
+          "claims": [
+            {
+              "source": "CDC_FormulaSafety",
+              "locator": "Mix carefully; extra precautions"
+            }
+          ]
+        }
+      ],
+      "personalMealPlanEnabled": false
+    },
+    {
+      "path": "mano-care.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "clinicalUseEnabled": false,
+      "entries": [
+        {
+          "id": "sleep",
+          "claims": [
+            {
+              "source": "CARE_SLEEP",
+              "locator": "Back to sleep; firm, flat sleep surface; loose bedding"
+            }
+          ]
+        },
+        {
+          "id": "fluid",
+          "claims": [
+            {
+              "source": "CARE_DEHYDRATION",
+              "locator": "Urgent advice; immediate action required"
+            }
+          ]
+        },
+        {
+          "id": "poison",
+          "claims": [
+            {
+              "source": "CARE_POISON",
+              "locator": "Immediate advice; while waiting for medical help; prevention"
+            }
+          ]
+        },
+        {
+          "id": "fever-care",
+          "claims": [
+            {
+              "source": "NICE-NG143",
+              "locator": "Recommendations: age, red flags, response to antipyretics"
+            }
+          ]
+        },
+        {
+          "id": "device",
+          "claims": [
+            {
+              "source": "AAP-Liquid",
+              "locator": "Using liquid medicines; dose measuring"
+            },
+            {
+              "source": "CONNECT_TEACHBACK",
+              "locator": "Slides 11, 13, 15 and 16: teach-back"
+            }
+          ]
+        }
+      ],
+      "patientDataEnabled": false
+    },
+    {
+      "path": "mano-connect.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "clinicalUseEnabled": false,
+      "entries": [
+        {
+          "id": "label",
+          "claims": [
+            {
+              "source": "AAP-Liquid",
+              "locator": "Using liquid medicines; dose measuring"
+            },
+            {
+              "source": "CONNECT_TEACHBACK",
+              "locator": "Slides 11, 13, 15 and 16: teach-back"
+            }
+          ]
+        },
+        {
+          "id": "feeding",
+          "claims": [
+            {
+              "source": "NHS_Vitamins",
+              "locator": "Vitamin supplements and overlap"
+            },
+            {
+              "source": "CONNECT_TEACHBACK",
+              "locator": "Slides 11, 13, 15 and 16: teach-back"
+            }
+          ]
+        },
+        {
+          "id": "urgent",
+          "claims": [
+            {
+              "source": "NICE-NG143",
+              "locator": "Recommendations: age, red flags, response to antipyretics"
+            }
+          ]
+        },
+        {
+          "id": "unknown",
+          "claims": [
+            {
+              "source": "NICE-NG143",
+              "locator": "Recommendations: age, red flags, response to antipyretics"
+            },
+            {
+              "source": "CONNECT_TEACHBACK",
+              "locator": "Slides 11, 13, 15 and 16: teach-back"
+            }
+          ]
+        }
+      ],
+      "syntheticOnly": true,
+      "submissionEnabled": false,
+      "triagePassIssuerEnabled": false,
+      "staffServiceEnabled": false
     }
   ]
 }

@@ -18,7 +18,24 @@
   return examples[example].map(row=>({month:row[0],value:row[index]}));
  }
  const fa=n=>Number(n).toLocaleString("fa-IR",{maximumFractionDigits:1});
+ // Fixed educational example identifiers, never real patient or triage inputs.
+ const connectExamples=Object.freeze({label:"training",feeding:"training",urgent:"emergency",unknown:"uncertain"});
+ function exampleRoute(id){return Object.hasOwn(connectExamples,id)?connectExamples[id]:null}
  function init(doc){
+  const connect=doc.getElementById("connect-example"),connectReset=doc.getElementById("connect-reset");
+  if(connect&&connectReset){
+   const cases=Array.from(doc.querySelectorAll("[data-connect-case]")),status=doc.getElementById("connect-status");
+   const showCase=()=>{
+    const route=exampleRoute(connect.value);
+    for(const item of cases)item.hidden=!route||item.dataset.connectCase!==connect.value;
+    status.textContent=route?"نمایش یک مثال ساختگی؛ هیچ پرونده‌ای ارسال نمی‌شود.":"نمونه نامعتبر است؛ هیچ تصمیمی صادر نمی‌شود.";
+    status.setAttribute("role",route==="emergency"?"alert":"status");
+   };
+   connect.addEventListener("change",showCase);
+   connectReset.addEventListener("click",()=>{connect.value="label";for(const item of cases)item.querySelectorAll("details").forEach(d=>d.open=false);showCase();connect.focus()});
+   connect.disabled=connectReset.disabled=false;showCase();
+  }
+
   const q=doc.getElementById("module-search"),cat=doc.getElementById("module-category"),reset=doc.getElementById("module-reset");
   if(q&&cat&&reset){
    const cards=Array.from(doc.querySelectorAll("[data-entry]"));
@@ -50,5 +67,5 @@
   }
   ex.addEventListener("change",render);metric.addEventListener("change",render);ex.disabled=metric.disabled=false;render();
  }
- return {normalize,matches,growthSeries,init};
+ return {normalize,matches,growthSeries,exampleRoute,init};
 });

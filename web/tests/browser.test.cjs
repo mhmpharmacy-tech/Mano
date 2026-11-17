@@ -281,7 +281,7 @@ test("Encyclopedia search, reset, navigation and no-data article operation",asyn
 
 test("MANO Drug, Growth and Skin: functional filters, synthetic chart and responsive a11y",async()=>{
  const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on("pageerror",e=>errors.push(e.message));
- await page.goto(parentUrl);assert.equal(await page.locator(".home-module-card").count(),3);
+ await page.goto(parentUrl);assert.equal(await page.locator(".home-module-card").count(),6);
  await page.locator('a.home-module-card[href="./mano-drug.html"]').click();
  assert.equal(await page.locator("[data-entry]:visible").count(),6);
  await page.locator("#module-search").fill("استامينوفن");
@@ -327,4 +327,47 @@ test("Module fallbacks: clinical content remains readable without JavaScript",as
  assert.ok(await page.locator("#growth-example").isDisabled());
  assert.equal(await page.locator("#growth-rows tr").count(),5);
  await context.close();
+});
+
+test("Nutrition, Care and Connect: safe learning flows, responsive screens and accessible content",async()=>{
+ const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on("pageerror",e=>errors.push(e.message));
+ await page.goto(parentUrl);
+ await page.locator('a.home-module-card[href="./mano-nutrition.html"]').click();
+ assert.equal(await page.locator("[data-entry]:visible").count(),5);
+ await page.locator("#module-category").selectOption("safety");assert.equal(await page.locator("[data-entry]:visible").count(),2);
+ await page.locator("#module-reset").click();await page.locator("#module-search").fill("عسل");assert.equal(await page.locator("[data-entry]:visible").count(),1);
+ await page.locator('a[href="./mano-care.html"]').click();assert.equal(await page.locator("[data-entry]:visible").count(),5);
+ await page.locator("#module-category").selectOption("warning");assert.equal(await page.locator("[data-entry]:visible").count(),2);
+ await page.locator(".care-checklist input").first().check();assert.equal(await page.locator(".care-checklist input:checked").count(),1);
+ await page.locator('a[href="./mano-connect.html"]').click();assert.equal(await page.locator("[data-connect-case]:visible").count(),1);
+ await page.locator("#connect-example").selectOption("urgent");
+ assert.equal(await page.locator('[data-connect-case="urgent"]:visible').count(),1);assert.equal(await page.locator('[data-connect-case="urgent"] .urgent-call').getAttribute("href"),"tel:115");
+ assert.equal(await page.locator("[data-connect-case]:visible details").count(),0);
+ await page.locator("#connect-example").selectOption("unknown");assert.equal(await page.locator('[data-route="uncertain"]:visible').count(),1);
+ assert.equal(await page.locator("form,textarea").count(),0);
+ await page.locator("#connect-reset").click();assert.equal(await page.locator('[data-connect-case="label"]:visible').count(),1);
+ await page.locator('[data-connect-case="label"] summary').click();assert.ok(await page.locator('[data-connect-case="label"] details[open]').isVisible());
+ for(const name of ["mano-nutrition","mano-care","mano-connect"]){
+  await page.goto(pathToFileURL(path.join(root,name+".html")).href);
+  for(const width of [320,390,430,768,1366]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),name+" overflow "+width)}
+  await page.setViewportSize({width:390,height:844});
+  await page.addScriptTag({path:require.resolve("axe-core/axe.min.js")});
+  const states=name==="mano-connect"?["label","urgent","unknown"]:["default"];
+  const reports={};
+  for(const state of states){
+   if(name==="mano-connect")await page.locator("#connect-example").selectOption(state);
+   const v=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}})).violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})));
+   reports[state]=v;assert.deepEqual(v.filter(v=>["critical","serious"].includes(v.impact)),[],name+" "+state);
+  }
+  fs.writeFileSync(path.join(out,name+"-a11y.json"),JSON.stringify(reports,null,2));
+  if(name==="mano-connect")await page.locator("#connect-example").selectOption("label");
+  await settleVisuals(page);await page.screenshot({path:path.join(out,name+"-mobile.png"),fullPage:true,animations:"disabled"});
+  await page.setViewportSize({width:1366,height:900});await settleVisuals(page);await page.screenshot({path:path.join(out,name+"-desktop.png"),fullPage:true,animations:"disabled"});
+ }
+ assert.deepEqual(errors,[]);await page.close();
+});
+test("Additional modules retain educational content when JavaScript is disabled",async()=>{
+ const context=await browser.newContext({javaScriptEnabled:false,viewport:{width:320,height:800}});const page=await context.newPage();
+ for(const name of ["mano-nutrition","mano-care"]){await page.goto(pathToFileURL(path.join(root,name+".html")).href);assert.ok(await page.locator("#module-search").isDisabled());assert.equal(await page.locator("[data-entry]:visible").count(),5)}
+ await page.goto(pathToFileURL(path.join(root,"mano-connect.html")).href);assert.ok(await page.locator("#connect-example").isDisabled());assert.equal(await page.locator("[data-connect-case]:visible").count(),4);assert.equal(await page.locator("form").count(),0);await context.close();
 });

@@ -127,10 +127,10 @@ test("Encyclopedia links match the registered eight draft articles",()=>{
  }
 });
 
-test("Three modules remain draft, source-linked and not clinical tools",()=>{
+test("Six modules remain draft, source-linked and not clinical tools",()=>{
  const m=JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8"));
  const home=fs.readFileSync(path.join(root,"index.html"),"utf8");
- assert.equal(m.draftModules.length,3);
+ assert.equal(m.draftModules.length,6);
  for(const mod of m.draftModules){
   const html=fs.readFileSync(path.join(root,mod.path),"utf8");
   assert.ok(home.includes('./'+mod.path));assert.match(html,/noindex,nofollow/);
@@ -149,4 +149,22 @@ test("Three modules remain draft, source-linked and not clinical tools",()=>{
  assert.ok(!/\bfetch\s*\(|\bXMLHttpRequest\b|\blocalStorage\b|\bsessionStorage\b|\bsendBeacon\b/.test(script));
 });
 
-test("Module pages cannot submit forms or start clinical network requests",()=>{for(const name of ["mano-drug","mano-growth","mano-skin"]){const html=fs.readFileSync(path.join(root,name+".html"),"utf8");assert.ok(html.includes("connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'"));assert.ok(!/<form\b|name="(?:patient|child|weight|age)"/.test(html));}});
+test("Module pages cannot submit forms or start clinical network requests",()=>{for(const name of ["mano-drug","mano-growth","mano-skin","mano-nutrition","mano-care","mano-connect"]){const html=fs.readFileSync(path.join(root,name+".html"),"utf8");assert.ok(html.includes("connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'"));assert.ok(!/<form\b|name="(?:patient|child|weight|age)"/.test(html));}});
+
+test("Six module pages interlink and every clinical claim has a registered link",()=>{
+ const m=JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8"));
+ for(const a of m.draftModules){
+  const html=fs.readFileSync(path.join(root,a.path),"utf8");
+  for(const b of m.draftModules.filter(b=>b.path!==a.path))assert.ok(html.includes('href="./'+b.path+'"'),a.path+" missing "+b.path);
+  for(const match of html.matchAll(/src="\.\/assets\/([^"]+)"/g))assert.ok(fs.existsSync(path.join(root,"assets",match[1])));
+ }
+ const mod=require("../modules.js");
+ assert.equal(mod.exampleRoute("urgent"),"emergency");
+ assert.equal(mod.exampleRoute("unknown"),"uncertain");
+ for(const id of ["__proto__","constructor","","other"])assert.equal(mod.exampleRoute(id),null);
+ const c=m.draftModules.find(x=>x.path==="mano-connect.html");
+ assert.equal(c.submissionEnabled,false);assert.equal(c.triagePassIssuerEnabled,false);
+ const html=fs.readFileSync(path.join(root,c.path),"utf8");
+ assert.ok(!/<form\b|<textarea\b|<input\b/.test(html));
+ assert.ok(html.includes('data-route="emergency"')&&html.includes('data-route="uncertain"'));
+});
