@@ -47,3 +47,14 @@ The `web/logic.js` helper deliberately returns caution rather than "safe" when n
 The source Android app is Kotlin/Jetpack Compose. The static web starter is not an Android build or a port of its full navigation, and Firebase has **not** been enabled. The website works as an educational preview only.
 
 Design favors a trustworthy teal/blue palette, a restrained child-friendly experience, concise Persian copy and MANO as the brand anchor without claiming AI has issued medical advice.
+## Six-module ecosystem internal review
+
+The home page now links Drug, Growth, Skin, Nutrition, Care and Connect, plus eight named draft articles. Growth uses synthetic data only; Connect uses fixed scripted examples and has no live account, intake, triage pass or pharmacist messaging. All clinical material is unapproved.
+
+A local internal-review bundle can be built with Node 22:
+
+```sh
+node web/tools/build-preview.cjs ./mano-preview-local
+```
+
+Choose a new output directory, open its index.html, and do not publicly host it. The workflow uploads this allowlisted bundle only after smoke and Chromium suites pass. The bundle includes local assets, static pages and the synthetic staff demonstration only, plus SHA-256 checksums. External evidence links require internet when deliberately opened. No real child data should be entered even in local review.

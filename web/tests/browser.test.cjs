@@ -343,8 +343,11 @@ test("Nutrition, Care and Connect: safe learning flows, responsive screens and a
  await page.locator("#connect-example").selectOption("urgent");
  assert.equal(await page.locator('[data-connect-case="urgent"]:visible').count(),1);assert.equal(await page.locator('[data-connect-case="urgent"] .urgent-call').getAttribute("href"),"tel:115");
  assert.equal(await page.locator("[data-connect-case]:visible details").count(),0);
+ assert.match(await page.locator("#connect-status").innerText(),/اقدام فوری/);
+ assert.equal(await page.locator("#connect-status").getAttribute("role"),"alert");
  await page.locator("#connect-example").selectOption("unknown");assert.equal(await page.locator('[data-route="uncertain"]:visible').count(),1);
  assert.equal(await page.locator("form,textarea").count(),0);
+ assert.match(await page.locator("#connect-status").innerText(),/ایمنی تأیید نشده/);
  await page.locator("#connect-reset").click();assert.equal(await page.locator('[data-connect-case="label"]:visible').count(),1);
  await page.locator('[data-connect-case="label"] summary').click();assert.ok(await page.locator('[data-connect-case="label"] details[open]').isVisible());
  for(const name of ["mano-nutrition","mano-care","mano-connect"]){

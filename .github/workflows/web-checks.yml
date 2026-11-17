@@ -57,3 +57,23 @@ jobs:
           path: web/browser-artifacts/
           if-no-files-found: ignore
           retention-days: 7
+
+  package-preview:
+    name: Build internal review ZIP
+    needs: [web-smoke, browser-qa]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify and assemble static preview
+        run: node web/tools/build-preview.cjs "$RUNNER_TEMP/mano-preview"
+      - name: Upload ready-to-open internal preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: mano-kids-internal-review-preview
+          path: ${{ runner.temp }}/mano-preview/
+          if-no-files-found: error
+          retention-days: 7

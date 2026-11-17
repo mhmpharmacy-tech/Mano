@@ -168,3 +168,18 @@ test("Six module pages interlink and every clinical claim has a registered link"
  assert.ok(!/<form\b|<textarea\b|<input\b/.test(html));
  assert.ok(html.includes('data-route="emergency"')&&html.includes('data-route="uncertain"'));
 });
+
+test("Static preview packaging is allowlisted and remains unapproved",()=>{
+ const os=require("node:os"),crypto=require("node:crypto");
+ const {buildPreview}=require("../tools/build-preview.cjs");
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"mano-preview-test-"));
+ try{
+  const dest=path.join(tmp,"preview"),result=buildPreview(dest);
+  assert.equal(result.articleCount,8);assert.equal(result.moduleCount,6);
+  const m=JSON.parse(fs.readFileSync(path.join(dest,"PREVIEW_MANIFEST.json"),"utf8"));
+  assert.equal(m.clinicalServiceEnabled,false);
+  for(const [name,sha] of Object.entries(m.sha256))assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(dest,name))).digest("hex"),sha);
+  for(const name of [".git","functions","tests","browser-artifacts","sitemap.xml"])assert.equal(fs.existsSync(path.join(dest,name)),false);
+  assert.throws(()=>buildPreview(dest),/new directory/);
+ }finally{fs.rmSync(tmp,{recursive:true,force:true})}
+});

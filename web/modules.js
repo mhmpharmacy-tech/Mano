@@ -27,9 +27,14 @@
    const cases=Array.from(doc.querySelectorAll("[data-connect-case]")),status=doc.getElementById("connect-status");
    const showCase=()=>{
     const route=exampleRoute(connect.value);
-    for(const item of cases)item.hidden=!route||item.dataset.connectCase!==connect.value;
-    status.textContent=route?"نمایش یک مثال ساختگی؛ هیچ پرونده‌ای ارسال نمی‌شود.":"نمونه نامعتبر است؛ هیچ تصمیمی صادر نمی‌شود.";
+    for(const item of cases){
+     item.hidden=!route||item.dataset.connectCase!==connect.value;
+     if(item.hidden)item.querySelectorAll("details").forEach(d=>d.open=false);
+    }
     status.setAttribute("role",route==="emergency"?"alert":"status");
+    status.setAttribute("aria-live",route==="emergency"?"assertive":"polite");
+    status.setAttribute("aria-atomic","true");
+    status.textContent=route==="emergency"?"مثال ساختگی اورژانسی: اقدام فوری؛ منتظر مشاوره نمانید.":route==="uncertain"?"مثال ساختگی با اطلاعات ناکافی: ایمنی تأیید نشده است.":route?"نمایش یک مثال ساختگی؛ هیچ پرونده‌ای ارسال نمی‌شود.":"نمونه نامعتبر است؛ هیچ تصمیمی صادر نمی‌شود.";
    };
    connect.addEventListener("change",showCase);
    connectReset.addEventListener("click",()=>{connect.value="label";for(const item of cases)item.querySelectorAll("details").forEach(d=>d.open=false);showCase();connect.focus()});
