@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#087b80">
+  <title>پنل داروساز — پیش‌نمایش MANO Kids</title>
+  <link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./staff-demo.css">
+  <script src="./staff-demo.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#staff-main">رفتن به پرونده‌ها</a>
+<header class="site-header staff-header"><div class="shell header-inner">
+  <a class="brand" href="./index.html"><img src="./assets/mano_icon_fg.png" alt="" width="43" height="43"><span><strong>MANO <em>Kids</em></strong><small>نمایش پنل داروساز</small></span></a>
+  <span class="demo-ribbon">DEMO · داده ساختگی · بدون اتصال سرور</span>
+  <a class="header-cta" href="./index.html">بازگشت به سایت</a>
+</div></header>
+<main class="staff-main shell" id="staff-main">
+  <div class="staff-title"><div><span class="overline">Clinical pharmacist workspace</span><h1>مدیریت پرونده‌های مشاوره</h1><p>پیش‌نمایش برای ارزیابی تجربه کاربری. تمام داده‌ها ساختگی هستند؛ هیچ پرونده، تأیید یا پیگیری واقعی ثبت نمی‌شود.</p></div><button id="reset-demo" type="button" class="btn secondary">بازنشانی نمونه‌ها</button></div>
+  <div class="staff-kpis" id="staff-kpis" aria-label="آمار پرونده‌های نمایشی"></div>
+  <div class="staff-workspace">
+    <aside class="staff-list-panel" aria-label="فهرست پرونده‌ها">
+      <h2>پرونده‌ها <small id="case-count"></small></h2>
+      <div class="staff-filters">
+        <label>دسته‌بندی<select id="filter-category"><option value="all">همه دسته‌ها</option><option value="symptoms">علائم</option><option value="medicine">دارو</option><option value="skin">پوست</option><option value="nutrition">تغذیه</option></select></label>
+        <label>وضعیت<select id="filter-status"><option value="all">همه وضعیت‌ها</option><option value="pending">در انتظار</option><option value="reviewed">بررسی‌شده (نمایشی)</option><option value="followup">دارای پیگیری</option></select></label>
+        <label>پرچم ایمنی<select id="filter-safety"><option value="all">همه پرونده‌ها</option><option value="flagged">فقط دارای هشدار</option><option value="normal">بدون هشدار ثبت‌شده</option></select></label>
+        <label>آخرین تماس<select id="filter-contact"><option value="all">همه تاریخ‌ها</option><option value="recent">از ۱۴۰۵/۰۸/۲۴ به بعد</option><option value="older">قبل از ۱۴۰۵/۰۸/۲۴</option></select></label>
+      </div>
+      <div id="case-list" class="case-list" role="list"></div>
+      <p id="case-empty" class="empty" hidden>پرونده‌ای با این فیلترها پیدا نشد.</p>
+    </aside>
+    <section class="staff-detail" aria-label="جزئیات پرونده نمایشی">
+      <div id="case-detail"></div>
+      <form id="review-form" class="review-form" hidden>
+        <h3>یادداشت و تصمیم داروساز (صرفاً شبیه‌سازی)</h3>
+        <label for="review-decision">تصمیم پیشنهادی</label>
+        <select id="review-decision" required>
+          <option value="">انتخاب تصمیم</option><option value="education">آموزش و پیگیری</option><option value="refer">ارجاع برای ارزیابی پزشکی</option><option value="clarify">درخواست اطلاعات بیشتر</option>
+        </select>
+        <label for="review-note">توضیح تصمیم و منبع (آزمایشی)</label>
+        <textarea id="review-note" rows="4" maxlength="800" placeholder="خلاصه منطق، هشدار و منبع معتبر را وارد کنید..." required></textarea>
+        <label for="review-followup">تاریخ پیگیری (اختیاری)</label>
+        <input id="review-followup" type="date">
+        <label class="check-row"><input id="review-confirm" type="checkbox"> بررسی فرد متخصص و ضرورت ارجاع را در نمونه مرور کرده‌ام</label>
+        <div class="staff-actions">
+          <button class="btn primary" type="submit">ثبت تصمیم آزمایشی</button>
+          <button class="btn secondary" type="button" id="print-case">چاپ خلاصه</button>
+        </div>
+        <p class="form-footnote">این دکمه یک تغییر موقت در حافظه همین صفحه می‌دهد و هیچ تأیید واقعی در Firebase انجام نمی‌دهد.</p>
+        <div id="review-message" class="screening-result" role="status" aria-live="polite" hidden></div>
+      </form>
+    </section>
+  </div>
+  <div class="staff-security-note"><strong>الزام قبل از فعال‌سازی واقعی:</strong> هویت و نقش داروساز باید سمت سرور بررسی شود؛ هر پرونده به داروخانه و کاربر مجاز متصل باشد؛ همه تصمیم‌ها، منابع و تغییرات وضعیت در Audit Log ثبت شوند؛ دسترسی و رضایت والد و سیاست نگهداری داده بررسی شوند.</div>
+</main>
+<footer class="footer"><div class="shell footer-inner"><strong>MANO Kids · Staff workflow mock</strong><span>داده‌های ساختگی، بدون بیمار واقعی</span><a href="./index.html">صفحه والدین</a></div></footer>
+</body>
+</html>
