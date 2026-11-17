@@ -294,3 +294,6 @@ img { max-width: 100%; display: block; }
   * { scroll-behavior: auto !important; }
   .btn:hover, .path-card:hover { transform: none; }
 }
+
+.screening-result.prompt { background:#fff5e5; border-color:#dab77b; color:#6f471b; }
+.article-entry { display:inline-block; min-height:44px; padding-block:10px; text-decoration:underline; text-underline-offset:4px; color:#08636c; }

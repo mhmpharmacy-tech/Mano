@@ -105,13 +105,14 @@
         <p>این راهنمای کوتاه فقط نشانه‌های عمومی نیاز به ارزیابی فوری را یادآوری می‌کند؛ نبود این نشانه‌ها به معنی سالم‌بودن یا بی‌نیازی از ویزیت نیست.</p>
         <img class="illustration" src="./assets/img_symptom_care_banner.jpg" alt="تصویرسازی همراهی کودک و والد در مراقبت روزمره" loading="lazy" decoding="async">
         <p class="source-line">مبنای اولیه: توصیه‌های عمومی AAP و NICE؛ محتوای فارسی نیازمند بازبینی بالینی نهایی است.</p>
+        <a class="text-link article-entry" href="./fever-in-children.html">راهنمای کامل‌تر تب کودک و زمان مراجعه ←</a>
       </div>
       <div class="screening-card">
         <div class="card-heading"><span class="number">۰۱</span><div><h3>بررسی سریع شرایط هشدار</h3><p>اطلاعات واردشده ذخیره یا ارسال نمی‌شوند.</p></div></div>
         <form id="redflags-form" novalidate>
           <label for="child-age">گروه سنی کودک</label>
           <select id="child-age" required>
-            <option value="">انتخاب کن</option><option value="under3">کمتر از ۳ ماه</option><option value="older">۳ ماه و بیشتر</option>
+            <option value="">انتخاب کن</option><option value="under3">کمتر از ۳ ماه</option><option value="threeToSix">۳ تا ۶ ماه</option><option value="older">بیش از ۶ ماه</option>
           </select>
           <label for="child-temp">دمای اندازه‌گیری‌شده (اختیاری، درجه سانتی‌گراد)</label>
           <input id="child-temp" type="text" inputmode="decimal" autocomplete="off" maxlength="6" dir="ltr" aria-describedby="temperature-help" placeholder="مثلاً ۳۸٫۰">
@@ -120,6 +121,7 @@
             <label class="check-row"><input type="checkbox" name="warning" value="breath"> دشواری شدید در تنفس یا کبودی لب‌ها</label>
             <label class="check-row"><input type="checkbox" name="warning" value="conscious"> کاهش سطح هوشیاری یا پاسخ‌ندادن</label>
             <label class="check-row"><input type="checkbox" name="warning" value="seizure"> تشنج</label>
+            <label class="check-row"><input type="checkbox" name="warning" value="rash"> لکه‌های قرمز یا بنفش که با فشار محو نمی‌شوند</label>
           </fieldset>
           <button type="submit" class="btn primary full">نمایش راهنمای اولیه <span aria-hidden="true">←</span></button>
         </form>
@@ -134,7 +136,8 @@
       <div class="feature-copy"><span class="overline">داروهای کودک</span><h2>قبل از مصرف، اطلاعات روی دارو را دقیق بخوان</h2>
         <p>هم‌نام بودن دو شربت به معنی یکسان‌بودن غلظت آن‌ها نیست. از نام ماده مؤثره، شکل دارویی و غلظت روی بسته‌بندی مطمئن شو.</p>
         <div class="mini-points"><span>مقدار دارو را از حدس یا قاشق خانگی تعیین نکن</span><span>داروهای ترکیبی ممکن است ماده مؤثره تکراری داشته باشند</span><span>برای دوز و تداخل، تأیید حرفه‌ای لازم است</span></div>
-        <a class="text-link" href="#pharmacist">پرسش مناسب برای داروساز آماده کن <span aria-hidden="true">←</span></a>
+        <a class="text-link article-entry" href="./liquid-medicine-safety.html">راهنمای تصویری ایمنی شربت و قطره ←</a>
+        <p><a class="text-link" href="#pharmacist">پرسش مناسب برای داروساز آماده کن <span aria-hidden="true">←</span></a></p>
       </div>
       <div class="feature-visual medicine-visual"><img src="./assets/mascot_medicine.png" alt="مانو کنار فرآورده‌های دارویی؛ تصویرسازی آموزشی" loading="lazy" decoding="async"><span class="feature-label">بدون محاسبه خودکار دوز</span></div>
     </div>

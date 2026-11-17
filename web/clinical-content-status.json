@@ -51,7 +51,8 @@
     "NICE-NG143": {
       "publisher": "NICE",
       "url": "https://www.nice.org.uk/guidance/ng143/chapter/Recommendations",
-      "verifiedOn": null
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
     },
     "AAP-HealthyChildren": {
       "publisher": "American Academy of Pediatrics",
@@ -62,6 +63,30 @@
       "publisher": "World Health Organization",
       "url": "https://www.who.int/tools/child-growth-standards",
       "verifiedOn": null
+    },
+    "AAP-Fever": {
+      "publisher": "American Academy of Pediatrics",
+      "url": "https://www.healthychildren.org/English/health-issues/conditions/fever/Pages/When-to-Call-the-Pediatrician.aspx",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "NICE-QS64": {
+      "publisher": "NICE",
+      "url": "https://www.nice.org.uk/guidance/qs64/chapter/quality-statement-4-safety-net-advice",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "AAP-Liquid": {
+      "publisher": "American Academy of Pediatrics",
+      "url": "https://www.healthychildren.org/English/safety-prevention/at-home/medication-safety/Pages/Using-Liquid-Medicines.aspx",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
+    },
+    "FDA-Acetaminophen": {
+      "publisher": "FDA",
+      "url": "https://www.fda.gov/drugs/safe-use-over-counter-pain-relievers-and-fever-reducers/acetaminophen",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17"
     }
   },
   "releaseBlockers": [
@@ -71,5 +96,55 @@
     "HTTPS domain and hosting review",
     "staff authentication before clinical services"
   ],
-  "note": "References are pointers for reviewers, not evidence of independent expert sign-off. Automated browser tests do not verify medical accuracy."
+  "note": "References are pointers for reviewers, not evidence of independent expert sign-off. Automated browser tests do not verify medical accuracy.",
+  "draftArticles": [
+    {
+      "path": "fever-in-children.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "NICE-NG143",
+        "NICE-QS64",
+        "AAP-Fever"
+      ],
+      "claims": [
+        {
+          "topic": "age-specific fever thresholds and temperature alone",
+          "source": "NICE-NG143",
+          "locator": "1.2.11–1.2.14"
+        },
+        {
+          "topic": "warning signs and safety net",
+          "source": "NICE-QS64",
+          "locator": "Quality statement 4"
+        },
+        {
+          "topic": "fluids, worsening, urgent pediatric assessment",
+          "source": "AAP-Fever",
+          "locator": "When to call the pediatrician"
+        }
+      ]
+    },
+    {
+      "path": "liquid-medicine-safety.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "AAP-Liquid",
+        "FDA-Acetaminophen"
+      ],
+      "claims": [
+        {
+          "topic": "concentration distinction, calibrated dosing device, teach-back",
+          "source": "AAP-Liquid",
+          "locator": "Different strengths; How to measure liquid medicines"
+        },
+        {
+          "topic": "duplicate ingredients and suspected overdose escalation",
+          "source": "FDA-Acetaminophen",
+          "locator": "Safe Use; Infants and Children"
+        }
+      ]
+    }
+  ]
 }

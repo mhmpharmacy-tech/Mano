@@ -69,8 +69,9 @@
       const response = window.ManoWarning.evaluate({ ageBand: ageBand, temperature: temperature, warnings: warnings });
       result.hidden = false;
       const urgent = response.kind === "danger";
-      result.className = "screening-result" + (urgent ? " alert" : "");
+      result.className = "screening-result" + (urgent ? " alert" : response.kind === "prompt" ? " prompt" : "");
       result.setAttribute("role", urgent ? "alert" : "status");
+      result.setAttribute("aria-live", urgent || response.kind === "prompt" ? "assertive" : "polite");
       result.replaceChildren();
 
       const title = document.createElement("strong");

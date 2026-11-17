@@ -77,3 +77,28 @@ test("Staff workspace uses synthetic fixture only and never submits records", ()
   assert.ok(!/\bfetch\s*\(|\bXMLHttpRequest\b|\blocalStorage\b|\bsessionStorage\b/.test(script), "Demo must not persist or transmit health data");
   assert.ok(script.includes('c.safety && decision === "education"'), "Safety-flag cases must not silently approve educational resolution");
 });
+
+test("Fever thresholds distinguish age bands and red flags take precedence",()=>{
+  assert.equal(evaluate({ageBand:"under3",temperature:"۳۸",warnings:[]}).kind,"danger");
+  assert.equal(evaluate({ageBand:"threeToSix",temperature:"۳۹",warnings:[]}).kind,"prompt");
+  assert.equal(evaluate({ageBand:"threeToSix",temperature:"۳۸٫۹",warnings:[]}).kind,"caution");
+  assert.equal(evaluate({ageBand:"older",temperature:"۳۹",warnings:[]}).kind,"caution");
+  assert.equal(evaluate({ageBand:"threeToSix",temperature:"۳۹",warnings:["rash"]}).kind,"danger");
+});
+test("Draft article pages are linked, unindexed, traceable and have no claimed approval",()=>{
+  const m=JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8"));
+  const home=fs.readFileSync(path.join(root,"index.html"),"utf8");
+  assert.equal(m.draftArticles.length,2);
+  for(const a of m.draftArticles){
+    const html=fs.readFileSync(path.join(root,a.path),"utf8");
+    assert.ok(home.includes('./'+a.path));
+    assert.ok(html.includes('noindex,nofollow'));
+    assert.equal((html.match(/<h1(?:\s|>)/g)||[]).length,1);
+    assert.ok(html.includes("در انتظار تأیید بالینی"));
+    assert.equal(a.humanReviewer,null);
+    assert.equal(a.reviewStatus,"NEEDS_CLINICAL_REVIEW");
+    for(const r of a.references) assert.ok(html.includes(m.sourceRegister[r].url),r);
+    for(const c of a.claims) assert.ok(a.references.includes(c.source)&&c.locator);
+    assert.ok(!/<script\b|<form\b/.test(html),"Standalone draft articles contain no scripts or data submission");
+  }
+});

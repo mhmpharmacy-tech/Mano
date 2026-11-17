@@ -201,3 +201,44 @@ test("Accessibility audit: WCAG 2.1 A/AA critical and serious issues", async () 
   }
   await page.close();
 });
+
+test("Two article journeys, age band routing, responsive layouts and accessibility",async()=>{
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  const errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  await page.goto(parentUrl);
+  await page.locator("#child-age").selectOption("threeToSix");
+  await page.locator("#child-temp").fill("۳۹");
+  await page.locator('#redflags-form button[type="submit"]').click();
+  assert.ok((await page.locator("#screening-result").getAttribute("class")).includes("prompt"));
+  assert.equal(await page.locator("#screening-result .urgent-call").count(),0);
+  await page.locator('input[name="warning"][value="rash"]').check();
+  await page.locator('#redflags-form button[type="submit"]').click();
+  assert.equal(await page.locator("#screening-result .urgent-call").getAttribute("href"),"tel:115");
+  await page.locator('a[href="./fever-in-children.html"]').first().click();
+  assert.ok(page.url().endsWith("fever-in-children.html"));
+  await page.locator(".article-question summary").first().click();
+  assert.ok(await page.locator(".article-question p").first().isVisible());
+  for(const file of ["fever-in-children.html","liquid-medicine-safety.html"]){
+    await page.goto(pathToFileURL(path.join(root,file)).href);
+    for(const width of [320,390,430,768,1366]){
+      await page.setViewportSize({width,height:844});
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),file+" overflow at "+width);
+    }
+    await page.setViewportSize({width:390,height:844});
+    if(file.startsWith("liquid")) {
+      await page.locator(".medicine-checklist input").first().check();
+      assert.ok(await page.locator(".medicine-checklist input").first().isChecked());
+      assert.equal(await page.locator("form").count(),0);
+    }
+    await page.addScriptTag({path:require.resolve("axe-core/axe.min.js")});
+    const violations=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}})).violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})));
+    fs.writeFileSync(path.join(out,file.replace(".html","-a11y.json")),JSON.stringify(violations,null,2));
+    assert.deepEqual(violations.filter(v=>v.impact==="serious"||v.impact==="critical"),[],file);
+    await page.screenshot({path:path.join(out,file.replace(".html","-mobile.png")),fullPage:true,animations:"disabled"});
+    await page.setViewportSize({width:1366,height:900});
+    await page.screenshot({path:path.join(out,file.replace(".html","-desktop.png")),fullPage:true,animations:"disabled"});
+  }
+  assert.deepEqual(errors,[]);
+  await page.close();
+});
