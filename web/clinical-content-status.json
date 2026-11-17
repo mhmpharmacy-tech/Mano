@@ -87,6 +87,97 @@
       "url": "https://www.fda.gov/drugs/safe-use-over-counter-pain-relievers-and-fever-reducers/acetaminophen",
       "verifiedOn": null,
       "sourceConsultedOn": "2026-11-17"
+    },
+    "RCH_Cough": {
+      "publisher": "Royal Children's Hospital Melbourne",
+      "url": "https://www.rch.org.au/clinicalguide/guideline_index/cough/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Full guideline: assessment, red flags, management"
+    },
+    "RCH_Constipation": {
+      "publisher": "Royal Children's Hospital Melbourne",
+      "url": "https://www.rch.org.au/clinicalguide/guideline_index/Constipation/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Full guideline: background, assessment, treatment"
+    },
+    "NHS_Nappy": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/baby/caring-for-a-newborn/nappy-rash/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Full patient guidance"
+    },
+    "NHS_Rashes": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/symptoms/rashes-babies-and-children/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Search excerpt: urgent advice"
+    },
+    "AAP_Feeding": {
+      "publisher": "American Academy of Pediatrics",
+      "url": "https://www.aap.org/en/patient-care/healthy-active-living-for-families/toddler-food-and-feeding/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Full page: Picky Eaters, Parent Provides Child Decides"
+    },
+    "AAP_NASPGHAN_2026": {
+      "publisher": "AAP / NASPGHAN",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41833317/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "2026 guideline: abstract; full text not accessible in this session"
+    },
+    "NICE_Growth": {
+      "publisher": "NICE",
+      "url": "https://www.nice.org.uk/guidance/ng75/chapter/recommendations",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Search excerpts: recognition and assessment"
+    },
+    "NHS_Vitamins": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/baby/weaning-and-feeding/vitamins-for-children/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Full page: supplement overlap, age and diet"
+    },
+    "CDC_Nutrients": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/vitamins-minerals/index.html",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Search excerpt: vitamin D, iron, zinc"
+    },
+    "RCH_Iron": {
+      "publisher": "Royal Children's Hospital Melbourne",
+      "url": "https://www.rch.org.au/clinicalguide/guideline_index/iron_poisoning/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Search excerpt: unknown ingestion and risk"
+    },
+    "CDC_FormulaSafety": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/preparation-and-storage.html",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Full page: May 14, 2026; water, mixing, storage, high-risk infants"
+    },
+    "CDC_FormulaChoice": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/choosing-a-formula.html",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Full page: April 16, 2026; brand, expiry, homemade formula"
+    },
+    "WHO_Formula": {
+      "publisher": "WHO",
+      "url": "https://www.who.int/publications/i/item/9789241595414",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Publication overview; full guideline not reviewed in this session"
     }
   },
   "releaseBlockers": [
@@ -150,6 +241,169 @@
           "locator": "Safe Use; Infants and Children"
         }
       ]
+    },
+    {
+      "path": "persistent-cough-in-children.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "RCH_Cough"
+      ],
+      "claims": [
+        {
+          "topic": "تعریف سرفه مزمن و ضرورت ارزیابی",
+          "source": "RCH_Cough",
+          "locator": "Key points; further assessment"
+        },
+        {
+          "topic": "علائم نگران‌کننده، شروع ناگهانی و شرح حال",
+          "source": "RCH_Cough",
+          "locator": "History; red flags; examination"
+        },
+        {
+          "topic": "پرهیز از مصرف تجربی دارو و محدودیت عسل",
+          "source": "RCH_Cough",
+          "locator": "Management"
+        }
+      ],
+      "localReviewRequired": "سن مجاز، ترکیبات و هشدار فرآورده‌های سرفه در بازار ایران جداگانه بررسی شوند."
+    },
+    {
+      "path": "childhood-constipation.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "RCH_Constipation"
+      ],
+      "claims": [
+        {
+          "topic": "دفع نرم و زورزدن شیرخوار، چرخه نگه‌داشتن",
+          "source": "RCH_Constipation",
+          "locator": "Background; Assessment"
+        },
+        {
+          "topic": "علائم ارجاع و بررسی نوزاد",
+          "source": "RCH_Constipation",
+          "locator": "Red Flags; Consider consultation"
+        },
+        {
+          "topic": "آموزش توالت و محدودیت رژیم تنها",
+          "source": "RCH_Constipation",
+          "locator": "Management: Behaviour and dietary modifications"
+        }
+      ],
+      "localReviewRequired": "تطبیق ملین‌ها و شکل‌های دارویی موجود ایران به بازبین داروساز سپرده شود."
+    },
+    {
+      "path": "diaper-rash.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "NHS_Nappy",
+        "NHS_Rashes"
+      ],
+      "claims": [
+        {
+          "topic": "تعویض، پاکسازی، محافظ پوستی",
+          "source": "NHS_Nappy",
+          "locator": "Things you can do; A pharmacist can help"
+        },
+        {
+          "topic": "نیاز به مراجعه در انتشار، تب و بهبود نیافتن",
+          "source": "NHS_Nappy",
+          "locator": "When and where to get medical help"
+        },
+        {
+          "topic": "افتراق ارجاع فوری در راش و بدحالی",
+          "source": "NHS_Rashes",
+          "locator": "Urgent advice (search excerpt; human verification required)"
+        }
+      ],
+      "localReviewRequired": "غلظت، ترکیب و سن مجاز کرم‌های بازار ایران باید توسط داروساز تأیید شود."
+    },
+    {
+      "path": "child-appetite-growth.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "AAP_Feeding",
+        "AAP_NASPGHAN_2026",
+        "NICE_Growth"
+      ],
+      "claims": [
+        {
+          "topic": "رفتار تغذیه‌ای نوپا بدون اجبار",
+          "source": "AAP_Feeding",
+          "locator": "Picky Eaters; Parent Provides Child Decides"
+        },
+        {
+          "topic": "ضرورت ارزیابی وزن‌گیری ناکافی",
+          "source": "AAP_NASPGHAN_2026",
+          "locator": "PubMed abstract; full text unavailable"
+        },
+        {
+          "topic": "نگرانی رشد و حمایت تغذیه",
+          "source": "NICE_Growth",
+          "locator": "Recommendations (search excerpt; full review pending)"
+        }
+      ],
+      "localReviewRequired": "منحنی رشد، ارزیابی رژیم و دسترسی به تغذیه درمانی باید با نظام سلامت ایران تطبیق داده شود."
+    },
+    {
+      "path": "child-supplements.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "NHS_Vitamins",
+        "CDC_Nutrients",
+        "RCH_Iron"
+      ],
+      "claims": [
+        {
+          "topic": "تفاوت نیاز و خطر هم‌پوشانی",
+          "source": "NHS_Vitamins",
+          "locator": "Vitamin supplements; Vitamin D"
+        },
+        {
+          "topic": "اهمیت آهن، ویتامین D، روی",
+          "source": "CDC_Nutrients",
+          "locator": "Overview (search excerpt)"
+        },
+        {
+          "topic": "ارجاع با مقدار نامعلوم آهن",
+          "source": "RCH_Iron",
+          "locator": "Risk assessment (search excerpt; human review pending)"
+        }
+      ],
+      "localReviewRequired": "دستور جاری مکمل‌یاری وزارت بهداشت ایران و غلظت قطره‌های ایرانی هنوز احراز نشده است؛ قبل از درج دوز الزامی است."
+    },
+    {
+      "path": "infant-formula.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "references": [
+        "CDC_FormulaSafety",
+        "CDC_FormulaChoice",
+        "WHO_Formula"
+      ],
+      "claims": [
+        {
+          "topic": "انتخاب مناسب و منع شیرخشک خانگی",
+          "source": "CDC_FormulaChoice",
+          "locator": "Choosing an infant formula; Homemade formula; 2026-04-16"
+        },
+        {
+          "topic": "نسبت آب و پودر، زمان مصرف و احتیاط در نوزاد پرخطر",
+          "source": "CDC_FormulaSafety",
+          "locator": "Mix carefully; Use quickly; Extra precautions; 2026-05-14"
+        },
+        {
+          "topic": "وجود راهنمای آماده‌سازی و دمای بازسازی",
+          "source": "WHO_Formula",
+          "locator": "Publication overview only"
+        }
+      ],
+      "localReviewRequired": "تفاوت راهنمای WHO، CDC و دستور محصول، کیفیت آب و توصیه رسمی ایران باید قبل از انتشار نسخه عملیاتی حل شود؛ این صفحه دمای واحد تجویز نمی‌کند."
     }
   ]
 }

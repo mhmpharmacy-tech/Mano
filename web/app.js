@@ -56,6 +56,20 @@
     });
   }
 
+  const librarySearch=byId("library-search");
+  if(librarySearch){
+    const items=Array.from(document.querySelectorAll(".library-card"));
+    const libCount=byId("library-count"), libEmpty=byId("library-empty");
+    const normalizeLibrary=(value)=>normalizePersian(value).replace(/[\u200c\u200d]/g,"").replace(/\s+/g,"");
+    function filterLibrary(){
+      const q=normalizeLibrary(librarySearch.value);let n=0;
+      for(const item of items){item.hidden=Boolean(q)&&!normalizeLibrary(item.textContent).includes(q);if(!item.hidden)n++}
+      libCount.textContent=n.toLocaleString("fa-IR")+" راهنمای آموزشی";libEmpty.hidden=n!==0;
+    }
+    librarySearch.addEventListener("input",filterLibrary);
+    librarySearch.addEventListener("keydown",event=>{if(event.key==="Escape"){librarySearch.value="";filterLibrary()}});
+  }
+
   const form = byId("redflags-form");
   const result = byId("screening-result");
   if (form && result && window.ManoWarning && typeof window.ManoWarning.evaluate === "function") {

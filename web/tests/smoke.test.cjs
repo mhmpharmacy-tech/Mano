@@ -88,7 +88,7 @@ test("Fever thresholds distinguish age bands and red flags take precedence",()=>
 test("Draft article pages are linked, unindexed, traceable and have no claimed approval",()=>{
   const m=JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8"));
   const home=fs.readFileSync(path.join(root,"index.html"),"utf8");
-  assert.equal(m.draftArticles.length,2);
+  assert.equal(m.draftArticles.length,8);
   for(const a of m.draftArticles){
     const html=fs.readFileSync(path.join(root,a.path),"utf8");
     assert.ok(home.includes('./'+a.path));
@@ -108,4 +108,21 @@ test("Warning form fails closed before local JavaScript is ready",()=>{
   assert.match(html,/id="warning-submit"[^>]*disabled/);
   assert.ok(html.includes("form-action 'none'"));
   assert.ok(html.includes('id="warning-nojs"'));
+});
+
+test("Encyclopedia links match the registered eight draft articles",()=>{
+ const home=fs.readFileSync(path.join(root,"index.html"),"utf8");
+ const m=JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8"));
+ assert.equal((home.match(/class="library-card tone-/g)||[]).length,8);
+ const metas=new Set();
+ for(const a of m.draftArticles){
+  assert.match(a.path,/^[a-z0-9-]+\.html$/);
+  assert.ok(home.includes('href="./'+a.path+'"'));
+  const html=fs.readFileSync(path.join(root,a.path),"utf8");
+  const desc=html.match(/<meta name="description" content="([^"]+)"/)[1];
+  assert.ok(!metas.has(desc),"Duplicate description");metas.add(desc);
+  for(const match of html.matchAll(/href="\.\/([a-z0-9-]+\.html)(?:#[^"]*)?"/g)){assert.ok(fs.existsSync(path.join(root,match[1])),"Missing internal article link")}
+  for(const match of html.matchAll(/src="\.\/assets\/([^"]+)"/g)){assert.ok(fs.existsSync(path.join(root,"assets",match[1])),"Missing local article asset")}
+  assert.ok(!/<script\b|<form\b/.test(html));
+ }
 });

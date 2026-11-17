@@ -56,3 +56,7 @@
 .article-urgent-strip a{color:#733421;font-weight:800;text-decoration:underline;text-underline-offset:3px;flex-shrink:0;padding:9px 2px}
 @media(max-width:850px){.article-sidebar{grid-row:auto}.article-related{display:grid}}
 @media(max-width:550px){.article-urgent-strip>.shell{flex-wrap:wrap;gap:0}.article-urgent-strip a{padding-block:3px}}
+
+.evidence-detail{display:block;color:#506a76;font-size:12px;overflow-wrap:anywhere}.article-evidence li{margin-bottom:10px}.article-age-grid .age-card strong{font-size:clamp(16px,2vw,23px);overflow-wrap:anywhere}
+/* Safety call remains visible on print as a labelled action, not a hidden reference. */
+@media print{.article-main .urgent-call{display:inline-block!important;background:none;color:#733421;border:1px solid #733421}.article-urgent-strip{display:none}}

@@ -219,7 +219,7 @@ test("Two article journeys, age band routing, responsive layouts and accessibili
   assert.ok(page.url().endsWith("fever-in-children.html"));
   await page.locator(".article-question summary").first().click();
   assert.ok(await page.locator(".article-question p").first().isVisible());
-  for(const file of ["fever-in-children.html","liquid-medicine-safety.html"]){
+  for(const {path:file} of JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8")).draftArticles){
     await page.goto(pathToFileURL(path.join(root,file)).href);
     for(const width of [320,390,430,768,1366]){
       await page.setViewportSize({width,height:844});
@@ -255,4 +255,26 @@ test("Disabled JavaScript never enables native warning form submission",async()=
   await page.locator("#child-temp").press("Enter");
   assert.equal(page.url(),parentUrl,"No health-related query string or navigation");
   await context.close();
+});
+
+test("Encyclopedia search, reset, navigation and no-data article operation",async()=>{
+ const page=await browser.newPage({viewport:{width:390,height:844}});
+ await page.goto(parentUrl);
+ assert.equal(await page.locator(".library-card:visible").count(),8);
+ await page.locator("#library-search").fill("كم‌اشتهايي");
+ // Exact visible Persian title is also guaranteed to find the article.
+ await page.locator("#library-search").fill("کم اشتهایی");
+ assert.equal(await page.locator(".library-card:visible").count(),1);
+ await page.locator(".library-card:visible").click();
+ assert.ok(page.url().endsWith("child-appetite-growth.html"));
+ assert.equal(await page.locator("form,script").count(),0);
+ await page.locator(".article-question summary").first().click();
+ assert.ok(await page.locator(".article-question p").isVisible());
+ await page.locator(".article-back").click();
+ await page.locator("#library-search").fill("xyz-no-match");
+ assert.equal(await page.locator(".library-card:visible").count(),0);
+ assert.ok(await page.locator("#library-empty").isVisible());
+ await page.locator("#library-search").press("Escape");
+ assert.equal(await page.locator(".library-card:visible").count(),8);
+ await page.close();
 });
