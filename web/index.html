@@ -11,6 +11,7 @@
   <meta property="og:title" content="مانو کیدز | راهنمای آموزشی سلامت کودک">
   <meta property="og:description" content="آشنایی با نشانه‌های هشدار و پرسش‌های سلامت کودک؛ نسخه پیش‌نمایش و در انتظار تأیید علمی.">
   <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="form-action 'none'; base-uri 'none'">
   <title>MANO Kids | راهنمای سلامت کودک</title>
   <link rel="icon" type="image/png" href="./assets/mano_icon_fg.png">
   <link rel="stylesheet" href="./styles.css">
@@ -123,8 +124,9 @@
             <label class="check-row"><input type="checkbox" name="warning" value="seizure"> تشنج</label>
             <label class="check-row"><input type="checkbox" name="warning" value="rash"> لکه‌های قرمز یا بنفش که با فشار محو نمی‌شوند</label>
           </fieldset>
-          <button type="submit" class="btn primary full">نمایش راهنمای اولیه <span aria-hidden="true">←</span></button>
+          <button type="submit" id="warning-submit" class="btn primary full" disabled>نمایش راهنمای اولیه <span aria-hidden="true">←</span></button>
         </form>
+        <noscript><p class="form-footnote" id="warning-nojs">فرم در این مرورگر فعال نیست. برای علائم خطر یا بدحالی کودک منتظر فرم نمانید؛ فوراً کمک پزشکی بگیرید. <a class="text-link" href="./fever-in-children.html">راهنمای آموزشی تب کودک</a></p></noscript>
         <div id="screening-result" class="screening-result" aria-live="assertive" role="status" aria-atomic="true" hidden></div>
         <p class="form-footnote">اگر حال عمومی کودک نگران‌کننده است، برای دریافت راهنمایی منتظر تکمیل این فرم نمان.</p>
       </div>

@@ -6,3 +6,5 @@ Two standalone educational pages with linked primary-source references and local
 - SEO: descriptive individual titles, unique descriptions, internal links and noindex; no invented review credentials/canonical hosts or sitemap.
 - UI/UX: emergency actions first, simple article navigation, teach-back, medication safety checklist (not an authorization or actual clinical check).
 Remaining: signed pediatric/clinical review, Iran-local clinical referral and medication labeling check, real family/device testing, asset compression and hosted network testing. Do not deploy or merge this draft as a public health product.
+
+Privacy fallback: the main warning-form submit button starts disabled, is enabled after the local handler and warning logic are available, and CSP blocks native form submissions. A no-JavaScript notice links to the static educational page. Browser tests cover this fallback. This does not replace a hosted privacy/security audit.

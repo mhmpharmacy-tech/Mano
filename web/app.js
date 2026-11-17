@@ -58,7 +58,7 @@
 
   const form = byId("redflags-form");
   const result = byId("screening-result");
-  if (form && result) {
+  if (form && result && window.ManoWarning && typeof window.ManoWarning.evaluate === "function") {
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       const ageBand = byId("child-age").value;
@@ -91,6 +91,9 @@
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       result.scrollIntoView({ behavior: prefersReducedMotion ? "instant" : "smooth", block: "nearest" });
     });
+    // Safe default: the button is disabled in HTML and enabled only after the local handler exists.
+    const warningSubmit = byId("warning-submit");
+    if (warningSubmit) warningSubmit.disabled = false;
   }
 
   const copyButton = byId("copy-question");

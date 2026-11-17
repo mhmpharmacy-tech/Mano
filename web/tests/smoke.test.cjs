@@ -102,3 +102,10 @@ test("Draft article pages are linked, unindexed, traceable and have no claimed a
     assert.ok(!/<script\b|<form\b/.test(html),"Standalone draft articles contain no scripts or data submission");
   }
 });
+
+test("Warning form fails closed before local JavaScript is ready",()=>{
+  const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+  assert.match(html,/id="warning-submit"[^>]*disabled/);
+  assert.ok(html.includes("form-action 'none'"));
+  assert.ok(html.includes('id="warning-nojs"'));
+});

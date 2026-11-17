@@ -242,3 +242,17 @@ test("Two article journeys, age band routing, responsive layouts and accessibili
   assert.deepEqual(errors,[]);
   await page.close();
 });
+
+test("Disabled JavaScript never enables native warning form submission",async()=>{
+  const context=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});
+  const page=await context.newPage();
+  await page.goto(parentUrl);
+  assert.ok(await page.locator("#warning-submit").isDisabled());
+  assert.ok(await page.locator("#warning-nojs").isVisible());
+  assert.equal(await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute("content"),"form-action 'none'; base-uri 'none'");
+  await page.locator('input[name="warning"][value="breath"]').check();
+  await page.locator("#child-temp").fill("۳۸");
+  await page.locator("#child-temp").press("Enter");
+  assert.equal(page.url(),parentUrl,"No health-related query string or navigation");
+  await context.close();
+});
