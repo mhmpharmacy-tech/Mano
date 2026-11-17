@@ -378,6 +378,94 @@
       "coverage": "Relevant full web-page sections opened",
       "verifiedOn": null,
       "sourceConsultedOn": "2026-11-17"
+    },
+    "DRUG_COAMOX": {
+      "publisher": "DailyMed / US label",
+      "url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=2bb03d3b-5d44-bc4a-e063-6394a90a656a",
+      "locator": "2.6 Switching between Dosage Forms and Strengths; 4 Contraindications; 5 Warnings",
+      "coverage": "Relevant full HTML label sections opened",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_COAMOX_MED": {
+      "publisher": "MedlinePlus",
+      "url": "https://medlineplus.gov/druginfo/meds/a685024.html",
+      "locator": "How should this medicine be used?",
+      "coverage": "Relevant full HTML page opened",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_OND": {
+      "publisher": "Canadian Paediatric Society",
+      "url": "https://cps.ca/en/documents/position/oral-ondansetron",
+      "locator": "Conclusion and recommendations; emergency department use",
+      "coverage": "Relevant full HTML guideline opened",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_OND_QT": {
+      "publisher": "FDA / US label",
+      "url": "https://www.accessdata.fda.gov/drugsatfda_docs/label/2025/020103s039%2C020605s023%2C020781s023lbl.pdf",
+      "locator": "Warnings and precautions: QT prolongation; search excerpt only",
+      "coverage": "Search excerpt reviewed; full label must be checked by reviewer",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_MET": {
+      "publisher": "EMA",
+      "url": "https://www.ema.europa.eu/en/news/european-medicines-agency-recommends-changes-use-metoclopramide",
+      "locator": "Information to patients and healthcare professionals",
+      "coverage": "Relevant full HTML regulatory communication opened",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_LOP": {
+      "publisher": "MedlinePlus",
+      "url": "https://www.medlineplus.gov/druginfo/meds/a682280.html",
+      "locator": "Important warning; precautions",
+      "coverage": "Relevant full HTML page opened",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_GE": {
+      "publisher": "NICE",
+      "url": "https://www.nice.org.uk/guidance/cg84/chapter/Recommendations",
+      "locator": "1.6 Other therapies; antidiarrhoeal medication",
+      "coverage": "Search excerpt reviewed; full guideline review pending",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_NYS": {
+      "publisher": "MedlinePlus",
+      "url": "https://medlineplus.gov/druginfo/meds/a682758.html",
+      "locator": "How should this medicine be used? oral fungal infections",
+      "coverage": "Relevant full HTML page opened",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_OSE": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/flu/hcp/antivirals/summary-clinicians.html",
+      "locator": "Treatment versus chemoprophylaxis, recommended antiviral medications; off-label ages",
+      "coverage": "Relevant HTML page opened; verify full age/indication tables before clinical use",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_OSE_CHILD": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/flu/treatment/children-antiviral.html",
+      "locator": "Antivirals approved for use in children; off-label and adverse effects",
+      "coverage": "Search excerpt reviewed",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
+    },
+    "DRUG_FDA_CONC": {
+      "publisher": "FDA",
+      "url": "https://www.fda.gov/drugs/drug-safety-and-availability/questions-and-answers-important-change-concentration-over-counter-otc-liquid-acetaminophen-marketed",
+      "locator": "Q2, Q4, Q5 and Q6; historical US concentration differences and devices",
+      "coverage": "Relevant full HTML page opened",
+      "sourceConsultedOn": "2026-11-17",
+      "verifiedOn": null
     }
   },
   "releaseBlockers": [
@@ -696,6 +784,88 @@
             }
           ],
           "iranLabelVerified": false
+        },
+        {
+          "id": "coamoxiclav",
+          "claims": [
+            {
+              "source": "DRUG_COAMOX",
+              "locator": "2.6 Switching between Dosage Forms and Strengths; 4 Contraindications; 5 Warnings"
+            },
+            {
+              "source": "DRUG_COAMOX_MED",
+              "locator": "How should this medicine be used?"
+            }
+          ],
+          "iranLabelVerified": false,
+          "clinicalUseEnabled": false
+        },
+        {
+          "id": "ondansetron",
+          "claims": [
+            {
+              "source": "DRUG_OND",
+              "locator": "Conclusion and recommendations; emergency department use"
+            },
+            {
+              "source": "DRUG_OND_QT",
+              "locator": "Warnings and precautions: QT prolongation; search excerpt only"
+            }
+          ],
+          "iranLabelVerified": false,
+          "clinicalUseEnabled": false
+        },
+        {
+          "id": "metoclopramide",
+          "claims": [
+            {
+              "source": "DRUG_MET",
+              "locator": "Information to patients and healthcare professionals"
+            }
+          ],
+          "iranLabelVerified": false,
+          "clinicalUseEnabled": false
+        },
+        {
+          "id": "loperamide",
+          "claims": [
+            {
+              "source": "DRUG_LOP",
+              "locator": "Important warning; precautions"
+            },
+            {
+              "source": "DRUG_GE",
+              "locator": "1.6 Other therapies; antidiarrhoeal medication"
+            }
+          ],
+          "iranLabelVerified": false,
+          "clinicalUseEnabled": false
+        },
+        {
+          "id": "nystatin",
+          "claims": [
+            {
+              "source": "DRUG_NYS",
+              "locator": "How should this medicine be used? oral fungal infections"
+            }
+          ],
+          "iranLabelVerified": false,
+          "clinicalUseEnabled": false
+        },
+        {
+          "id": "oseltamivir",
+          "claims": [
+            {
+              "source": "DRUG_OSE",
+              "locator": "Treatment versus chemoprophylaxis, recommended antiviral medications; off-label ages"
+            },
+            {
+              "source": "DRUG_OSE_CHILD",
+              "locator": "Antivirals approved for use in children; off-label and adverse effects"
+            }
+          ],
+          "iranLabelVerified": false,
+          "clinicalUseEnabled": false
         }
       ]
     },

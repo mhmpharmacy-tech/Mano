@@ -7,10 +7,10 @@ const queue=buildReviewQueue(),at="2026-11-17T10:00:00.000Z";
 const d={id:queue.items[0].id,status:"approved",checks:[...keys],note:"",at};
 const packet={schemaVersion:1,kind:"MANO_CONTENT_REVIEW_DRAFT",snapshot:queue.snapshot,reviewer:"EXAMPLE",releaseAuthorized:false,decisions:[d]};
 test("Every registered clinical page and entry appears in the queue",()=>{
- assert.equal(queue.items.length,47);
+ assert.equal(queue.items.length,53);
  assert.equal(queue.items.filter(i=>i.group==="article").length,8);
  assert.equal(queue.items.filter(i=>i.group==="module").length,6);
- assert.equal(queue.items.filter(i=>i.group==="entry").length,26);
+ assert.equal(queue.items.filter(i=>i.group==="entry").length,32);
  assert.match(queue.snapshot,/^[a-f0-9]{64}$/);
  assert.ok(queue.hashes["logic.js"]);
 });

@@ -283,14 +283,14 @@ test("MANO Drug, Growth and Skin: functional filters, synthetic chart and respon
  const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on("pageerror",e=>errors.push(e.message));
  await page.goto(parentUrl);assert.equal(await page.locator(".home-module-card").count(),6);
  await page.locator('a.home-module-card[href="./mano-drug.html"]').click();
- assert.equal(await page.locator("[data-entry]:visible").count(),6);
+ assert.equal(await page.locator("[data-entry]:visible").count(),12);
  await page.locator("#module-search").fill("استامينوفن");
  assert.equal(await page.locator("[data-entry]:visible").count(),1);
  await page.locator("#module-reset").click();
  await page.locator("#module-category").selectOption("rx");
- assert.equal(await page.locator("[data-entry]:visible").count(),1);
- await page.locator("[data-entry]:visible summary").click();
- assert.ok(await page.locator("[data-entry]:visible dl").isVisible());
+ assert.equal(await page.locator("[data-entry]:visible").count(),2);
+ await page.locator('[data-entry="coamoxiclav"] summary').click();
+ assert.ok(await page.locator('[data-entry="coamoxiclav"] dl').isVisible());
  await page.locator('a[href="./mano-growth.html"]').click();
  assert.equal(await page.locator("#growth-rows tr").count(),5);
  await page.locator("#growth-example").selectOption("b");await page.locator("#growth-measure").selectOption("height");
@@ -383,7 +383,7 @@ test("Local review board: deliberate approval, file resume, responsive layout",a
  const errors=[];page.on("pageerror",e=>errors.push(e.message));
  try{
   await page.goto(pathToFileURL(path.join(folder,"clinical-review.html")).href);
-  assert.equal(await page.locator("#review-item option").count(),47);
+  assert.equal(await page.locator("#review-item option").count(),53);
   await page.locator("#reviewer").fill("EXAMPLE");
   await page.locator("#review-group").selectOption("article");assert.equal(await page.locator("#review-item option").count(),8);
   await page.locator("#review-decision").selectOption("approved");await page.locator("#review-save").click();
