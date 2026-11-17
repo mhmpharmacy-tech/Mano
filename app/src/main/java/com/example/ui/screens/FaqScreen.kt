@@ -2,7 +2,6 @@ package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,10 +35,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.domain.model.AgeBand
@@ -51,6 +47,7 @@ import com.example.ui.components.AgeSelectorRow
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.EmptyState
 import com.example.ui.components.LtrText
+import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
@@ -85,11 +82,10 @@ fun FaqScreen(
     ) {
       item {
         SectionCard {
-          Image(
-            painter = painterResource(id = R.drawable.img_topics_library_banner),
+          ManoBannerFrame(
+            resId = R.drawable.img_topics_library_banner,
             contentDescription = "مانو و کتابخانه پرسش‌های پرتکرار والدین",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(144.dp).clip(RoundedCornerShape(16.dp)),
+            aspectRatio = 16f / 9f,
           )
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 56.dp)

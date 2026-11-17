@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import androidx.core.content.edit
 import com.example.MainActivity
 import com.example.R
 import com.example.domain.util.FeverDoseTimelineEngine
@@ -51,11 +52,11 @@ object FeverTimelineWidgetStore {
 
     context
       .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-      .edit()
-      .putString(KEY_TEMP_TEXT, tempText)
-      .putString(KEY_DOSE_TEXT, doseText)
-      .putString(KEY_INTERVAL_TEXT, intervalText)
-      .apply()
+      .edit {
+        putString(KEY_TEMP_TEXT, tempText)
+        putString(KEY_DOSE_TEXT, doseText)
+        putString(KEY_INTERVAL_TEXT, intervalText)
+      }
 
     val manager = AppWidgetManager.getInstance(context)
     val component = ComponentName(context, FeverTimelineWidgetProvider::class.java)

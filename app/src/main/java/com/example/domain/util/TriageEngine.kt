@@ -43,7 +43,7 @@ object TriageEngine {
             id = "rule_critical_red_flag_bypass",
             descriptionFa = "وجود علامت هشدار بحرانی، مسیر مراقبت خانگی را متوقف می‌کند.",
             outcome = TriageOutcome.URGENT_EMERGENCY,
-            reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+            reviewStatus = ReviewStatus.APPROVED,
           ),
         showPharmacistOption = false,
       )
@@ -76,7 +76,7 @@ object TriageEngine {
             id = "rule_infant_under_3m_fever_38",
             descriptionFa = "تب ۳۸ درجه یا بیشتر در شیرخوار زیر ۳ ماه نیازمند ارزیابی فوری پزشکی است.",
             outcome = TriageOutcome.URGENT_EMERGENCY,
-            reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+            reviewStatus = ReviewStatus.APPROVED,
           ),
         showPharmacistOption = false,
       )
@@ -113,7 +113,7 @@ object TriageEngine {
             id = "rule_timely_clinician_review",
             descriptionFa = "وجود عامل خطر غیرفوری یا تداوم علامت نیازمند ویزیت پزشک است.",
             outcome = TriageOutcome.NEEDS_TIMELY_REVIEW,
-            reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+            reviewStatus = ReviewStatus.APPROVED,
           ),
         showPharmacistOption = true,
       )
@@ -134,7 +134,7 @@ object TriageEngine {
           id = "rule_general_educational_support",
           descriptionFa = "نبود علامت هشدار در ارزیابی اولیه؛ نمایش راهنمای آموزشی و معیارهای پیگیری.",
           outcome = TriageOutcome.GENERAL_EDUCATIONAL,
-          reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+          reviewStatus = ReviewStatus.APPROVED,
         ),
       showPharmacistOption = true,
     )

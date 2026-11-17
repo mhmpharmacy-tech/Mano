@@ -1,0 +1,26 @@
+{
+  "name": "mano-kids-functions",
+  "version": "1.0.0",
+  "description": "MANO Kids trusted Firebase Cloud Functions backend for non-urgent pediatric pharmacist consultations, triage passes, live staff directory checks, and immutable clinical audit logs.",
+  "main": "lib/src/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "build": "tsc",
+    "test": "npm run build && node --test lib/test/*.test.js",
+    "test:security": "npm run build && node --test lib/test/cases.security.test.js lib/test/triage.test.js",
+    "bootstrap:pharmacy": "npm run build && node lib/src/scripts/bootstrap.js",
+    "onboard:pharmacist": "npm run build && node lib/src/scripts/onboardPharmacist.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.2.0",
+    "firebase-functions": "^6.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  },
+  "private": true
+}

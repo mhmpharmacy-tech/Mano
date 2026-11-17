@@ -118,6 +118,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.R
 import com.example.data.FeverLogCloud
+import com.example.data.FirebaseFunctionsConsultationGateway
 import com.example.data.ManoCloudRepository
 import com.example.data.ManoThemeMode
 import com.example.data.MedicationDoseLogCloud
@@ -202,6 +203,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
@@ -305,7 +307,9 @@ fun ManoApp(
                 val app = checkNotNull(this[APPLICATION_KEY]) { "APPLICATION_KEY missing" }
                 val databaseId = app.getString(R.string.firestore_database_id)
                 val db = FirebaseFirestore.getInstance(databaseId)
-                ManoCloudSyncViewModel(ManoCloudRepository(db, auth), uid)
+                val functionsGateway =
+                  runCatching { FirebaseFunctionsConsultationGateway(FirebaseFunctions.getInstance("us-central1")) }.getOrNull()
+                ManoCloudSyncViewModel(ManoCloudRepository(db, auth, functionsGateway), uid)
               }
             },
         )
@@ -323,6 +327,26 @@ fun ManoApp(
     ?: remember { mutableStateOf<CloudDataState<List<FeverLogCloud>>>(CloudDataState.Success(emptyList())) }
   val cloudConsultationsState by cloudVm?.consultationsState?.collectAsStateWithLifecycle()
     ?: remember { mutableStateOf<CloudDataState<List<com.example.domain.model.ConsultationRequestDemo>>>(CloudDataState.Success(emptyList())) }
+  val serverConsultations by cloudVm?.serverConsultations?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(emptyList()) }
+  val acceptingPharmacies by cloudVm?.acceptingPharmacies?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(emptyList()) }
+  val selectedPharmacyId by cloudVm?.selectedPharmacyId?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(null) }
+  val isSubmittingConsultation by cloudVm?.isSubmittingConsultation?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(false) }
+  val serverConsultationErrorFa by cloudVm?.serverConsultationErrorFa?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(null) }
+  val staffAccessStatus by cloudVm?.staffAccessStatus?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(com.example.domain.model.StaffAccessStatus()) }
+  val staffInboxCases by cloudVm?.staffInboxCases?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(emptyList()) }
+  val isLoadingStaffInbox by cloudVm?.isLoadingStaffInbox?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(false) }
+  val staffActionInFlightCaseId by cloudVm?.staffActionInFlightCaseId?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(null) }
+  val staffErrorFa by cloudVm?.staffErrorFa?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(null) }
   val cloudBookmarks by cloudVm?.bookmarkedSlugsState?.collectAsStateWithLifecycle()
     ?: remember { mutableStateOf(emptySet<String>()) }
   val cloudVisitDraftsState by cloudVm?.visitDraftsState?.collectAsStateWithLifecycle()
@@ -337,8 +361,9 @@ fun ManoApp(
     if (currentUser != null) (cloudProfileState as? CloudDataState.Success)?.data else localChildProfile
   val effectiveConsultations =
     if (currentUser != null) {
-      val cloudList = (cloudConsultationsState as? CloudDataState.Success)?.data ?: emptyList()
-      uiState.askPharmacist.copy(requests = cloudList)
+      val legacyList = (cloudConsultationsState as? CloudDataState.Success)?.data ?: emptyList()
+      val merged = (serverConsultations + legacyList).distinctBy { it.id }
+      uiState.askPharmacist.copy(requests = merged)
     } else {
       uiState.askPharmacist
     }
@@ -615,11 +640,20 @@ fun ManoApp(
       ModalDrawerSheet {
         Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.mano_pose_welcome),
-              contentDescription = "نشان مانو کیدز",
-              modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
-            )
+            Surface(
+              color = Color(0xFF0D8794),
+              shape = RoundedCornerShape(14.dp),
+              border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+              shadowElevation = 3.dp,
+              modifier = Modifier.size(46.dp),
+            ) {
+              Image(
+                painter = painterResource(id = R.drawable.img_mano_launcher),
+                contentDescription = "نشان مانو کیدز",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
+              )
+            }
             Column {
               Text("مانو کیدز", style = MaterialTheme.typography.titleMedium)
               Text("همراه علمی مراقبت از کودک", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -790,16 +824,22 @@ fun ManoApp(
               },
               title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                  Image(
-                    painter = painterResource(id = R.drawable.mano_pose_welcome),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                  Surface(
+                    color = Color(0xFF0D8794),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.2.dp, PureWhite.copy(alpha = 0.55f)),
                     modifier =
                       Modifier
-                        .size(36.dp)
-                        .shadow(6.dp, RoundedCornerShape(12.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                        .clip(RoundedCornerShape(12.dp)),
-                  )
+                        .size(38.dp)
+                        .shadow(6.dp, RoundedCornerShape(12.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                  ) {
+                    Image(
+                      painter = painterResource(id = R.drawable.img_mano_launcher),
+                      contentDescription = null,
+                      contentScale = ContentScale.Crop,
+                      modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                    )
+                  }
                   Text("مانو کیدز", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
               },
@@ -1401,32 +1441,67 @@ fun ManoApp(
                   state = effectiveConsultations,
                   onSelectCategory = viewModel::setAskCategory,
                   onSelectAgeBand = viewModel::setAskAgeBand,
-                  onQuestionChange = viewModel::setAskQuestion,
-                  onUrgentFlagChange = viewModel::setAskUrgentFlags,
-                  onConsentChange = viewModel::setAskConsent,
+                  onQuestionChange = { text ->
+                    cloudVm?.clearServerConsultationError()
+                    viewModel.setAskQuestion(text)
+                  },
+                  onUrgentFlagChange = { urgent ->
+                    cloudVm?.clearServerConsultationError()
+                    viewModel.setAskUrgentFlags(urgent)
+                  },
+                  onConsentChange = { accepted ->
+                    cloudVm?.clearServerConsultationError()
+                    viewModel.setAskConsent(accepted)
+                  },
                   onSubmit = {
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
-                      val validated = viewModel.consumeValidatedAskPharmacistQuestion()
+                      val validated = viewModel.validateAskPharmacistForm()
                       if (validated != null) {
-                        activeCloudVm.submitConsultation(validated.first, validated.second, validated.third)
+                        activeCloudVm.submitTrustedConsultation(
+                          category = validated.first,
+                          ageBand = validated.second,
+                          questionSummaryFa = validated.third,
+                          hasUrgentFlag = uiState.askPharmacist.hasUrgentFlags,
+                          consentAccepted = uiState.askPharmacist.consentAccepted,
+                          onSuccess = { viewModel.clearAskPharmacistQuestion() },
+                        )
                       }
                     } else {
                       viewModel.submitAskPharmacistDemo()
                     }
                   },
-                  onAdvanceStatus = { id, status ->
+                  onAdvanceStatus = { id, _ ->
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
-                      activeCloudVm.advanceConsultationStatus(id, status)
+                      activeCloudVm.refreshServerConsultations(silent = false)
                     } else {
                       viewModel.advanceDemoRequestStatus(id)
                     }
                   },
                   currentUser = currentUser,
+                  acceptingPharmacies = acceptingPharmacies,
+                  selectedPharmacyId = selectedPharmacyId,
+                  onSelectPharmacy = { pharmacyId -> cloudVm?.selectPharmacy(pharmacyId) },
+                  isSubmitting = isSubmittingConsultation,
+                  serverErrorFa = serverConsultationErrorFa,
                   onCloudAuthSuccess = { viewModel.showToast("اتصال به حساب گوگل انجام شد.") },
                   onCloudAuthError = { msg -> viewModel.showToast(msg) },
                   onSignedOut = { viewModel.showToast("از حساب گوگل خارج شدید.") },
+                  staffAccess = staffAccessStatus,
+                  staffInboxCases = staffInboxCases,
+                  isLoadingStaffInbox = isLoadingStaffInbox,
+                  staffActionInFlightCaseId = staffActionInFlightCaseId,
+                  staffErrorFa = staffErrorFa,
+                  onRefreshStaffInbox = { forceRefresh, statusFilter ->
+                    cloudVm?.refreshStaffStatusAndInbox(forceTokenRefresh = forceRefresh, statusFilter = statusFilter)
+                  },
+                  onAcknowledgeStaffCaseReceived = { pharmacyId, caseId, note ->
+                    cloudVm?.acknowledgeStaffCaseReceived(pharmacyId, caseId, note)
+                  },
+                  onSubmitStaffCaseReview = { pharmacyId, caseId, note, reply, attestation ->
+                    cloudVm?.submitStaffCaseReview(pharmacyId, caseId, note, reply, attestation)
+                  },
                 )
               }
 

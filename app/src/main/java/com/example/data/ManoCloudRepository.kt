@@ -10,6 +10,9 @@ import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.DoctorVisitDraft
 import com.example.domain.model.FollowUpNote
 import com.example.domain.model.SavedSyrupScan
+import com.example.domain.model.PublicPharmacyOption
+import com.example.domain.model.StaffAccessStatus
+import com.example.domain.model.StaffConsultationCase
 import com.example.domain.model.VaccineRecord
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
@@ -24,6 +27,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.snapshots
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -35,15 +39,22 @@ import kotlinx.coroutines.tasks.await
 class ManoCloudRepository(
   private val db: FirebaseFirestore,
   private val auth: FirebaseAuth = Firebase.auth,
+  private val functionsGateway: ConsultationBackendGateway? = null,
 ) {
   constructor(context: Context) : this(
     db = FirebaseFirestore.getInstance(context.applicationContext.getString(R.string.firestore_database_id)),
     auth = Firebase.auth,
+    functionsGateway = defaultFunctionsGateway(),
   )
 
   private fun requireUserId(): String =
     auth.currentUser?.uid
       ?: throw IllegalStateException("کاربر باید پیش از دسترسی به فضای ابری با حساب گوگل وارد شده باشد.")
+
+  private fun requireFunctionsGateway(): ConsultationBackendGateway =
+    functionsGateway
+      ?: runCatching { FirebaseFunctionsConsultationGateway(FirebaseFunctions.getInstance("us-central1")) }.getOrNull()
+      ?: throw IllegalStateException("سرویس Cloud Functions در این نشست مقداردهی نشده است.")
 
   // --- CHILD PROFILE ---
 
@@ -337,6 +348,103 @@ class ManoCloudRepository(
     )
   }
 
+  suspend fun fetchAcceptingPharmaciesFromServer(): Result<List<PublicPharmacyOption>> {
+    requireUserId()
+    return requireFunctionsGateway().listAcceptingPharmacies()
+  }
+
+  suspend fun fetchParentConsultationsFromServer(limit: Int = 25): Result<List<ConsultationRequestDemo>> {
+    requireUserId()
+    return requireFunctionsGateway().listParentConsultations(limit)
+  }
+
+  suspend fun submitTrustedConsultationViaServer(
+    preferredPharmacyId: String?,
+    category: ConsultationCategory,
+    ageBand: AgeBand,
+    questionSummaryFa: String,
+    hasUrgentFlag: Boolean,
+    consentAccepted: Boolean,
+  ): Result<ConsultationRequestDemo> {
+    requireUserId()
+    val gateway = requireFunctionsGateway()
+    val resolvedPharmacyId =
+      if (!preferredPharmacyId.isNullOrBlank()) {
+        preferredPharmacyId.trim()
+      } else {
+        val listRes = gateway.listAcceptingPharmacies()
+        val firstActive = listRes.getOrNull()?.firstOrNull { it.acceptingCases }?.pharmacyId
+        firstActive
+          ?: return Result.failure(
+            IllegalStateException(
+              "هیچ داروخانه فعال و آماده پذیرش از سرور دریافت نشد؛ پس از استقرار Functions و اجرای اسکریپت راه‌اندازی داروخانه دوباره تلاش کنید.",
+            ),
+          )
+      }
+
+    return gateway.issueTriagePassAndSubmitCase(
+      pharmacyId = resolvedPharmacyId,
+      category = category,
+      ageBand = ageBand,
+      questionSummaryFa = questionSummaryFa,
+      hasUrgentFlag = hasUrgentFlag,
+      consentAccepted = consentAccepted,
+    )
+  }
+
+  suspend fun fetchPharmacistStaffClaims(forceRefresh: Boolean = false): StaffAccessStatus {
+    val user = auth.currentUser ?: return StaffAccessStatus()
+    return try {
+      val tokenResult = user.getIdToken(forceRefresh).await()
+      val claims = tokenResult.claims
+      val verified = claims["manoStaffVerified"] as? Boolean ?: false
+      val role = claims["manoStaffRole"] as? String
+      val pharmacyId = (claims["manoPharmacyId"] as? String)?.takeIf { it.isNotBlank() }
+      StaffAccessStatus(
+        isVerifiedPharmacist = verified && role == "pharmacist" && pharmacyId != null,
+        role = role,
+        pharmacyId = pharmacyId,
+      )
+    } catch (e: CancellationException) {
+      throw e
+    } catch (_: Exception) {
+      StaffAccessStatus()
+    }
+  }
+
+  suspend fun fetchPharmacyInbox(
+    pharmacyId: String,
+    statusFilter: ConsultationStatus? = null,
+    limit: Int = 30,
+  ): Result<List<StaffConsultationCase>> {
+    requireUserId()
+    return requireFunctionsGateway().getPharmacyInbox(
+      pharmacyId = pharmacyId.trim(),
+      statusFilter = statusFilter,
+      limit = limit,
+    )
+  }
+
+  suspend fun reviewStaffConsultationCase(
+    pharmacyId: String,
+    caseId: String,
+    nextStatus: ConsultationStatus,
+    internalNote: String?,
+    parentReply: String?,
+    pharmacistAttestation: Boolean,
+  ): Result<StaffConsultationCase> {
+    requireUserId()
+    return requireFunctionsGateway().reviewConsultationCase(
+      pharmacyId = pharmacyId.trim(),
+      caseId = caseId.trim(),
+      nextStatus = nextStatus,
+      internalNote = internalNote,
+      parentReply = parentReply,
+      pharmacistAttestation = pharmacistAttestation,
+    )
+  }
+
+  @Deprecated("Legacy direct-Firestore helper retained for rule compatibility tests only; UI uses submitTrustedConsultationViaServer.")
   suspend fun createConsultation(
     category: ConsultationCategory,
     ageBand: AgeBand,
@@ -367,6 +475,7 @@ class ManoCloudRepository(
     }
   }
 
+  @Deprecated("Workflow transitions must execute server-side in reviewConsultationCase.")
   suspend fun advanceConsultationStatus(consultationId: String, currentStatus: ConsultationStatus): Result<Unit> {
     val uid = requireUserId()
     val nextStatus =
@@ -838,5 +947,12 @@ class ManoCloudRepository(
 
   companion object {
     const val PRIMARY_PROFILE_DOC_ID = "primary"
+
+    private fun defaultFunctionsGateway(): ConsultationBackendGateway? =
+      try {
+        FirebaseFunctionsConsultationGateway(FirebaseFunctions.getInstance("us-central1"))
+      } catch (_: Exception) {
+        null
+      }
   }
 }

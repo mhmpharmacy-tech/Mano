@@ -176,12 +176,19 @@ fun TopicsCardStudioPanel(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-              Image(
-                bitmap = pickedReferenceBitmap!!.asImageBitmap(),
-                contentDescription = "تصویر مرجع انتخاب‌شده",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)),
-              )
+              Surface(
+                color = manoCardSurface(),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, manoBorderColor()),
+                modifier = Modifier.size(58.dp),
+              ) {
+                Image(
+                  bitmap = pickedReferenceBitmap!!.asImageBitmap(),
+                  contentDescription = "تصویر مرجع انتخاب‌شده",
+                  contentScale = ContentScale.Crop,
+                  modifier = Modifier.fillMaxSize(),
+                )
+              }
               Text(
                 text = "تصویر مرجع آماده ویرایش است.",
                 style = MaterialTheme.typography.bodySmall,
@@ -284,17 +291,20 @@ fun TopicsCardStudioPanel(
             }
           }
 
-          Image(
-            bitmap = activeCard.bitmap.asImageBitmap(),
-            contentDescription = activeCard.titleFa,
-            contentScale = ContentScale.Crop,
-            modifier =
-              Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(18.dp))
-                .testTag("active_generated_card_image"),
-          )
+          Surface(
+            color = manoCardSurface(),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.2.dp, manoBorderColor()),
+            shadowElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+          ) {
+            Image(
+              bitmap = activeCard.bitmap.asImageBitmap(),
+              contentDescription = activeCard.titleFa,
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.fillMaxSize().testTag("active_generated_card_image"),
+            )
+          }
 
           OutlinedTextField(
             value = editInstructionText,

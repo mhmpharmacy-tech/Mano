@@ -1,0 +1,236 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Soft luminous purple aura -->
+    <path android:pathData="M48,4 A44,44 0 1,1 47.99,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="48"
+                android:centerY="46"
+                android:gradientRadius="44"
+                android:startColor="#48C2A8FF"
+                android:centerColor="#228358E8"
+                android:endColor="#008358E8" />
+        </aapt:attr>
+    </path>
+
+    <!-- Soft feathered ground shadow -->
+    <path android:pathData="M21,84.5 A26,5.5 0 1,0 73,84.5 A26,5.5 0 1,0 21,84.5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="47"
+                android:centerY="84.5"
+                android:gradientRadius="26"
+                android:startColor="#36381D7A"
+                android:endColor="#00381D7A" />
+        </aapt:attr>
+    </path>
+
+    <!-- Body tunic / Pharmacist coat (Purple 3D gradient + luminous rim) -->
+    <path
+        android:pathData="M26,76 C26,61 34,54.5 46,54.5 C58,54.5 66,61 66,76 C66,81.5 61.5,84.5 46,84.5 C30.5,84.5 26,81.5 26,76 Z"
+        android:strokeWidth="1.2"
+        android:strokeColor="#66D9C7FF">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="30"
+                android:startY="54"
+                android:endX="62"
+                android:endY="85"
+                android:startColor="#A784FF"
+                android:centerColor="#8358E8"
+                android:endColor="#532EAD" />
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#26291066"
+        android:pathData="M27,76 C33,82 59,82 65,76 C65,81 60,84 46,84 C32,84 27,81 27,76 Z" />
+
+    <!-- White pharmacist lapel with shaded gradient -->
+    <path android:pathData="M35,56 L46,72.5 L57,56 L52,53.8 L46,63 L40,53.8 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="35"
+                android:startY="54"
+                android:endX="57"
+                android:endY="72"
+                android:startColor="#FFFFFF"
+                android:endColor="#DDD0FF" />
+        </aapt:attr>
+    </path>
+
+    <!-- Stethoscope draped neatly across shoulders -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M34,56 C32,68 38,76 46,76 C54,76 60,68 58,56"
+        android:strokeWidth="2.6"
+        android:strokeColor="#4C2E9C"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M42.4,76 A3.6,3.6 0 1,0 49.6,76 A3.6,3.6 0 1,0 42.4,76 Z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#4C2E9C">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="44.8"
+                android:centerY="74.8"
+                android:gradientRadius="4"
+                android:startColor="#FFFFFF"
+                android:endColor="#D6C4FF" />
+        </aapt:attr>
+    </path>
+
+    <!-- Mascot ears -->
+    <path
+        android:pathData="M22.5,28.5 C20.5,20.5 26.8,15.2 33.2,20.8 L34.2,31.2 L23.8,33.2 Z"
+        android:strokeWidth="1.1"
+        android:strokeColor="#66D9C7FF">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="22"
+                android:startY="18"
+                android:endX="33"
+                android:endY="32"
+                android:startColor="#AE8CFF"
+                android:endColor="#5E38BF" />
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M69.5,28.5 C71.5,20.5 65.2,15.2 58.8,20.8 L57.8,31.2 L68.2,33.2 Z"
+        android:strokeWidth="1.1"
+        android:strokeColor="#66D9C7FF">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="69"
+                android:startY="18"
+                android:endX="59"
+                android:endY="32"
+                android:startColor="#AE8CFF"
+                android:endColor="#5E38BF" />
+        </aapt:attr>
+    </path>
+
+    <!-- Chin shadow -->
+    <path
+        android:fillColor="#302D136E"
+        android:pathData="M31,54.5 C36,59.5 56,59.5 61,54.5 C57,57 35,57 31,54.5 Z" />
+
+    <!-- Head hood (radial purple gradient + luminous rim) -->
+    <path
+        android:pathData="M22.5,37 C22.5,20.5 32.8,14.5 46,14.5 C59.2,14.5 69.5,20.5 69.5,37 C69.5,51.2 59.2,58.2 46,58.2 C32.8,58.2 22.5,51.2 22.5,37 Z"
+        android:strokeWidth="1.2"
+        android:strokeColor="#80E1D1FF">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="39"
+                android:centerY="23"
+                android:gradientRadius="36"
+                android:startColor="#C4A8FF"
+                android:centerColor="#9A75F2"
+                android:endColor="#5D37BD" />
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M28,26 C32,19 41,16.5 49,16.8"
+        android:strokeWidth="2.1"
+        android:strokeColor="#55FFFFFF"
+        android:strokeLineCap="round" />
+
+    <!-- Ear headset accent -->
+    <path
+        android:fillColor="#5F3AC2"
+        android:pathData="M21.5,32 C21.5,29 24.5,29 25.5,32 V40 C24.5,43 21.5,43 21.5,40 Z"
+        android:strokeWidth="0.8"
+        android:strokeColor="#80D9C7FF" />
+
+    <!-- Inner warm face -->
+    <path
+        android:pathData="M28,39 C28,28 36,24 46,24 C56,24 64,28 64,39 C64,49.2 56,54.2 46,54.2 C36,54.2 28,49.2 28,39 Z"
+        android:strokeWidth="0.8"
+        android:strokeColor="#40FFFFFF">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="42"
+                android:centerY="31"
+                android:gradientRadius="26"
+                android:startColor="#FFFFFF"
+                android:centerColor="#FFFBF4"
+                android:endColor="#EAE2D6" />
+        </aapt:attr>
+    </path>
+
+    <!-- Eyes -->
+    <path android:fillColor="#0D2730" android:pathData="M35.8,37.5 A2.9,3.3 0 1,0 41.6,37.5 A2.9,3.3 0 1,0 35.8,37.5 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M37.2,36 A1.0,1.0 0 1,0 39.2,36 A1.0,1.0 0 1,0 37.2,36 Z" />
+    <path android:fillColor="#99FFFFFF" android:pathData="M39.3,38.4 A0.5,0.5 0 1,0 40.3,38.4 A0.5,0.5 0 1,0 39.3,38.4 Z" />
+
+    <path android:fillColor="#0D2730" android:pathData="M50.4,37.5 A2.9,3.3 0 1,0 56.2,37.5 A2.9,3.3 0 1,0 50.4,37.5 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M51.8,36 A1.0,1.0 0 1,0 53.8,36 A1.0,1.0 0 1,0 51.8,36 Z" />
+    <path android:fillColor="#99FFFFFF" android:pathData="M53.9,38.4 A0.5,0.5 0 1,0 54.9,38.4 A0.5,0.5 0 1,0 53.9,38.4 Z" />
+
+    <!-- Feathered cheeks -->
+    <path android:pathData="M31.5,43 A3.6,2.1 0 1,0 38.7,43 A3.6,2.1 0 1,0 31.5,43 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="35.1"
+                android:centerY="43"
+                android:gradientRadius="3.6"
+                android:startColor="#99FF8DA3"
+                android:endColor="#00FF8DA3" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M53.3,43 A3.6,2.1 0 1,0 60.5,43 A3.6,2.1 0 1,0 53.3,43 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="56.9"
+                android:centerY="43"
+                android:gradientRadius="3.6"
+                android:startColor="#99FF8DA3"
+                android:endColor="#00FF8DA3" />
+        </aapt:attr>
+    </path>
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M41.5,43.5 Q46,47.5 50.5,43.5"
+        android:strokeWidth="2.2"
+        android:strokeColor="#0D2730"
+        android:strokeLineCap="round" />
+
+    <!-- Glossy Connect Speech Bubble with top highlight -->
+    <path
+        android:pathData="M65,24 H87 C89.2,24 91,25.8 91,28 V40 C91,42.2 89.2,44 87,44 H73 L67,49 L68,44 H65 C62.8,44 61,42.2 61,40 V28 C61,25.8 62.8,24 65,24 Z"
+        android:strokeWidth="1.9"
+        android:strokeColor="#5F3AC2"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="62"
+                android:startY="24"
+                android:endX="90"
+                android:endY="48"
+                android:startColor="#FFFFFF"
+                android:endColor="#DFD1FF" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#8358E8" android:pathData="M68,34 A2,2 0 1,0 72,34 A2,2 0 1,0 68,34 Z" />
+    <path android:fillColor="#8358E8" android:pathData="M74,34 A2,2 0 1,0 78,34 A2,2 0 1,0 74,34 Z" />
+    <path android:fillColor="#8358E8" android:pathData="M80,34 A2,2 0 1,0 84,34 A2,2 0 1,0 80,34 Z" />
+</vector>

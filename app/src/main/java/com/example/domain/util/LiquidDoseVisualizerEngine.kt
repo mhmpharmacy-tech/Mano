@@ -281,6 +281,9 @@ object LiquidDoseVisualizerEngine {
   fun parseAgeMonthsFromText(raw: String): Int? {
     val clean = PersianNormalizer.normalize(raw).trim()
     if (clean.isEmpty()) return null
+    val isBandLabel = AgeBand.entries.any { PersianNormalizer.normalize(it.labelFa) == clean }
+    val hasNumericRange = Regex("""\d+\s*(?:تا|الی|-|–|to)\s*\d+""", RegexOption.IGNORE_CASE).containsMatchIn(clean)
+    if (isBandLabel || hasNumericRange) return null
     val yearsMatch = Regex("""(\d+)\s*سال""").find(clean)
     val monthsMatch = Regex("""(\d+)\s*ماه""").find(clean)
     val years = yearsMatch?.groupValues?.getOrNull(1)?.toIntOrNull()

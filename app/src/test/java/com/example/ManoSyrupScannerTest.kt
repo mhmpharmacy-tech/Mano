@@ -1,6 +1,7 @@
 package com.example
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -24,6 +25,7 @@ import com.example.domain.model.SyrupIngredientKey
 import com.example.domain.util.LiquidFormulationId
 import com.example.domain.util.SyrupConcentrationMatcher
 import com.example.ui.components.AlertSeverity
+import com.example.ui.util.SyrupImageHelper
 import com.example.ui.viewmodel.ManoSyrupScannerViewModel
 import com.example.ui.viewmodel.SyrupScannerAiEngine
 import com.example.ui.viewmodel.SyrupScannerUiState
@@ -283,5 +285,21 @@ class ManoSyrupScannerTest {
           hasAnyAncestor(hasTestTag("studio_3d_scanned_bottle_banner"))
       )
       .assertIsDisplayed()
+  }
+
+  @Test
+  fun syrupImageHelper_enhancesDimBitmap_andPreservesWellLitBitmap() {
+    val dim = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+      eraseColor(Color.rgb(24, 24, 24))
+    }
+    val enhancedDim = SyrupImageHelper.enhanceLowLightIfNeeded(dim)
+    val liftedPx = enhancedDim.getPixel(32, 32)
+    assertTrue("Expected dim image pixel to be lifted, got red=${Color.red(liftedPx)}", Color.red(liftedPx) > 45)
+
+    val bright = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+      eraseColor(Color.rgb(210, 210, 210))
+    }
+    val untouchedBright = SyrupImageHelper.enhanceLowLightIfNeeded(bright)
+    assertTrue("Expected well-lit bitmap to be returned unchanged", untouchedBright === bright)
   }
 }

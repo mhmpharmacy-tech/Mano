@@ -7,13 +7,13 @@ const fallbackEl = document.getElementById('webgl-fallback');
 
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'default' });
 } catch (err) {
   if (fallbackEl) fallbackEl.style.display = 'flex';
   throw err;
 }
 
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -23,13 +23,38 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf0f7f8);
-scene.fog = new THREE.FogExp2(0xf0f7f8, 0.032);
+scene.fog = new THREE.FogExp2(0xf0f7f8, 0.028);
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 const roomEnv = new RoomEnvironment();
-scene.environment = pmrem.fromScene(roomEnv, 0.04).texture;
-scene.environmentIntensity = 0.72;
+scene.environment = pmrem.fromScene(roomEnv, 0.045).texture;
+scene.environmentIntensity = 0.78;
 roomEnv.dispose();
+pmrem.dispose();
+
+// Procedural ceramic micro-grain roughness map for tactile PBR highlights
+function createMicroNoiseTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(128, 128);
+  for (let i = 0; i < img.data.length; i += 4) {
+    // Deterministic soft ceramic variance centered around ~232..255
+    const n = 232 + Math.floor((((i * 19 + 37) % 97) / 97) * 23);
+    img.data[i] = n;
+    img.data[i + 1] = n;
+    img.data[i + 2] = n;
+    img.data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  return tex;
+}
+const microGrainTex = createMicroNoiseTexture();
 
 const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 80);
 camera.position.set(0.3, 2.35, 5.2);
@@ -42,21 +67,31 @@ controls.minDistance = 2.0;
 controls.maxDistance = 9.5;
 controls.target.set(0, 0.72, 0);
 
-// Studio key light + cool sky/floor bounce
-const keyLight = new THREE.DirectionalLight(0xfff6ea, 2.15);
-keyLight.position.set(4.5, 6.8, 4.2);
+// 3-Point Soft Studio Lighting Rig (Key + Aqua Fill + Luminous Back Rim + Hemisphere)
+const keyLight = new THREE.DirectionalLight(0xfff8ef, 2.05);
+keyLight.position.set(4.2, 7.2, 4.6);
 keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.shadow.mapSize.set(1536, 1536);
+keyLight.shadow.radius = 4.5;
 keyLight.shadow.camera.left = -4.8;
 keyLight.shadow.camera.right = 4.8;
 keyLight.shadow.camera.top = 4.8;
 keyLight.shadow.camera.bottom = -4.8;
 keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 18;
-keyLight.shadow.bias = -0.0005;
+keyLight.shadow.camera.far = 19;
+keyLight.shadow.bias = -0.0004;
+keyLight.shadow.normalBias = 0.022;
 scene.add(keyLight);
 
-const hemiLight = new THREE.HemisphereLight(0xdff5f9, 0xcbd8d6, 0.68);
+const fillLight = new THREE.DirectionalLight(0xd9f4f8, 0.78);
+fillLight.position.set(-4.6, 3.8, 3.6);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xe9fcff, 0.76);
+rimLight.position.set(-1.6, 4.4, -5.2);
+scene.add(rimLight);
+
+const hemiLight = new THREE.HemisphereLight(0xe8f9fc, 0xc5dbd9, 0.74);
 scene.add(hemiLight);
 
 // Ground clinic studio stage & radial contact shadow generator
@@ -65,10 +100,10 @@ function makeRadialShadowTexture() {
   c.width = 128;
   c.height = 128;
   const ctx = c.getContext('2d');
-  const g = ctx.createRadialGradient(64, 64, 8, 64, 64, 62);
-  g.addColorStop(0, 'rgba(18, 48, 56, 0.32)');
-  g.addColorStop(0.55, 'rgba(18, 48, 56, 0.11)');
-  g.addColorStop(1, 'rgba(18, 48, 56, 0.0)');
+  const g = ctx.createRadialGradient(64, 64, 6, 64, 64, 62);
+  g.addColorStop(0, 'rgba(10, 32, 38, 0.34)');
+  g.addColorStop(0.50, 'rgba(10, 32, 38, 0.13)');
+  g.addColorStop(1, 'rgba(10, 32, 38, 0.0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c);
@@ -76,12 +111,17 @@ function makeRadialShadowTexture() {
   return tex;
 }
 const contactShadowTex = makeRadialShadowTexture();
+const contactShadowMats = [];
 
 function createContactShadow(rx, rz) {
-  const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(rx, rz),
-    new THREE.MeshBasicMaterial({ map: contactShadowTex, transparent: true, depthWrite: false })
-  );
+  const mat = new THREE.MeshBasicMaterial({
+    map: contactShadowTex,
+    transparent: true,
+    opacity: 0.78,
+    depthWrite: false,
+  });
+  contactShadowMats.push(mat);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(rx, rz), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = 0.004;
   return mesh;
@@ -89,20 +129,45 @@ function createContactShadow(rx, rz) {
 
 const floorMesh = new THREE.Mesh(
   new THREE.CircleGeometry(18, 64),
-  new THREE.MeshStandardMaterial({ color: 0xe6f1f3, roughness: 0.94, metalness: 0.0 })
+  new THREE.MeshStandardMaterial({ color: 0xe4f0f2, roughness: 0.92, metalness: 0.0 })
 );
 floorMesh.rotation.x = -Math.PI / 2;
 floorMesh.receiveShadow = true;
 scene.add(floorMesh);
 
-// Ground-flush rounded ceramic studio plinth
+// Ground-flush clearcoated ceramic studio plinth + brushed gold perimeter trim
+const plinthMat = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff,
+  roughness: 0.24,
+  roughnessMap: microGrainTex,
+  metalness: 0.04,
+  clearcoat: 0.55,
+  clearcoatRoughness: 0.16,
+  envMapIntensity: 0.95,
+});
 const plinth = new THREE.Mesh(
   new THREE.CylinderGeometry(2.8, 2.96, 0.12, 64),
-  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.03 })
+  plinthMat
 );
 plinth.position.y = 0.06;
 plinth.receiveShadow = true;
 scene.add(plinth);
+
+const plinthTrimMat = new THREE.MeshPhysicalMaterial({
+  color: 0xd9ab57,
+  emissive: 0x0f8c79,
+  emissiveIntensity: 0.08,
+  roughness: 0.24,
+  metalness: 0.85,
+  clearcoat: 0.4,
+});
+const plinthTrimRing = new THREE.Mesh(
+  new THREE.TorusGeometry(2.79, 0.018, 12, 72),
+  plinthTrimMat
+);
+plinthTrimRing.rotation.x = Math.PI / 2;
+plinthTrimRing.position.y = 0.121;
+scene.add(plinthTrimRing);
 
 // Procedural Textures
 function createSyringeScaleTexture() {
@@ -393,7 +458,13 @@ thermoGroup.add(dockBase);
 
 const thermoBody = new THREE.Mesh(
   new THREE.CapsuleGeometry(0.16, 1.02, 12, 24),
-  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 })
+  new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    roughness: 0.18,
+    metalness: 0.03,
+    clearcoat: 0.85,
+    clearcoatRoughness: 0.12,
+  })
 );
 thermoBody.position.y = 0.85;
 thermoBody.rotation.z = -0.12;
@@ -430,130 +501,339 @@ thermoGroup.add(feverRing);
 tagInteractive(thermoGroup, 'thermometer');
 
 // =========================================================================
-// SCENE 2: 3D MANO MASCOT + ORBITING PEDIATRIC STATIONS
+// SCENE 2: 3D PBR MANO HERO + 6 COLOR-CODED MANO SQUAD CHARACTERS
 // =========================================================================
 const manoRoot = new THREE.Group();
 manoRoot.position.y = 0.12;
 manoRoot.visible = false;
 scene.add(manoRoot);
-manoRoot.add(createContactShadow(2.2, 2.2));
+manoRoot.add(createContactShadow(2.15, 2.15));
 
 const manoChar = new THREE.Group();
 manoRoot.add(manoChar);
 
-const tealFurMat = new THREE.MeshStandardMaterial({ color: 0x1a9fa8, roughness: 0.44, metalness: 0.02 });
-const bellyCoatMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.38 });
-const eyeMat = new THREE.MeshStandardMaterial({ color: 0x10272d, roughness: 0.08, metalness: 0.1 });
-const cheekMat = new THREE.MeshStandardMaterial({ color: 0xff9f8e, roughness: 0.45 });
-const metalMat = new THREE.MeshStandardMaterial({ color: 0xdce5e7, roughness: 0.18, metalness: 0.9 });
-
-// Grounded feet
-[-0.28, 0.28].forEach((x) => {
-  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.2, 24, 18), tealFurMat);
-  foot.scale.set(1.0, 0.65, 1.25);
-  foot.position.set(x, 0.13, 0.08);
-  foot.castShadow = true;
-  manoChar.add(foot);
+// Signature PBR Materials for Hero MANO
+const manoPorcelainMat = new THREE.MeshPhysicalMaterial({
+  color: 0xf7fbfc,
+  roughness: 0.15,
+  roughnessMap: microGrainTex,
+  metalness: 0.03,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.06,
+  ior: 1.52,
+  reflectivity: 0.9,
+  envMapIntensity: 1.15,
 });
 
-// Torso + clinic coat
-const torso = new THREE.Mesh(new THREE.SphereGeometry(0.62, 32, 26), tealFurMat);
-torso.scale.set(1.0, 1.15, 0.92);
-torso.position.y = 0.82;
+const manoGoldMat = new THREE.MeshPhysicalMaterial({
+  color: 0xdfb15b,
+  roughness: 0.21,
+  metalness: 0.90,
+  clearcoat: 0.42,
+  clearcoatRoughness: 0.12,
+  envMapIntensity: 1.35,
+});
+
+const manoVisorMat = new THREE.MeshPhysicalMaterial({
+  color: 0x0a2329,
+  roughness: 0.05,
+  metalness: 0.10,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.03,
+  ior: 1.56,
+  reflectivity: 1.0,
+  envMapIntensity: 1.4,
+});
+
+const manoFaceGlowMat = new THREE.MeshPhysicalMaterial({
+  color: 0x7efce5,
+  emissive: 0x3ef0ce,
+  emissiveIntensity: 1.30,
+  roughness: 0.18,
+  clearcoat: 0.4,
+});
+
+const manoCoreEmblemMat = new THREE.MeshPhysicalMaterial({
+  color: 0x139ea6,
+  emissive: 0x15b8a6,
+  emissiveIntensity: 0.85,
+  roughness: 0.20,
+  metalness: 0.22,
+  clearcoat: 0.85,
+});
+
+const manoSproutMat = new THREE.MeshPhysicalMaterial({
+  color: 0x2ec486,
+  roughness: 0.30,
+  metalness: 0.02,
+  clearcoat: 0.58,
+  clearcoatRoughness: 0.18,
+  sheen: 0.55,
+  sheenColor: new THREE.Color(0xbefae0),
+  sheenRoughness: 0.42,
+});
+
+const manoScarfMat = new THREE.MeshPhysicalMaterial({
+  color: 0x136a76,
+  roughness: 0.62,
+  metalness: 0.0,
+  sheen: 0.88,
+  sheenColor: new THREE.Color(0x88e6ea),
+  sheenRoughness: 0.45,
+});
+
+const metalMat = new THREE.MeshPhysicalMaterial({
+  color: 0xe3ecee,
+  roughness: 0.12,
+  metalness: 0.95,
+  clearcoat: 0.38,
+  envMapIntensity: 1.35,
+});
+
+// Grounded porcelain feet with golden ankle collars
+[-0.25, 0.25].forEach((x) => {
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.185, 24, 18), manoPorcelainMat);
+  foot.scale.set(1.0, 0.68, 1.32);
+  foot.position.set(x, 0.125, 0.06);
+  foot.castShadow = true;
+  foot.receiveShadow = true;
+  manoChar.add(foot);
+
+  const ankleRing = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.022, 10, 24), manoGoldMat);
+  ankleRing.rotation.x = Math.PI / 2;
+  ankleRing.position.set(x, 0.24, 0.04);
+  manoChar.add(ankleRing);
+});
+
+// Porcelain torso + luminous chest emblem + M+ gold ring
+const torso = new THREE.Mesh(new THREE.SphereGeometry(0.56, 36, 28), manoPorcelainMat);
+torso.scale.set(1.0, 1.08, 0.90);
+torso.position.y = 0.78;
 torso.castShadow = true;
+torso.receiveShadow = true;
 manoChar.add(torso);
 
-const coatPatch = new THREE.Mesh(new THREE.SphereGeometry(0.56, 28, 22), bellyCoatMat);
-coatPatch.scale.set(0.86, 1.02, 0.45);
-coatPatch.position.set(0, 0.78, 0.36);
-manoChar.add(coatPatch);
+const chestBezel = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.026, 12, 32), manoGoldMat);
+chestBezel.position.set(0, 0.82, 0.48);
+manoChar.add(chestBezel);
 
-// Stethoscope collar + medallion
-const stethCollar = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.036, 12, 32), new THREE.MeshStandardMaterial({ color: 0x124852, roughness: 0.35 }));
-stethCollar.rotation.x = Math.PI * 0.42;
-stethCollar.position.set(0, 1.32, 0.08);
+const chestCore = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 28), manoCoreEmblemMat);
+chestCore.rotation.x = Math.PI / 2;
+chestCore.position.set(0, 0.82, 0.47);
+manoChar.add(chestCore);
+
+// Velvet stethoscope collar + chrome clinical disc
+const stethCollar = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.036, 14, 36), manoScarfMat);
+stethCollar.rotation.x = Math.PI * 0.44;
+stethCollar.position.set(0, 1.30, 0.05);
+stethCollar.castShadow = true;
 manoChar.add(stethCollar);
 
-const stethDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.04, 24), metalMat);
+const stethDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.034, 24), metalMat);
 stethDisc.rotation.x = Math.PI / 2;
-stethDisc.position.set(0.16, 1.05, 0.57);
+stethDisc.position.set(0.24, 1.03, 0.44);
 manoChar.add(stethDisc);
 
-// Head + ears + face
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 26), tealFurMat);
+// Head chassis + golden visor bezel + optical smoked visor + glowing mint face
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.50, 36, 28), manoPorcelainMat);
+head.scale.set(1.08, 0.96, 0.94);
 head.position.y = 1.72;
 head.castShadow = true;
+head.receiveShadow = true;
 manoChar.add(head);
 
-[-0.36, 0.36].forEach((x) => {
-  const ear = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 16), tealFurMat);
-  ear.position.set(x, 2.12, -0.04);
-  ear.castShadow = true;
-  manoChar.add(ear);
-});
+const visorBezel = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.035, 16, 40), manoGoldMat);
+visorBezel.scale.set(1.16, 0.86, 1.0);
+visorBezel.position.set(0, 1.72, 0.37);
+manoChar.add(visorBezel);
 
-[-0.17, 0.17].forEach((x) => {
-  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.058, 16, 14), eyeMat);
-  eye.position.set(x, 1.76, 0.44);
+const visorScreen = new THREE.Mesh(new THREE.SphereGeometry(0.41, 32, 24), manoVisorMat);
+visorScreen.scale.set(0.95, 0.72, 0.56);
+visorScreen.position.set(0, 1.72, 0.25);
+manoChar.add(visorScreen);
+
+[-0.14, 0.14].forEach((x) => {
+  const eye = new THREE.Mesh(new THREE.CapsuleGeometry(0.038, 0.046, 8, 14), manoFaceGlowMat);
+  eye.position.set(x, 1.76, 0.47);
   manoChar.add(eye);
 });
 
-[-0.27, 0.27].forEach((x) => {
-  const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), cheekMat);
-  cheek.scale.set(1.2, 0.75, 0.4);
-  cheek.position.set(x, 1.62, 0.42);
-  manoChar.add(cheek);
+const smileCurve = new THREE.Mesh(
+  new THREE.TorusGeometry(0.095, 0.017, 10, 24, Math.PI * 0.75),
+  manoFaceGlowMat
+);
+smileCurve.rotation.z = Math.PI * 1.125;
+smileCurve.position.set(0, 1.68, 0.475);
+manoChar.add(smileCurve);
+
+// Signature green sprout + golden crown mount on head
+const sproutCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.082, 0.055, 24), manoGoldMat);
+sproutCollar.position.set(0, 2.20, 0);
+manoChar.add(sproutCollar);
+
+const sproutStem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.19, 12), manoSproutMat);
+sproutStem.position.set(0, 2.30, 0);
+sproutStem.castShadow = true;
+manoChar.add(sproutStem);
+
+[-1, 1].forEach((dir) => {
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), manoSproutMat);
+  leaf.scale.set(1.25, 0.34, 0.72);
+  leaf.position.set(dir * 0.085, 2.40, 0.01);
+  leaf.rotation.z = dir * 0.45;
+  leaf.castShadow = true;
+  manoChar.add(leaf);
 });
 
-// Waving arms
-const leftArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.38, 10, 16), tealFurMat);
-leftArm.position.set(-0.68, 0.98, 0.04);
-leftArm.rotation.z = 0.55;
-leftArm.castShadow = true;
-manoChar.add(leftArm);
+// Articulated waving arms with golden shoulder/wrist trim
+const leftArmGroup = new THREE.Group();
+leftArmGroup.position.set(-0.56, 0.96, 0.02);
+leftArmGroup.rotation.z = 0.48;
+manoChar.add(leftArmGroup);
 
-const rightArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.38, 10, 16), tealFurMat);
-rightArm.position.set(0.68, 1.1, 0.06);
-rightArm.rotation.z = -0.85;
-rightArm.castShadow = true;
-manoChar.add(rightArm);
+const leftShoulderRing = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), manoGoldMat);
+leftArmGroup.add(leftShoulderRing);
+
+const leftArmMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.34, 12, 20), manoPorcelainMat);
+leftArmMesh.position.y = -0.20;
+leftArmMesh.castShadow = true;
+leftArmGroup.add(leftArmMesh);
+
+const leftCuff = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.018, 10, 24), manoGoldMat);
+leftCuff.rotation.x = Math.PI / 2;
+leftCuff.position.y = -0.35;
+leftArmGroup.add(leftCuff);
+
+const rightArmGroup = new THREE.Group();
+rightArmGroup.position.set(0.56, 1.05, 0.04);
+rightArmGroup.rotation.z = -2.28;
+manoChar.add(rightArmGroup);
+
+const rightShoulderRing = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), manoGoldMat);
+rightArmGroup.add(rightShoulderRing);
+
+const rightArmMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.34, 12, 20), manoPorcelainMat);
+rightArmMesh.position.y = -0.20;
+rightArmMesh.castShadow = true;
+rightArmGroup.add(rightArmMesh);
+
+const rightCuff = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.018, 10, 24), manoGoldMat);
+rightCuff.rotation.x = Math.PI / 2;
+rightCuff.position.y = -0.35;
+rightArmGroup.add(rightCuff);
 
 tagInteractive(manoChar, 'mano');
 
-// 4 Orbiting Care Station Mini-Props
+// 6 Color-Coded Orbiting PBR Mini-MANO Squad Characters
 const stationsRing = new THREE.Group();
-stationsRing.position.y = 1.05;
+stationsRing.position.y = 0.72;
 manoRoot.add(stationsRing);
 
-const stationConfigs = [
-  { id: 'station_fever', color: 0xef6c57, angle: 0 },
-  { id: 'station_syringe', color: 0x13828c, angle: Math.PI / 2 },
-  { id: 'station_hydration', color: 0x3ba6d1, angle: Math.PI },
-  { id: 'station_sleep', color: 0xf0b24d, angle: (3 * Math.PI) / 2 },
+const squadConfigs = [
+  { id: 'mano_drug', color: 0x0f8c79, emissive: 0x16b89f, kind: 'drug', angle: 0 },
+  { id: 'mano_growth', color: 0x1d78c1, emissive: 0x3898e8, kind: 'growth', angle: Math.PI / 3 },
+  { id: 'mano_skin', color: 0xe06356, emissive: 0xf48477, kind: 'skin', angle: (2 * Math.PI) / 3 },
+  { id: 'mano_nutrition', color: 0x6b8e23, emissive: 0x8fb834, kind: 'nutrition', angle: Math.PI },
+  { id: 'mano_care', color: 0xe67e22, emissive: 0xf59d47, kind: 'care', angle: (4 * Math.PI) / 3 },
+  { id: 'mano_connect', color: 0x7c5cbf, emissive: 0x9b7be0, kind: 'connect', angle: (5 * Math.PI) / 3 },
 ];
 
-stationConfigs.forEach((cfg) => {
+const squadMeshesById = new Map();
+squadConfigs.forEach((cfg, idx) => {
   const stGroup = new THREE.Group();
-  const radius = 1.65;
+  const radius = 1.78;
   stGroup.position.set(Math.cos(cfg.angle) * radius, 0, Math.sin(cfg.angle) * radius);
+  stGroup.userData.baseAngle = cfg.angle;
+  stGroup.userData.accentColor = cfg.color;
+  stGroup.userData.emissiveColor = cfg.emissive;
 
   const badgeBase = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.24, 0.24, 0.08, 24),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 })
+    new THREE.CylinderGeometry(0.28, 0.30, 0.06, 28),
+    plinthMat
   );
   badgeBase.castShadow = true;
+  badgeBase.receiveShadow = true;
   stGroup.add(badgeBase);
 
-  const gem = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.16, 1),
-    new THREE.MeshStandardMaterial({ color: cfg.color, roughness: 0.22, metalness: 0.12 })
-  );
-  gem.position.y = 0.24;
-  gem.castShadow = true;
-  stGroup.add(gem);
+  const suitMat = new THREE.MeshPhysicalMaterial({
+    color: cfg.color,
+    emissive: cfg.emissive,
+    emissiveIntensity: 0.14,
+    roughness: 0.18,
+    roughnessMap: microGrainTex,
+    metalness: 0.08,
+    clearcoat: 0.95,
+    clearcoatRoughness: 0.08,
+    ior: 1.5,
+  });
 
+  const rimMat = new THREE.MeshPhysicalMaterial({
+    color: cfg.emissive,
+    emissive: cfg.emissive,
+    emissiveIntensity: 0.32,
+    roughness: 0.25,
+    metalness: 0.6,
+  });
+  const baseRing = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.016, 10, 28), rimMat);
+  baseRing.rotation.x = Math.PI / 2;
+  baseRing.position.y = 0.032;
+  stGroup.add(baseRing);
+
+  // Mini-MANO porcelain torso + color-coded dome helmet
+  const miniBody = new THREE.Mesh(new THREE.SphereGeometry(0.155, 22, 18), manoPorcelainMat);
+  miniBody.scale.set(1.0, 1.05, 0.92);
+  miniBody.position.y = 0.21;
+  miniBody.castShadow = true;
+  stGroup.add(miniBody);
+
+  const miniChestBand = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.022, 10, 24), suitMat);
+  miniChestBand.rotation.x = Math.PI / 2;
+  miniChestBand.position.y = 0.22;
+  stGroup.add(miniChestBand);
+
+  const miniHead = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 18), suitMat);
+  miniHead.scale.set(1.08, 0.96, 0.95);
+  miniHead.position.y = 0.45;
+  miniHead.castShadow = true;
+  stGroup.add(miniHead);
+
+  const miniVisor = new THREE.Mesh(new THREE.SphereGeometry(0.122, 20, 16), manoVisorMat);
+  miniVisor.scale.set(0.98, 0.72, 0.56);
+  miniVisor.position.set(0, 0.45, 0.088);
+  stGroup.add(miniVisor);
+
+  [-0.042, 0.042].forEach((ex) => {
+    const miniEye = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), manoFaceGlowMat);
+    miniEye.position.set(ex, 0.46, 0.152);
+    stGroup.add(miniEye);
+  });
+
+  // Role-distinct head topper emblem in brushed gold / glow
+  if (cfg.kind === 'drug') {
+    const plusV = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.085, 0.026), manoGoldMat);
+    plusV.position.y = 0.64;
+    const plusH = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.026, 0.026), manoGoldMat);
+    plusH.position.y = 0.64;
+    stGroup.add(plusV, plusH);
+  } else if (cfg.kind === 'growth' || cfg.kind === 'nutrition') {
+    const miniLeaf = new THREE.Mesh(new THREE.SphereGeometry(0.048, 14, 10), suitMat);
+    miniLeaf.scale.set(1.3, 0.42, 0.72);
+    miniLeaf.position.set(0.03, 0.63, 0);
+    miniLeaf.rotation.z = 0.4;
+    stGroup.add(miniLeaf);
+  } else {
+    const miniHalo = new THREE.Mesh(new THREE.TorusGeometry(0.078, 0.014, 10, 22), manoGoldMat);
+    miniHalo.rotation.x = Math.PI / 2;
+    miniHalo.position.y = 0.63;
+    stGroup.add(miniHalo);
+  }
+
+  stGroup.userData.suitMat = suitMat;
+  stGroup.userData.rimMat = rimMat;
+  stGroup.userData.phase = idx * 1.047;
   tagInteractive(stGroup, cfg.id);
   stationsRing.add(stGroup);
+  squadMeshesById.set(cfg.id, stGroup);
 });
 
 // =========================================================================
@@ -761,7 +1041,13 @@ weighingRoot.add(blanketGroup);
 
 const blanketPad = new THREE.Mesh(
   new THREE.BoxGeometry(0.92, 0.038, 0.64),
-  new THREE.MeshStandardMaterial({ color: 0xfbf3df, roughness: 0.72 })
+  new THREE.MeshPhysicalMaterial({
+    color: 0xfbf3df,
+    roughness: 0.72,
+    sheen: 0.82,
+    sheenColor: new THREE.Color(0xfffaf0),
+    sheenRoughness: 0.65,
+  })
 );
 blanketPad.castShadow = true;
 blanketPad.receiveShadow = true;
@@ -769,14 +1055,14 @@ blanketGroup.add(blanketPad);
 
 const blanketTrim = new THREE.Mesh(
   new THREE.BoxGeometry(0.95, 0.02, 0.67),
-  new THREE.MeshStandardMaterial({ color: 0xe6d4b3, roughness: 0.75 })
+  new THREE.MeshPhysicalMaterial({ color: 0xe6d4b3, roughness: 0.75, sheen: 0.65 })
 );
 blanketTrim.position.y = -0.008;
 blanketGroup.add(blanketTrim);
 
 tagInteractive(blanketGroup, 'blanket');
 
-// Articulated 3D Child Mannequin (مانکن سه‌بعدی کودک)
+// Articulated 3D Child Mannequin (مانکن سه‌بعدی کودک) with soft PBR skin & textile sheen
 const mannequinGroup = new THREE.Group();
 mannequinGroup.position.set(-1.65, 0.03, 0.05);
 weighingRoot.add(mannequinGroup);
@@ -784,16 +1070,46 @@ weighingRoot.add(mannequinGroup);
 const mannequinPosePivot = new THREE.Group();
 mannequinGroup.add(mannequinPosePivot);
 
-const mqSkinMat = new THREE.MeshStandardMaterial({ color: 0xf6d8c7, roughness: 0.42, metalness: 0.02 });
-const mqJointMat = new THREE.MeshStandardMaterial({ color: 0xe3baa4, roughness: 0.36, metalness: 0.04 });
-const mqDiaperMat = new THREE.MeshStandardMaterial({ color: 0x1aa0aa, roughness: 0.45 });
-const mqHairMat = new THREE.MeshStandardMaterial({ color: 0x7a5c4d, roughness: 0.54 });
-const mqJacketMat = new THREE.MeshStandardMaterial({
+const mqSkinMat = new THREE.MeshPhysicalMaterial({
+  color: 0xf6d8c7,
+  roughness: 0.42,
+  metalness: 0.01,
+  clearcoat: 0.08,
+  clearcoatRoughness: 0.45,
+  sheen: 0.34,
+  sheenColor: new THREE.Color(0xffe6d9),
+  sheenRoughness: 0.55,
+});
+const mqJointMat = new THREE.MeshPhysicalMaterial({
+  color: 0xe3baa4,
+  roughness: 0.38,
+  metalness: 0.02,
+  sheen: 0.28,
+  sheenColor: new THREE.Color(0xffdfd0),
+});
+const mqDiaperMat = new THREE.MeshPhysicalMaterial({
+  color: 0x1aa0aa,
+  roughness: 0.55,
+  sheen: 0.68,
+  sheenColor: new THREE.Color(0x9be6ec),
+});
+const mqHairMat = new THREE.MeshPhysicalMaterial({
+  color: 0x7a5c4d,
+  roughness: 0.52,
+  sheen: 0.45,
+  sheenColor: new THREE.Color(0xb89685),
+});
+const mqJacketMat = new THREE.MeshPhysicalMaterial({
   color: 0xf28463,
-  roughness: 0.5,
+  roughness: 0.64,
+  sheen: 0.85,
+  sheenColor: new THREE.Color(0xffc3b2),
+  sheenRoughness: 0.58,
   transparent: true,
   opacity: 1.0,
 });
+const eyeMat = new THREE.MeshPhysicalMaterial({ color: 0x10272d, roughness: 0.08, metalness: 0.1, clearcoat: 0.9 });
+const cheekMat = new THREE.MeshPhysicalMaterial({ color: 0xff9f8e, roughness: 0.42, sheen: 0.35 });
 
 // Articulated Left & Right Legs (feet bottom sits at local y = 0)
 const mqLegs = [];
@@ -917,9 +1233,18 @@ tagInteractive(mannequinGroup, 'mannequin');
 
 // Instanced Ambient Floating Pastel Motes (>24 particles using single InstancedMesh)
 const MOTE_COUNT = 32;
+const moteMat = new THREE.MeshPhysicalMaterial({
+  color: 0x8de0e6,
+  emissive: 0x4fd1c5,
+  emissiveIntensity: 0.14,
+  roughness: 0.22,
+  clearcoat: 0.65,
+  transparent: true,
+  opacity: 0.72,
+});
 const moteMesh = new THREE.InstancedMesh(
   new THREE.IcosahedronGeometry(0.042, 0),
-  new THREE.MeshStandardMaterial({ color: 0x8de0e6, roughness: 0.35, transparent: true, opacity: 0.72 }),
+  moteMat,
   MOTE_COUNT
 );
 scene.add(moteMesh);
@@ -940,6 +1265,7 @@ const scratchQuat = new THREE.Quaternion();
 const scratchScale = new THREE.Vector3(1, 1, 1);
 
 let activeScene = 'workbench';
+let selectedSquadId = 'default';
 let targetSyringeMl = 5.0;
 let currentSyringeMl = 5.0;
 let targetZoneMl = 0.0;
@@ -991,18 +1317,58 @@ window.Mano3D = {
   setThemeMode(isDark) {
     const dark = Boolean(isDark);
     const bgHex = dark ? 0x08191f : 0xf0f7f8;
-    const floorHex = dark ? 0x0f252c : 0xe6f1f3;
-    const plinthHex = dark ? 0x16323b : 0xffffff;
+    const floorHex = dark ? 0x0d2128 : 0xe4f0f2;
+    const plinthHex = dark ? 0x142e38 : 0xffffff;
     scene.background.setHex(bgHex);
     scene.fog.color.setHex(bgHex);
     floorMesh.material.color.setHex(floorHex);
-    plinth.material.color.setHex(plinthHex);
-    hemiLight.color.setHex(dark ? 0x6ea6b5 : 0xdff5f9);
-    hemiLight.groundColor.setHex(dark ? 0x0d2128 : 0xcbd8d6);
-    hemiLight.intensity = dark ? 0.56 : 0.68;
-    keyLight.intensity = dark ? 1.85 : 2.15;
+    plinthMat.color.setHex(plinthHex);
+    plinthMat.roughness = dark ? 0.20 : 0.24;
+    plinthMat.clearcoat = dark ? 0.62 : 0.55;
+    plinthTrimMat.emissiveIntensity = dark ? 0.38 : 0.08;
+
+    scene.environmentIntensity = dark ? 0.62 : 0.78;
+    renderer.toneMappingExposure = dark ? 1.12 : 1.04;
+
+    keyLight.color.setHex(dark ? 0xf4fbff : 0xfff8ef);
+    keyLight.intensity = dark ? 1.75 : 2.05;
+    fillLight.color.setHex(dark ? 0x56b2c4 : 0xd9f4f8);
+    fillLight.intensity = dark ? 0.58 : 0.78;
+    rimLight.color.setHex(dark ? 0x67e8de : 0xe9fcff);
+    rimLight.intensity = dark ? 1.38 : 0.76;
+
+    hemiLight.color.setHex(dark ? 0x3b8696 : 0xe8f9fc);
+    hemiLight.groundColor.setHex(dark ? 0x0b1f26 : 0xc5dbd9);
+    hemiLight.intensity = dark ? 0.50 : 0.74;
+
+    manoFaceGlowMat.emissiveIntensity = dark ? 1.50 : 1.25;
+    manoCoreEmblemMat.emissiveIntensity = dark ? 1.05 : 0.75;
+    moteMat.emissiveIntensity = dark ? 0.42 : 0.14;
+    for (let i = 0; i < contactShadowMats.length; i++) {
+      contactShadowMats[i].opacity = dark ? 0.90 : 0.78;
+    }
+
     document.documentElement.style.background = dark ? '#08191f' : '#f0f7f8';
     document.body.style.background = dark ? '#08191f' : '#f0f7f8';
+    markInteractive(900);
+  },
+  selectSquadMember(memberId) {
+    selectedSquadId = squadMeshesById.has(memberId) ? memberId : 'default';
+    if (activeScene !== 'mano') {
+      window.Mano3D.setScene('mano');
+    }
+    manoBounce = 0.85;
+    const picked = squadMeshesById.get(selectedSquadId);
+    if (picked) {
+      manoCoreEmblemMat.color.setHex(picked.userData.accentColor);
+      manoCoreEmblemMat.emissive.setHex(picked.userData.emissiveColor);
+      plinthTrimMat.emissive.setHex(picked.userData.emissiveColor);
+    } else {
+      manoCoreEmblemMat.color.setHex(0x139ea6);
+      manoCoreEmblemMat.emissive.setHex(0x15b8a6);
+      plinthTrimMat.emissive.setHex(0x0f8c79);
+    }
+    markInteractive(1600);
   },
   setSyringeMl(ml) {
     const clamped = Math.max(0.5, Math.min(20.0, Number(ml) || 5.0));
@@ -1102,7 +1468,19 @@ window.Mano3D = {
       setCameraFocus([0.3, 2.35, 5.2], [0, 0.72, 0]);
     }
   },
+  setPaused(paused) {
+    setScenePaused(Boolean(paused));
+  },
 };
+
+let interactionBoostUntilMs = performance.now() + 1800;
+function markInteractive(durationMs = 1500) {
+  interactionBoostUntilMs = Math.max(interactionBoostUntilMs, performance.now() + durationMs);
+}
+
+controls.addEventListener('start', () => markInteractive(2500));
+controls.addEventListener('change', () => markInteractive(1200));
+controls.addEventListener('end', () => markInteractive(1400));
 
 // Tap raycasting to focus / notify Android
 const raycaster = new THREE.Raycaster();
@@ -1113,6 +1491,7 @@ canvas.addEventListener('pointerdown', (e) => {
   downX = e.clientX;
   downY = e.clientY;
   cameraLerpActive = false;
+  markInteractive(2000);
 });
 canvas.addEventListener('pointerup', (e) => {
   const dx = e.clientX - downX;
@@ -1130,7 +1509,12 @@ canvas.addEventListener('pointerup', (e) => {
   for (const hit of hits) {
     const partId = hit.object.userData.partId;
     if (partId) {
-      if (partId === 'mano') manoBounce = 1.0;
+      if (partId === 'mano') {
+        window.Mano3D.selectSquadMember('default');
+      } else if (squadMeshesById.has(partId)) {
+        window.Mano3D.selectSquadMember(partId);
+      }
+      markInteractive(1600);
       if (window.AndroidBridge && typeof window.AndroidBridge.onPartSelected === 'function') {
         window.AndroidBridge.onPartSelected(partId);
       }
@@ -1145,12 +1529,60 @@ window.addEventListener('resize', () => {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
+  markInteractive(1000);
 });
 
-// Animation Loop
+// Adaptive power-aware Animation Loop (60fps during interaction, ~30fps idle, 0fps paused/hidden)
 let lastMs = performance.now();
+let lastRenderMs = 0;
+let rafId = 0;
+let scenePaused = false;
+
+function setScenePaused(paused) {
+  if (scenePaused === paused) return;
+  scenePaused = paused;
+  if (scenePaused) {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+  } else {
+    lastMs = performance.now();
+    lastRenderMs = 0;
+    markInteractive(1200);
+    if (!rafId && !document.hidden) {
+      rafId = requestAnimationFrame(animate);
+    }
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  setScenePaused(document.hidden);
+});
+
+function isMotionActive(nowMs) {
+  return (
+    nowMs < interactionBoostUntilMs ||
+    cameraLerpActive ||
+    bottleShakeTimer > 0 ||
+    manoBounce > 0 ||
+    Math.abs(currentSyringeMl - targetSyringeMl) > 0.02
+  );
+}
+
 function animate(nowMs) {
-  requestAnimationFrame(animate);
+  if (scenePaused || document.hidden) {
+    rafId = 0;
+    return;
+  }
+  rafId = requestAnimationFrame(animate);
+
+  const minIntervalMs = isMotionActive(nowMs) ? 14 : 33;
+  if (lastRenderMs > 0 && nowMs - lastRenderMs < minIntervalMs) {
+    return;
+  }
+  lastRenderMs = nowMs;
+
   const dt = Math.min(0.05, Math.max(0.001, (nowMs - lastMs) / 1000));
   lastMs = nowMs;
   const t = nowMs * 0.001;
@@ -1188,18 +1620,28 @@ function animate(nowMs) {
     feverRing.scale.setScalar(1.0);
   }
 
-  // 3D MANO gentle breath, bounce & orbiting care stations
+  // 3D MANO gentle breath, bounce & orbiting PBR squad characters
   if (activeScene === 'mano') {
     manoBounce = Math.max(0, manoBounce - dt * 2.2);
-    const hop = Math.sin(manoBounce * Math.PI) * 0.28;
+    const hop = Math.sin(manoBounce * Math.PI) * 0.26;
     manoChar.position.y = hop;
-    const breath = 1.0 + Math.sin(t * 2.4) * 0.018;
+    const breath = 1.0 + Math.sin(t * 2.4) * 0.016;
     manoChar.scale.set(breath, 2.0 - breath, breath);
-    rightArm.rotation.z = -0.85 + Math.sin(t * 4.2) * 0.22;
-    stationsRing.rotation.y = t * 0.38;
+    rightArmGroup.rotation.z = -2.28 + Math.sin(t * 4.2) * 0.20;
+    leftArmGroup.rotation.z = 0.48 + Math.sin(t * 2.4) * 0.04;
+    stationsRing.rotation.y = t * 0.30;
     for (let i = 0; i < stationsRing.children.length; i++) {
-      stationsRing.children[i].position.y = Math.sin(t * 2.1 + i * 1.4) * 0.12;
-      stationsRing.children[i].rotation.y = -stationsRing.rotation.y + t * 0.8;
+      const fig = stationsRing.children[i];
+      const isSelected = fig.userData.partId === selectedSquadId;
+      const targetScale = isSelected ? 1.24 : 1.0;
+      const nextScale = damp(fig.scale.x, targetScale, 8, dt);
+      fig.scale.setScalar(nextScale);
+      const bobY = (isSelected ? 0.16 : 0.0) + Math.sin(t * 2.1 + fig.userData.phase) * 0.11;
+      fig.position.y = damp(fig.position.y, bobY, 7, dt);
+      fig.rotation.y = -stationsRing.rotation.y + Math.sin(t * 1.4 + i) * 0.16;
+      if (fig.userData.rimMat) {
+        fig.userData.rimMat.emissiveIntensity = isSelected ? 0.85 : 0.28;
+      }
     }
   }
 
@@ -1295,4 +1737,4 @@ function animate(nowMs) {
   renderer.render(scene, camera);
 }
 
-requestAnimationFrame(animate);
+rafId = requestAnimationFrame(animate);

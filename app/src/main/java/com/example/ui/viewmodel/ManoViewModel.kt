@@ -401,7 +401,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  fun consumeValidatedAskPharmacistQuestion(): Triple<ConsultationCategory, AgeBand, String>? {
+  fun validateAskPharmacistForm(): Triple<ConsultationCategory, AgeBand, String>? {
     val form = _uiState.value.askPharmacist
     if (form.hasUrgentFlags) {
       _uiState.update {
@@ -427,10 +427,19 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
       }
       return null
     }
-    val prepared = Triple(form.category, form.ageBand, form.questionText.trim())
+    _uiState.update { it.copy(askPharmacist = it.askPharmacist.copy(validationErrorFa = null)) }
+    return Triple(form.category, form.ageBand, form.questionText.trim())
+  }
+
+  fun clearAskPharmacistQuestion() {
     _uiState.update {
-      it.copy(askPharmacist = form.copy(questionText = "", validationErrorFa = null))
+      it.copy(askPharmacist = it.askPharmacist.copy(questionText = "", validationErrorFa = null))
     }
+  }
+
+  fun consumeValidatedAskPharmacistQuestion(): Triple<ConsultationCategory, AgeBand, String>? {
+    val prepared = validateAskPharmacistForm() ?: return null
+    clearAskPharmacistQuestion()
     return prepared
   }
 

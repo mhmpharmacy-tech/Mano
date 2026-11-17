@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,10 +61,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -81,6 +78,7 @@ import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineSnapshot
 import com.example.domain.util.NutritionPromptBuilder
 import com.example.ui.components.AlertSeverity
+import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoIconMedallion
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PediatricIconKind
@@ -147,11 +145,11 @@ fun NutritionGrowthEntryCard(
           .padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-      Image(
-        painter = painterResource(id = R.drawable.img_nutrition_banner),
+      ManoBannerFrame(
+        resId = R.drawable.img_nutrition_banner,
         contentDescription = "مانو در کنار وعده غذای سالم و مقوی کودک",
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(14.dp)),
+        aspectRatio = 16f / 9f,
+        cornerRadius = 16.dp,
       )
       Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -291,11 +289,10 @@ fun NutritionAdvisorScreen(
       // Hero Header Card
       item {
         SectionCard {
-          Image(
-            painter = painterResource(id = R.drawable.img_nutrition_banner),
+          ManoBannerFrame(
+            resId = R.drawable.img_nutrition_banner,
             contentDescription = "پیشنهاد غذای سالم و مقوی کودک با همراهی مانو",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(168.dp).clip(RoundedCornerShape(16.dp)),
+            aspectRatio = 16f / 9f,
           )
           Row(
             verticalAlignment = Alignment.CenterVertically,

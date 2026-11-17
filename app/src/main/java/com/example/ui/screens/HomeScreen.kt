@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,12 +51,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,7 +70,10 @@ import com.example.ui.components.CoreNavigationCard
 import com.example.ui.components.GalacticRing
 import com.example.ui.components.HomeFeverTimelineWidget
 import com.example.ui.components.LtrText
+import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoOrbitalHeroStage
+import com.example.ui.components.ManoSquadMember
+import com.example.ui.components.ManoSquadSection
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.PharmacistCtaCard
 import com.example.ui.components.RadialTopicItem
@@ -83,15 +82,15 @@ import com.example.ui.components.SeverityAlert
 import com.example.ui.components.TopicAccentRole
 import com.example.ui.util.ManoLinkShareHelper
 import com.example.ui.theme.AquaSurface
-import com.example.ui.theme.CoralCare
-import com.example.ui.theme.DarkCoral
-import com.example.ui.theme.DarkSage
+import com.example.ui.theme.DarkJade
+import com.example.ui.theme.DarkOrange
 import com.example.ui.theme.DarkSky
 import com.example.ui.theme.DarkSurface
+import com.example.ui.theme.JadeCareInk
 import com.example.ui.theme.LocalManoDarkTheme
+import com.example.ui.theme.OrangeCareInk
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SageCare
-import com.example.ui.theme.SkyCare
+import com.example.ui.theme.SkyCareInk
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
 import com.example.ui.theme.manoTintedSurface
@@ -186,7 +185,7 @@ fun HomeScreen(
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("home_list"),
       contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(20.dp),
+      verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
       // WELCOMING DUAL-RING GALACTIC ORBITAL CENTERPIECE AROUND PROMINENT MANO MASCOT
       item {
@@ -208,33 +207,43 @@ fun HomeScreen(
 
       // UNIFIED QUICK SEARCH ENTRY BAR
       item {
+        val searchAccent = MaterialTheme.colorScheme.primary
         Surface(
           onClick = onOpenGlobalSearch,
           color = manoCardSurface(),
-          shape = RoundedCornerShape(18.dp),
-          border = BorderStroke(1.dp, manoBorderColor()),
+          shape = RoundedCornerShape(20.dp),
+          border = BorderStroke(1.2.dp, searchAccent.copy(alpha = 0.24f)),
           modifier =
             Modifier
               .fillMaxWidth()
               .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(18.dp),
-                ambientColor = com.example.ui.theme.ShadowSlate.copy(alpha = 0.10f),
-                spotColor = com.example.ui.theme.ShadowSlate.copy(alpha = 0.08f),
+                elevation = 7.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = searchAccent.copy(alpha = 0.14f),
+                spotColor = com.example.ui.theme.ShadowSlate.copy(alpha = 0.10f),
               )
               .minimumInteractiveComponentSize()
               .testTag("home_quick_search_bar"),
         ) {
           Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
           ) {
-            Icon(
-              imageVector = Icons.Rounded.Search,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.primary,
-            )
+            Surface(
+              color = searchAccent.copy(alpha = 0.12f),
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.size(34.dp),
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  imageVector = Icons.Rounded.Search,
+                  contentDescription = null,
+                  tint = searchAccent,
+                  modifier = Modifier.size(19.dp),
+                )
+              }
+            }
             Text(
               text = "جست‌وجوی سریع دارو، تب نوزاد، سرفه، شیرخشک...",
               style = MaterialTheme.typography.bodyMedium,
@@ -259,13 +268,29 @@ fun HomeScreen(
         )
       }
 
+      // SIX BESPOKE MANO VECTOR CHARACTERS (Color-coded interactive squad connecting to each section)
+      item {
+        ManoSquadSection(
+          onSelectMember = { member ->
+            when (member) {
+              ManoSquadMember.DRUG -> onNavigateMedicines()
+              ManoSquadMember.GROWTH -> onNavigateGrowth()
+              ManoSquadMember.SKIN -> onNavigateSkin()
+              ManoSquadMember.NUTRITION -> onNavigateNutrition()
+              ManoSquadMember.CARE -> onNavigateSymptoms("fever")
+              ManoSquadMember.CONNECT -> onNavigateAskPharmacist()
+            }
+          }
+        )
+      }
+
       // THREE STACKED FULL-WIDTH CORE NAVIGATION CARDS
       item {
         val isDark = LocalManoDarkTheme.current
         val cardSurface = if (isDark) DarkSurface else PureWhite
-        val triageAccent = if (isDark) DarkCoral else CoralCare
-        val medAccent = if (isDark) DarkSage else SageCare
-        val growthAccent = if (isDark) DarkSky else SkyCare
+        val triageAccent = if (isDark) DarkOrange else OrangeCareInk
+        val medAccent = if (isDark) DarkJade else JadeCareInk
+        val growthAccent = if (isDark) DarkSky else SkyCareInk
 
         Column(
           modifier = Modifier.fillMaxWidth().testTag("core_navigation_stack"),
@@ -331,52 +356,46 @@ fun HomeScreen(
       // SMART SYRUP LABEL CAMERA SCANNER QUICK-LAUNCH CARD
       item {
         SectionCard(modifier = Modifier.testTag("home_syrup_scanner_card")) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-          ) {
-            Image(
-              painter = painterResource(id = R.drawable.img_syrup_scanner_banner),
-              contentDescription = "اسکنر هوشمند برچسب شربت و قطره با دوربین",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(78.dp).clip(RoundedCornerShape(14.dp)),
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+          ManoBannerFrame(
+            resId = R.drawable.img_syrup_scanner_banner,
+            contentDescription = "اسکنر هوشمند برچسب شربت و قطره با دوربین",
+            aspectRatio = 16f / 9f,
+          )
+          Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(8.dp),
               ) {
-                Surface(
-                  color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                  shape = RoundedCornerShape(6.dp),
-                ) {
-                  Text(
-                    text = stringResource(R.string.syrup_scanner_badge),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                  )
-                }
-                if (savedSyrupScansCount > 0) {
-                  Text(
-                    text = "$savedSyrupScansCount اسکن ذخیره‌شده",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  )
-                }
+                Text(
+                  text = stringResource(R.string.syrup_scanner_badge),
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.primary,
+                  fontWeight = FontWeight.Bold,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                )
               }
-              Text(
-                text = stringResource(R.string.syrup_scanner_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-              )
-              Text(
-                text = stringResource(R.string.syrup_scanner_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
+              if (savedSyrupScansCount > 0) {
+                Text(
+                  text = "$savedSyrupScansCount اسکن ذخیره‌شده",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
             }
+            Text(
+              text = stringResource(R.string.syrup_scanner_title),
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.Bold,
+            )
+            Text(
+              text = stringResource(R.string.syrup_scanner_subtitle),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
           }
           Button(
             onClick = onNavigateSyrupScanner,
@@ -430,25 +449,19 @@ fun HomeScreen(
         }
       }
 
-      // داروها و مراقبت ایمن
+      // UNIFIED SPECIALIZED PEDIATRIC TOOLS & 3D STUDIO HUB (replaces repetitive dual illustrated cards)
       item {
-        SectionCard {
-          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.mascot_medicine),
-              contentDescription = "مانو در کنار بطری دارو و دفترچه ثبت مصرف",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(78.dp).clip(RoundedCornerShape(14.dp)),
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text("داروها و مراقبت ایمن", style = MaterialTheme.typography.titleMedium)
-              Text(
-                text = "همیشه شکل و غلظت دارو را بررسی کنید و برای داروهای مایع فقط از سرنگ مدرج (mL) استفاده نمایید.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-          }
+        SectionCard(modifier = Modifier.testTag("home_unified_tools_card")) {
+          Text(
+            text = "ابزارهای تخصصی، ۳بعدی و واکسیناسیون",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary,
+          )
+          Text(
+            text = "دسترسی یکپارچه به آزمایشگاه سرنگ mL، راهنمای سه‌بعدی مانو، مشاور تغذیه و تقویم واکسن.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
               onClick = onNavigateMedicines,
@@ -476,34 +489,13 @@ fun HomeScreen(
               fontWeight = FontWeight.SemiBold,
             )
           }
-        }
-      }
-
-      // رشد و تکامل
-      item {
-        SectionCard {
-          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.mascot_growth),
-              contentDescription = "مانو در محور رشد، مراقبت و آموزش کودک",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(78.dp).clip(RoundedCornerShape(14.dp)),
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text("رشد، تکامل و مهارت‌های مراقبت", style = MaterialTheme.typography.titleMedium)
-              Text(
-                text = "چک‌لیست نقاط عطف رشد (بدون برچسب تشخیصی)، تغذیه، خواب و استفاده ایمن از وسایل خانگی.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-          }
+          HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
               onClick = onNavigateGrowth,
               modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("home_growth_btn"),
             ) {
-              Text("رشد و تکامل")
+              Text("رشد و صدک WHO")
             }
             OutlinedButton(
               onClick = onNavigateDevices,
@@ -565,21 +557,18 @@ fun HomeScreen(
       // منابع علمی، حریم خصوصی و هویت پروژه
       item {
         SectionCard {
-          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.family_support),
-              contentDescription = "خانواده در حال گفت‌وگو و یادداشت‌برداری همراه با مانو",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(84.dp).clip(RoundedCornerShape(14.dp)),
+          ManoBannerFrame(
+            resId = R.drawable.family_support,
+            contentDescription = "خانواده در حال گفت‌وگو و یادداشت‌برداری همراه با مانو",
+            aspectRatio = 1.48f,
+          )
+          Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("منابع علمی، شفافیت و حریم خصوصی", style = MaterialTheme.typography.titleMedium)
+            Text(
+              text = "مانو جایگزین پزشک یا تشخیص‌دهنده خودکار نیست. محتوای بالینی این راهنما دارای برچسب شفافیت علمی است.",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text("منابع علمی، شفافیت و حریم خصوصی", style = MaterialTheme.typography.titleMedium)
-              Text(
-                text = "مانو جایگزین پزشک یا تشخیص‌دهنده خودکار نیست. محتوای بالینی این راهنما دارای برچسب شفافیت علمی است.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
           }
           HorizontalDivider(color = MaterialTheme.colorScheme.outline)
           Row(
@@ -612,6 +601,7 @@ fun HomeScreen(
                 text = "دامنه‌های متصل به اپلیکیشن (App Links):",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
               )
               TextButton(
                 onClick = { onNavigateInfo("domain") },

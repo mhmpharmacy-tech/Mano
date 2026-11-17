@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,11 +64,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -87,6 +83,7 @@ import com.example.domain.util.VaccinationScheduleCatalog
 import com.example.domain.util.VaccinationScheduleEngine
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.LtrText
+import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoIconMedallion
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PediatricIconKind
@@ -161,11 +158,10 @@ fun VaccinesScreen(
       // HERO & PROGRESS OVERVIEW CARD
       item {
         SectionCard(modifier = Modifier.testTag("vaccine_overview_card")) {
-          Image(
-            painter = painterResource(id = R.drawable.img_vaccines_banner),
+          ManoBannerFrame(
+            resId = R.drawable.img_vaccines_banner,
             contentDescription = "تصویر برنامه واکسیناسیون و مراقبت پیشگیرانه مانو کیدز",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(164.dp).clip(RoundedCornerShape(16.dp)),
+            aspectRatio = 16f / 9f,
           )
           Row(
             verticalAlignment = Alignment.CenterVertically,

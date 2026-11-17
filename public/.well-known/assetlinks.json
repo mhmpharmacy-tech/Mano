@@ -1,0 +1,37 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.aistudio.manokids.rnkvpx",
+      "sha256_cert_fingerprints": [
+        "6C:37:92:DB:3D:CB:5F:25:1C:5B:2F:8A:38:C8:FC:49:80:4F:F7:3F:B9:3A:FD:5C:9D:32:C5:9D:85:EC:BD:E0",
+        "REPLACE_WITH_PLAY_OR_RELEASE_SHA256_FINGERPRINT"
+      ]
+    },
+    "relation_extensions": {
+      "delegate_permission/common.handle_all_urls": {
+        "dynamic_app_link_components": [
+          { "/": "/topics/*" },
+          { "/": "/topics" },
+          { "/": "/medicines/*" },
+          { "/": "/medicines" },
+          { "/": "/vaccines*" },
+          { "/": "/symptoms*" },
+          { "/": "/growth*" },
+          { "/": "/nutrition*" },
+          { "/": "/3d*" },
+          { "/": "/skin*" },
+          { "/": "/devices*" },
+          { "/": "/faq*" },
+          { "/": "/pharmacist*" },
+          { "/": "/child*" },
+          { "/": "/info*" },
+          { "/": "/" }
+        ]
+      }
+    }
+  }
+]

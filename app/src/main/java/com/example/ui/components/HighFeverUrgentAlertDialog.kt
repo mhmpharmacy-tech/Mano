@@ -1,7 +1,7 @@
 package com.example.ui.components
 
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -189,7 +189,7 @@ fun HighFeverUrgentAlertDialog(
 
           Button(
             onClick = {
-              val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:115"))
+              val dialIntent = Intent(Intent.ACTION_DIAL, "tel:115".toUri())
               runCatching { context.startActivity(dialIntent) }
             },
             colors = ButtonDefaults.buttonColors(

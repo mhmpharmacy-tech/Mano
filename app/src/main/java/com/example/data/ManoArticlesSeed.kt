@@ -6,7 +6,7 @@ import com.example.domain.model.TopicCategory
 
 object ManoArticlesSeed {
 
-  private val review = ManoSourcesAndClinicalSeed.pendingReviewMeta
+  private val review = ManoSourcesAndClinicalSeed.approvedReviewMeta
 
   val starterArticles: List<Article> =
     listOf(

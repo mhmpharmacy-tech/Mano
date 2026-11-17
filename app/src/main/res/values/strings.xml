@@ -25,4 +25,7 @@
     <string name="syrup_scanner_title">اسکنر هوشمند شربت و قطره</string>
     <string name="syrup_scanner_subtitle">تشخیص غلظت بطری (mg/mL) با تصویرخوان هوشمند و تنظیم خودکار سرنگ سه‌بعدی پس از تایید والد</string>
     <string name="syrup_scanner_badge">جدید • اسکن دوربین</string>
+    <string name="mano_squad_section_title">تیم همراهان مانو</string>
+    <string name="mano_squad_section_badge">۶ شخصیت اختصاصی</string>
+    <string name="mano_squad_section_subtitle">هر همراه با رنگ و نماد ویژه، شما را مستقیم به ابزار و راهنمای تخصصی همان بخش هدایت می‌کند.</string>
 </resources>

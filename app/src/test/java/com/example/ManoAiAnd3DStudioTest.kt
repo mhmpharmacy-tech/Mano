@@ -198,10 +198,13 @@ class ManoAiAnd3DStudioTest {
     composeTestRule.onNodeWithTag("studio_3d_syringe_slider").assertIsDisplayed()
     composeTestRule.onNodeWithTag("studio_3d_fever_switch").assertIsDisplayed()
 
-    // Switching to MANO 3D mode updates controls cleanly
+    // Switching to MANO 3D mode updates controls cleanly & exposes 6 PBR squad character chips
     composeTestRule.onNodeWithTag("scene_switch_mano").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("studio_3d_reset_camera").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("studio_3d_mano_squad_row").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("studio_3d_squad_mano_drug").performClick()
+    composeTestRule.waitForIdle()
   }
 
   @Test

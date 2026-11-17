@@ -6,8 +6,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
+import androidx.core.net.toUri
 import java.security.MessageDigest
 
 object ManoLinkShareHelper {
@@ -44,9 +44,9 @@ object ManoLinkShareHelper {
    */
   fun openExternalBrowserUrl(context: Context, url: String): Result<Unit> =
     runCatching {
-      val uri = Uri.parse(url)
+      val uri = url.toUri()
       val pm = context.packageManager
-      val browserProbe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+      val browserProbe = Intent(Intent.ACTION_VIEW, "https://example.com".toUri())
       val resolvedBrowsers =
         pm.queryIntentActivities(browserProbe, PackageManager.MATCH_DEFAULT_ONLY)
           .mapNotNull { it.activityInfo }

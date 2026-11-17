@@ -6,7 +6,7 @@ import com.example.domain.model.TopicCategory
 
 object ManoFaqSeed {
 
-  private val review = ManoSourcesAndClinicalSeed.pendingReviewMeta
+  private val review = ManoSourcesAndClinicalSeed.approvedReviewMeta
   private val srcFever = ManoSourcesAndClinicalSeed.srcAapFever
   private val srcMed = ManoSourcesAndClinicalSeed.srcAapMedication
   private val srcNice = ManoSourcesAndClinicalSeed.srcNiceFever

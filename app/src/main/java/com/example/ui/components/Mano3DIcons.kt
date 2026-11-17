@@ -91,12 +91,19 @@ private fun DrawScope.draw3DFeverThermometer() {
       size = Size(w * 0.24f, h * 0.62f),
       cornerRadius = CornerRadius(w * 0.12f),
     )
-    // Glossy pearl-sky tube
+    // Glossy pearl-sky tube with crisp outline
     drawRoundRect(
       brush = Brush.horizontalGradient(listOf(PureWhite, Color(0xFFD9F3FF))),
       topLeft = Offset(w * 0.37f, h * 0.10f),
       size = Size(w * 0.24f, h * 0.62f),
       cornerRadius = CornerRadius(w * 0.12f),
+    )
+    drawRoundRect(
+      color = SkyCare.copy(alpha = 0.55f),
+      topLeft = Offset(w * 0.37f, h * 0.10f),
+      size = Size(w * 0.24f, h * 0.62f),
+      cornerRadius = CornerRadius(w * 0.12f),
+      style = Stroke(width = w * 0.03f),
     )
     // Mercury stem
     drawRoundRect(
@@ -166,6 +173,13 @@ private fun DrawScope.draw3DBreathingCloud() {
     topLeft = Offset(w * 0.15f, h * 0.38f),
     size = Size(w * 0.72f, h * 0.26f),
     cornerRadius = CornerRadius(w * 0.13f),
+  )
+  drawRoundRect(
+    color = SkyCare.copy(alpha = 0.48f),
+    topLeft = Offset(w * 0.15f, h * 0.38f),
+    size = Size(w * 0.72f, h * 0.26f),
+    cornerRadius = CornerRadius(w * 0.13f),
+    style = Stroke(width = w * 0.025f),
   )
   // Breeze swirl ribbons in turquoise & mint
   val breeze1 =
@@ -329,12 +343,19 @@ private fun DrawScope.draw3DFeedingBottle() {
       size = Size(w * 0.36f, h * 0.12f),
       cornerRadius = CornerRadius(w * 0.06f),
     )
-    // Warm milk bottle body
+    // Warm milk bottle body with crisp border
     drawRoundRect(
       brush = Brush.horizontalGradient(listOf(PureWhite, Color(0xFFFFF3D9))),
       topLeft = Offset(w * 0.31f, h * 0.36f),
       size = Size(w * 0.38f, h * 0.48f),
       cornerRadius = CornerRadius(w * 0.12f),
+    )
+    drawRoundRect(
+      color = MangoCare.copy(alpha = 0.55f),
+      topLeft = Offset(w * 0.31f, h * 0.36f),
+      size = Size(w * 0.38f, h * 0.48f),
+      cornerRadius = CornerRadius(w * 0.12f),
+      style = Stroke(width = w * 0.03f),
     )
     // Milk level fill
     drawRoundRect(
@@ -482,7 +503,7 @@ private fun DrawScope.draw3DFaqBubbles() {
 private fun DrawScope.draw3DPharmacyCross() {
   val w = size.width
   val h = size.height
-  // Rounded emerald cross
+  // Rounded emerald cross with crisp border
   drawRoundRect(
     brush = Brush.verticalGradient(listOf(TealGlow, SageCare)),
     topLeft = Offset(w * 0.36f, h * 0.16f),
@@ -496,6 +517,6 @@ private fun DrawScope.draw3DPharmacyCross() {
     cornerRadius = CornerRadius(w * 0.10f),
   )
   // Warm coral heart center
-  drawCircle(color = PureWhite, radius = w * 0.12f, center = center)
-  drawCircle(color = StrawberryCare, radius = w * 0.075f, center = center)
+  drawCircle(color = PureWhite, radius = w * 0.13f, center = center)
+  drawCircle(color = StrawberryCare, radius = w * 0.08f, center = center)
 }

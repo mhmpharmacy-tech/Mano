@@ -75,8 +75,8 @@ private val ManoDarkColorScheme =
     surfaceTint = DarkPrimary,
     outline = DarkBorder,
     outlineVariant = DarkBorder,
-    error = DangerCrimson,
-    onError = PureWhite,
+    error = DarkCoral,
+    onError = DarkBackground,
     errorContainer = DarkErrorContainer,
     onErrorContainer = DarkOnErrorContainer,
   )
@@ -132,12 +132,11 @@ fun manoTintedSurface(
 
 @Composable
 fun manoChartGridColor(): Color =
-  if (LocalManoDarkTheme.current) DarkBorder else Color(0xFFDFEAEC)
+  if (LocalManoDarkTheme.current) DarkBorder else Color(0xFFD5E4E7)
 
 @Composable
 fun manoChartAxisHex(): Int =
-  if (LocalManoDarkTheme.current) android.graphics.Color.parseColor("#A7C8C3")
-  else android.graphics.Color.parseColor("#607D8B")
+  if (LocalManoDarkTheme.current) 0xFFBBD7D2.toInt() else 0xFF334E57.toInt()
 
 @Composable
 fun manoChartRailColor(): Color =

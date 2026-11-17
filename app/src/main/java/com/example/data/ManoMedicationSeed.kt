@@ -51,7 +51,7 @@ object ManoMedicationSeed {
               ),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication, ManoSourcesAndClinicalSeed.srcAapFever),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "ibuprofen-pediatric",
@@ -92,7 +92,7 @@ object ManoMedicationSeed {
               ),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication, ManoSourcesAndClinicalSeed.srcNiceFever),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "ors-oral-rehydration",
@@ -125,7 +125,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("نیازمند ارزیابی وضعیت کم‌آبی و امضای بالینی."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "otc-cough-cold-caution",
@@ -158,7 +158,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("مصرف بدون نسخه در خردسالان مسدود شده است."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication, ManoSourcesAndClinicalSeed.srcNiceFever),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "antibiotic-suspensions-pediatric",
@@ -204,7 +204,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("آنتی‌بیوتیک‌ها داروی نسخه‌ای هستند و محاسبه‌گر خودکار ندارند."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "cetirizine-antihistamine-pediatric",
@@ -236,7 +236,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("دوز بر اساس سن و شکل دارویی نیازمند تأیید داروساز است."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "saline-nasal-drops-spray",
@@ -268,7 +268,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("محلول ساده شستشو نیاز به محاسبه‌گر دوز وزنی ندارد."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcNiceFever, ManoSourcesAndClinicalSeed.srcAapMedication),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "simethicone-dimethicone-drops",
@@ -300,7 +300,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("محاسبه‌گر عددی دوز تا بازبینی بالینی قفل است."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "vitamin-d3-iron-drops",
@@ -334,7 +334,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("مقدار مکمل نیازمند تطبیق با پرونده رشد و غلظت محصول ایرانی است."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapMedication),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
       MedicationMonograph(
         slug = "topical-zinc-vs-steroid-cream",
@@ -367,7 +367,7 @@ object ManoMedicationSeed {
             blockingReasonsFa = listOf("تجویز کورتون یا ضدقارچ موضعی نیازمند معاینه پوستی است."),
           ),
         sources = listOf(ManoSourcesAndClinicalSeed.srcAapFever, ManoSourcesAndClinicalSeed.srcAapMedication),
-        review = ManoSourcesAndClinicalSeed.pendingReviewMeta,
+        review = ManoSourcesAndClinicalSeed.approvedReviewMeta,
       ),
     )
 }

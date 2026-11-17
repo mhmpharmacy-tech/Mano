@@ -88,11 +88,13 @@ import com.example.domain.util.MedicationOverlapEngine
 import com.example.ui.auth.CloudSyncAuthCard
 import com.example.ui.util.ManoLinkShareHelper
 import com.example.ui.components.AlertSeverity
+import com.example.ui.components.ClinicalBulletList
 import com.example.ui.components.ClinicalNote
 import com.example.ui.components.EmptyState
 import com.example.ui.components.FeverDoseTimelineCard
 import com.example.ui.components.InteractiveOralSyringeLabCard
 import com.example.ui.components.LtrText
+import com.example.ui.components.ManoFramedIllustration
 import com.example.ui.components.MedicationChecklistActionsCard
 import com.example.ui.components.MedicationChecklistCategoryHeader
 import com.example.ui.components.MedicationChecklistHeaderCard
@@ -245,11 +247,12 @@ fun MedicinesScreen(
       item {
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.mascot_medicine),
+            ManoFramedIllustration(
+              resId = R.drawable.mascot_medicine,
               contentDescription = "مانو در کنار بطری دارو و دفترچه ثبت مصرف",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(84.dp).clip(RoundedCornerShape(14.dp)),
+              width = 96.dp,
+              aspectRatio = 0.90f,
+              accentColor = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
               Text("داروهای کودک و ایمنی مصرف", style = MaterialTheme.typography.headlineSmall)
@@ -454,7 +457,7 @@ fun MedicinesScreen(
                     onClick = { activeSubTab = MedicinesSubTab.SAFETY_CHECKLIST },
                     modifier = Modifier.minimumInteractiveComponentSize().testTag("syringe_open_checklist_btn"),
                   ) {
-                    Text("بررسی چک‌لیست", maxLines = 1)
+                    Text("بررسی چک‌لیست", maxLines = 2)
                   }
                 }
               }
@@ -665,7 +668,7 @@ fun MedicinesScreen(
                     onClick = { activeSubTab = MedicinesSubTab.SAFETY_CHECKLIST },
                     modifier = Modifier.minimumInteractiveComponentSize().testTag("dose_log_open_checklist_btn"),
                   ) {
-                    Text(if (checklistProgress.isAllCriticalReady) "مرور" else "بررسی چک‌لیست", maxLines = 1)
+                    Text(if (checklistProgress.isAllCriticalReady) "مرور" else "بررسی چک‌لیست", maxLines = 2)
                   }
                 }
               }
@@ -936,7 +939,7 @@ fun MedicineDetailScreen(
         SeverityAlert(
           severity = AlertSeverity.DANGER,
           title = "چه مواردی را بدون ارزیابی پزشک نباید داد؟ (هشدار مصرف)",
-          body = medication.whatNotToGiveFa.joinToString("\n• ", prefix = "• "),
+          body = medication.whatNotToGiveFa.joinToString("\n\n• ", prefix = "• "),
           showCautionMascot = true,
           modifier = Modifier.testTag("medicine_detail_warnings"),
         )
@@ -945,19 +948,33 @@ fun MedicineDetailScreen(
       item {
         SectionCard {
           Text("کاربرد و حداقل سن برچسب", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-          Text("• کاربرد: ${medication.treatsFa}", style = MaterialTheme.typography.bodyMedium)
-          Text("• حداقل سن: ${medication.labeledMinimumAgeFa}", style = MaterialTheme.typography.bodyMedium)
+          ClinicalBulletList(
+            items = listOf(
+              "کاربرد: ${medication.treatsFa}",
+              "حداقل سن: ${medication.labeledMinimumAgeFa}",
+            ),
+            bulletColor = MaterialTheme.colorScheme.primary,
+          )
         }
       }
 
       item {
         SectionCard(modifier = Modifier.testTag("medicine_detail_precautions")) {
           Text("اصول زمان‌بندی، احتیاط‌ها و عوارض شایع", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-          medication.timingAndPrecautionsFa.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
-          Text("تداخلات مهم:", style = MaterialTheme.typography.titleSmall)
-          medication.interactionCautionsFa.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
-          Text("عوارض شایع:", style = MaterialTheme.typography.titleSmall)
-          medication.commonSideEffectsFa.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+          ClinicalBulletList(
+            items = medication.timingAndPrecautionsFa,
+            bulletColor = MaterialTheme.colorScheme.primary,
+          )
+          Text("تداخلات مهم:", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+          ClinicalBulletList(
+            items = medication.interactionCautionsFa,
+            bulletColor = manoSemanticAccent(CautionAmber, DarkGold),
+          )
+          Text("عوارض شایع:", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+          ClinicalBulletList(
+            items = medication.commonSideEffectsFa,
+            bulletColor = MaterialTheme.colorScheme.secondary,
+          )
         }
       }
 
@@ -968,7 +985,7 @@ fun MedicineDetailScreen(
               Icon(Icons.Rounded.Inventory2, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
               Text("شرایط نگهداری و مصرف پس از باز شدن", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             }
-            Text(medication.storageAndShelfLifeFa, style = MaterialTheme.typography.bodyMedium)
+            Text(medication.storageAndShelfLifeFa, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
           }
         }
       }
@@ -976,9 +993,15 @@ fun MedicineDetailScreen(
       item {
         SectionCard {
           Text("نکات کاربردی هنگام امتناع کودک و زمان مراجعه", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-          medication.refusalTipsFa.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
-          Text("چه زمانی مشاوره فوری لازم است:", style = MaterialTheme.typography.titleSmall)
-          medication.whenToSeekAdviceFa.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+          ClinicalBulletList(
+            items = medication.refusalTipsFa,
+            bulletColor = MaterialTheme.colorScheme.primary,
+          )
+          Text("چه زمانی مشاوره فوری لازم است:", style = MaterialTheme.typography.titleSmall, color = manoSemanticAccent(CoralCare, DarkCoral))
+          ClinicalBulletList(
+            items = medication.whenToSeekAdviceFa,
+            bulletColor = manoSemanticAccent(CoralCare, DarkCoral),
+          )
         }
       }
 
@@ -990,7 +1013,7 @@ fun MedicineDetailScreen(
           shape = RoundedCornerShape(18.dp),
           modifier = Modifier.fillMaxWidth().testTag("locked_dose_preview"),
         ) {
-          Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
               Icon(Icons.Rounded.Lock, contentDescription = null, tint = cautionAccent)
               Text(
@@ -1001,15 +1024,17 @@ fun MedicineDetailScreen(
             }
             Text(
               text = "برای پیشگیری از خطای دوز و غلظت، پیش از استفاده از مقادیر مرجع، بررسی موارد زیر الزامی است:",
-              style = MaterialTheme.typography.bodySmall,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurface,
             )
             medication.lockedDoseRule.requiredInputsFa.forEach { req ->
-              Text("✓ $req", style = MaterialTheme.typography.bodySmall)
+              Text("✓ $req", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             }
             Text("موارد نیازمند احتیاط والد:", style = MaterialTheme.typography.labelLarge, color = cautionAccent)
-            medication.lockedDoseRule.blockingReasonsFa.forEach { reason ->
-              Text("• $reason", style = MaterialTheme.typography.bodySmall)
-            }
+            ClinicalBulletList(
+              items = medication.lockedDoseRule.blockingReasonsFa,
+              bulletColor = cautionAccent,
+            )
           }
         }
       }

@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import android.animation.ValueAnimator
+import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -89,6 +90,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -169,7 +171,9 @@ fun ManoOrbitalHeroStage(
   val outerCount = outerList.size.coerceAtLeast(1)
 
   val scope = rememberCoroutineScope()
-  val animatorsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
+  val animatorsEnabled = remember {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ValueAnimator.areAnimatorsEnabled() else true
+  }
   val shouldRunIntro = remember { !hasPlayedIntro && animatorsEnabled }
 
   val mascotAlpha = remember { Animatable(if (shouldRunIntro) 0f else 1f) }
@@ -482,7 +486,7 @@ fun ManoOrbitalHeroStage(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
+        SourceBadge(reviewStatus = ReviewStatus.APPROVED)
         Row(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -777,36 +781,55 @@ fun ManoOrbitalHeroStage(
               .testTag("mano_mascot_touch"),
         ) {
           Box(
+            contentAlignment = Alignment.Center,
             modifier =
               Modifier
-                .size(mascotSize + 6.dp)
+                .size(mascotSize + 10.dp)
                 .shadow(
-                  elevation = 10.dp,
+                  elevation = 12.dp,
                   shape = CircleShape,
-                  ambientColor = ShadowSlate.copy(alpha = 0.14f),
-                  spotColor = animatedAccent.copy(alpha = 0.25f),
+                  ambientColor = animatedAccent.copy(alpha = 0.28f),
+                  spotColor = goldAccent.copy(alpha = 0.28f),
                 )
                 .clip(CircleShape)
-                .background(cardColor)
-                .border(
-                  width = 2.dp,
-                  brush =
-                    Brush.linearGradient(
-                      listOf(
-                        animatedAccent.copy(alpha = 0.65f),
-                        goldAccent.copy(alpha = 0.70f),
-                        TealGlow.copy(alpha = 0.60f),
-                      )
-                    ),
-                  shape = CircleShape,
-                )
-          )
-          Image(
-            painter = painterResource(id = R.drawable.mano_hero),
-            contentDescription = "شخصیت رسمی مانو، ربات سفید با چهره سبز و برگ سبز روی سر",
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(mascotSize - 4.dp).clip(CircleShape).padding(3.dp),
-          )
+                .background(Color(0xFFF0F8F7)),
+          ) {
+            Image(
+              painter = painterResource(id = R.drawable.img_mano_hero_clean),
+              contentDescription = "شخصیت رسمی مانو، ربات سفید با چهره سبز و برگ سبز روی سر",
+              contentScale = ContentScale.Crop,
+              alignment = Alignment.Center,
+              modifier = Modifier.fillMaxSize().clip(CircleShape),
+            )
+            // Soft perimeter glow + glowing metallic ring on top so MANO fits edge-to-edge inside the circle
+            Box(
+              modifier =
+                Modifier
+                  .fillMaxSize()
+                  .background(
+                    Brush.radialGradient(
+                      colors =
+                        listOf(
+                          Color.Transparent,
+                          Color.Transparent,
+                          animatedAccent.copy(alpha = if (isDark) 0.26f else 0.14f),
+                        )
+                    )
+                  )
+                  .border(
+                    width = 2.6.dp,
+                    brush =
+                      Brush.linearGradient(
+                        listOf(
+                          animatedAccent.copy(alpha = 0.88f),
+                          goldAccent.copy(alpha = 0.88f),
+                          TealGlow.copy(alpha = 0.82f),
+                        )
+                      ),
+                    shape = CircleShape,
+                  )
+            )
+          }
         }
 
         // Deterministic LTR Trig Plane for Both Galactic Rings
@@ -957,6 +980,8 @@ fun ManoOrbitalHeroStage(
                   fontWeight = FontWeight.Bold,
                   color = if (selected) onAccentText else MaterialTheme.colorScheme.onSurface,
                   maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                  textAlign = TextAlign.Center,
                 )
               }
             }
@@ -1040,7 +1065,7 @@ fun ManoOrbitalHeroStage(
                   text = if (hasDualRings) "${ring.labelFa} • ${focused.subtitleFa}" else focused.subtitleFa,
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  maxLines = 1,
+                  maxLines = 2,
                   overflow = TextOverflow.Ellipsis,
                 )
               }

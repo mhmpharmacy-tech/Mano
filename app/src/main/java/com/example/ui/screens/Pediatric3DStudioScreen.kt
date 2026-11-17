@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.os.Build
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -238,6 +239,7 @@ fun Pediatric3DStudioScreen(
   var weighingPosture by remember(defaultWeighingPosture) {
     mutableStateOf(defaultWeighingPosture)
   }
+  var selectedManoSquadId by remember { mutableStateOf("default") }
   var selectedPartLabelFa by remember(syncedTargetMl, childProfile, initialScene, prefillScannedDrugFa) {
     mutableStateOf(
       when {
@@ -335,8 +337,14 @@ fun Pediatric3DStudioScreen(
   DisposableEffect(lifecycleOwner) {
     val observer = LifecycleEventObserver { _, event ->
       when (event) {
-        Lifecycle.Event.ON_RESUME -> webViewRef.value?.onResume()
-        Lifecycle.Event.ON_PAUSE -> webViewRef.value?.onPause()
+        Lifecycle.Event.ON_RESUME -> {
+          webViewRef.value?.onResume()
+          runJs("window.Mano3D && window.Mano3D.setPaused(false);")
+        }
+        Lifecycle.Event.ON_PAUSE -> {
+          runJs("window.Mano3D && window.Mano3D.setPaused(true);")
+          webViewRef.value?.onPause()
+        }
         else -> Unit
       }
     }
@@ -345,6 +353,9 @@ fun Pediatric3DStudioScreen(
       lifecycleOwner.lifecycle.removeObserver(observer)
       webViewRef.value?.apply {
         stopLoading()
+        onPause()
+        loadUrl("about:blank")
+        clearHistory()
         removeJavascriptInterface("AndroidBridge")
         destroy()
       }
@@ -357,11 +368,16 @@ fun Pediatric3DStudioScreen(
       modifier = Modifier.fillMaxSize().testTag("pediatric_3d_webview"),
       factory = { ctx ->
         WebView(ctx).apply {
-          setBackgroundColor(android.graphics.Color.parseColor(if (isDark) "#08191F" else "#F0F7F8"))
+          setBackgroundColor(if (isDark) 0xFF08191F.toInt() else 0xFFF0F7F8.toInt())
           settings.javaScriptEnabled = true
           settings.domStorageEnabled = true
           settings.allowFileAccess = false
           settings.allowContentAccess = false
+          settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+          settings.setSupportMultipleWindows(false)
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.safeBrowsingEnabled = true
+          }
           settings.mediaPlaybackRequiresUserGesture = true
           settings.cacheMode = WebSettings.LOAD_DEFAULT
 
@@ -379,6 +395,13 @@ fun Pediatric3DStudioScreen(
 
           webViewClient =
             object : WebViewClient() {
+              override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?,
+              ): Boolean {
+                return request?.url?.host != ASSET_VIRTUAL_HOST
+              }
+
               override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?,
@@ -821,19 +844,48 @@ fun Pediatric3DStudioScreen(
                 }
               }
             } else {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-              ) {
-                Text(
-                  text = "روی مانو یا گوهرهای مداری ضربه بزنید تا واکنش ببینید.",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                  modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onBack) {
-                  Text("بستن")
+              Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val squadChoices =
+                  listOf(
+                    "default" to "مانو اصلی",
+                    "mano_drug" to "Mano Drug",
+                    "mano_growth" to "Mano Growth",
+                    "mano_skin" to "Mano Skin",
+                    "mano_nutrition" to "Mano Nutrition",
+                    "mano_care" to "Mano Care",
+                    "mano_connect" to "Mano Connect",
+                  )
+                LazyRow(
+                  horizontalArrangement = Arrangement.spacedBy(6.dp),
+                  modifier = Modifier.fillMaxWidth().testTag("studio_3d_mano_squad_row"),
+                ) {
+                  items(squadChoices, key = { it.first }) { (id, label) ->
+                    FilterChip(
+                      selected = selectedManoSquadId == id,
+                      onClick = {
+                        selectedManoSquadId = id
+                        selectedPartLabelFa = partDescriptionFa(if (id == "default") "mano" else id)
+                        runJs("window.Mano3D && window.Mano3D.selectSquadMember('$id');")
+                      },
+                      label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                      modifier = Modifier.minimumInteractiveComponentSize().testTag("studio_3d_squad_$id"),
+                    )
+                  }
+                }
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                  Text(
+                    text = "روی مانو یا کاراکترهای رنگی مدار ضربه بزنید تا با متریال PBR برجسته شوند.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                  )
+                  TextButton(onClick = onBack) {
+                    Text("بستن")
+                  }
                 }
               }
             }
@@ -853,7 +905,13 @@ private fun partDescriptionFa(partId: String): String {
     "scale_lcd" -> "نمایشگر ترازو: پیش از گذاشتن کودک عدد را روی 0.00 kg صفر (Tare) کنید"
     "blanket" -> "زیرانداز سبک و نرم: قبل از صفر کردن ترازو روی کفه قرار دهید"
     "mannequin" -> "مانکن سه‌بعدی کودک: با لباس سبک و در مرکز حلقه ترازو قرار می‌گیرد"
-    "mano" -> "مانو در حالت تعاملی: لمس شما پرش نرم ایجاد می‌کند"
+    "mano" -> "مانو اصلی (پرسلن براق و طلا): لمس شما پرش نرم و بازتاب نوری ایجاد می‌کند"
+    "mano_drug" -> "Mano Drug (سبز یشمی): پایش ایمنی دارو و دوز دقیق mL"
+    "mano_growth" -> "Mano Growth (آبی): پایش رشد، قد و وزن بر اساس منحنی WHO"
+    "mano_skin" -> "Mano Skin (مرجانی): مراقبت ملایم پوست و پیشگیری از سوختگی پوشک"
+    "mano_nutrition" -> "Mano Nutrition (سبز زیتونی): تغذیه تکمیلی و سلامت گوارشی کودک"
+    "mano_care" -> "Mano Care (نارنجی): پایش تب، علائم هشدار و خط زمانی مراقبت"
+    "mano_connect" -> "Mano Connect (بنفش): ارتباط مستقیم و تایید علمی داروساز"
     "station_fever" -> "ایستگاه پایش تب و علائم هشدار"
     "station_syringe" -> "ایستگاه آموزش دوز دقیق سرنگ mL"
     "station_hydration" -> "ایستگاه آبرسانی و مایعات حمایتی"

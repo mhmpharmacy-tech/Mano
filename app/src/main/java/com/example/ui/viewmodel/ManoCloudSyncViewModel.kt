@@ -6,13 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.FeverLogCloud
 import com.example.data.ManoCloudRepository
 import com.example.data.MedicationDoseLogCloud
+import com.example.data.UrgentTriageBlockedException
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.ConsultationRequestDemo
 import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.DoctorVisitDraft
+import com.example.domain.model.PublicPharmacyOption
 import com.example.domain.model.SavedSyrupScan
+import com.example.domain.model.StaffAccessStatus
+import com.example.domain.model.StaffConsultationCase
 import com.example.domain.model.VaccineRecord
 import com.example.domain.util.TimelineDosePoint
 import com.example.domain.util.TimelineTempPoint
@@ -99,10 +103,195 @@ class ManoCloudSyncViewModel(
   private val _cloudToastFa = MutableStateFlow<String?>(null)
   val cloudToastFa: StateFlow<String?> = _cloudToastFa.asStateFlow()
 
+  private val _acceptingPharmacies = MutableStateFlow<List<PublicPharmacyOption>>(emptyList())
+  val acceptingPharmacies: StateFlow<List<PublicPharmacyOption>> = _acceptingPharmacies.asStateFlow()
+
+  private val _selectedPharmacyId = MutableStateFlow<String?>(null)
+  val selectedPharmacyId: StateFlow<String?> = _selectedPharmacyId.asStateFlow()
+
+  private val _serverConsultations = MutableStateFlow<List<ConsultationRequestDemo>>(emptyList())
+  val serverConsultations: StateFlow<List<ConsultationRequestDemo>> = _serverConsultations.asStateFlow()
+
+  private val _isSubmittingConsultation = MutableStateFlow(false)
+  val isSubmittingConsultation: StateFlow<Boolean> = _isSubmittingConsultation.asStateFlow()
+
+  private val _serverConsultationErrorFa = MutableStateFlow<String?>(null)
+  val serverConsultationErrorFa: StateFlow<String?> = _serverConsultationErrorFa.asStateFlow()
+
+  private val _staffAccessStatus = MutableStateFlow(StaffAccessStatus())
+  val staffAccessStatus: StateFlow<StaffAccessStatus> = _staffAccessStatus.asStateFlow()
+
+  private val _staffInboxCases = MutableStateFlow<List<StaffConsultationCase>>(emptyList())
+  val staffInboxCases: StateFlow<List<StaffConsultationCase>> = _staffInboxCases.asStateFlow()
+
+  private val _isLoadingStaffInbox = MutableStateFlow(false)
+  val isLoadingStaffInbox: StateFlow<Boolean> = _isLoadingStaffInbox.asStateFlow()
+
+  private val _staffActionInFlightCaseId = MutableStateFlow<String?>(null)
+  val staffActionInFlightCaseId: StateFlow<String?> = _staffActionInFlightCaseId.asStateFlow()
+
+  private val _staffErrorFa = MutableStateFlow<String?>(null)
+  val staffErrorFa: StateFlow<String?> = _staffErrorFa.asStateFlow()
+
   private var hasAttemptedOfflineMigration = false
+
+  init {
+    refreshServerConsultations(silent = true)
+    refreshStaffStatusAndInbox(silent = true)
+  }
 
   fun clearCloudToast() {
     _cloudToastFa.value = null
+  }
+
+  fun clearServerConsultationError() {
+    _serverConsultationErrorFa.value = null
+  }
+
+  fun clearStaffError() {
+    _staffErrorFa.value = null
+  }
+
+  fun selectPharmacy(pharmacyId: String) {
+    _selectedPharmacyId.value = pharmacyId
+  }
+
+  fun refreshServerConsultations(silent: Boolean = false) {
+    viewModelScope.launch {
+      val pharmaciesRes = repository.fetchAcceptingPharmaciesFromServer()
+      pharmaciesRes.getOrNull()?.let { list ->
+        _acceptingPharmacies.value = list
+        if (_selectedPharmacyId.value == null || list.none { it.pharmacyId == _selectedPharmacyId.value }) {
+          _selectedPharmacyId.value = list.firstOrNull { it.acceptingCases }?.pharmacyId
+        }
+      }
+
+      val casesRes = repository.fetchParentConsultationsFromServer()
+      if (casesRes.isSuccess) {
+        _serverConsultations.value = casesRes.getOrNull().orEmpty()
+        if (!silent) {
+          _cloudToastFa.value = "آخرین وضعیت مشاوره‌ها از سرور به‌روزرسانی شد."
+        }
+      } else if (!silent) {
+        val msg = casesRes.exceptionOrNull()?.localizedMessage ?: "خطا در دریافت وضعیت از سرور."
+        _cloudToastFa.value = msg
+      }
+    }
+  }
+
+  fun refreshStaffStatusAndInbox(
+    forceTokenRefresh: Boolean = false,
+    explicitPharmacyId: String? = null,
+    statusFilter: ConsultationStatus? = null,
+    silent: Boolean = false,
+  ) {
+    viewModelScope.launch {
+      _isLoadingStaffInbox.value = true
+      if (!silent) _staffErrorFa.value = null
+      try {
+        val status = repository.fetchPharmacistStaffClaims(forceRefresh = forceTokenRefresh)
+        _staffAccessStatus.value = status
+        val targetPharmacyId =
+          explicitPharmacyId?.trim()?.takeIf { it.isNotEmpty() } ?: status.pharmacyId
+        if (targetPharmacyId == null || !status.isVerifiedPharmacist) {
+          _staffInboxCases.value = emptyList()
+          return@launch
+        }
+        val inboxRes = repository.fetchPharmacyInbox(pharmacyId = targetPharmacyId, statusFilter = statusFilter)
+        if (inboxRes.isSuccess) {
+          _staffInboxCases.value = inboxRes.getOrNull().orEmpty()
+          if (!silent) {
+            _cloudToastFa.value = "صندوق پرونده‌های داروخانه به‌روزرسانی شد."
+          }
+        } else {
+          val msg = inboxRes.exceptionOrNull()?.localizedMessage ?: "خطا در دریافت پرونده‌های داروخانه."
+          if (!silent) {
+            _staffErrorFa.value = msg
+            _cloudToastFa.value = msg
+          }
+        }
+      } finally {
+        _isLoadingStaffInbox.value = false
+      }
+    }
+  }
+
+  fun acknowledgeStaffCaseReceived(
+    pharmacyId: String,
+    caseId: String,
+    internalNote: String?,
+    onSuccess: () -> Unit = {},
+  ) {
+    if (_staffActionInFlightCaseId.value != null) return
+    _staffActionInFlightCaseId.value = caseId
+    _staffErrorFa.value = null
+    viewModelScope.launch {
+      try {
+        val res =
+          repository.reviewStaffConsultationCase(
+            pharmacyId = pharmacyId,
+            caseId = caseId,
+            nextStatus = ConsultationStatus.RECEIVED,
+            internalNote = internalNote,
+            parentReply = null,
+            pharmacistAttestation = false,
+          )
+        if (res.isSuccess) {
+          val updated = res.getOrThrow()
+          _staffInboxCases.value =
+            _staffInboxCases.value.map { if (it.caseId == updated.caseId) updated else it }
+          _cloudToastFa.value = "پرونده توسط داروساز پذیرش شد (وضعیت: دریافت شده)."
+          refreshServerConsultations(silent = true)
+          onSuccess()
+        } else {
+          val msg = res.exceptionOrNull()?.localizedMessage ?: "خطا در پذیرش پرونده."
+          _staffErrorFa.value = msg
+          _cloudToastFa.value = msg
+        }
+      } finally {
+        _staffActionInFlightCaseId.value = null
+      }
+    }
+  }
+
+  fun submitStaffCaseReview(
+    pharmacyId: String,
+    caseId: String,
+    internalNote: String?,
+    parentReply: String,
+    pharmacistAttestation: Boolean,
+    onSuccess: () -> Unit = {},
+  ) {
+    if (_staffActionInFlightCaseId.value != null) return
+    _staffActionInFlightCaseId.value = caseId
+    _staffErrorFa.value = null
+    viewModelScope.launch {
+      try {
+        val res =
+          repository.reviewStaffConsultationCase(
+            pharmacyId = pharmacyId,
+            caseId = caseId,
+            nextStatus = ConsultationStatus.REVIEWED,
+            internalNote = internalNote,
+            parentReply = parentReply,
+            pharmacistAttestation = pharmacistAttestation,
+          )
+        if (res.isSuccess) {
+          val updated = res.getOrThrow()
+          _staffInboxCases.value =
+            _staffInboxCases.value.map { if (it.caseId == updated.caseId) updated else it }
+          _cloudToastFa.value = "پاسخ علمی با تاییدیه داروساز ثبت و قفل شد."
+          refreshServerConsultations(silent = true)
+          onSuccess()
+        } else {
+          val msg = res.exceptionOrNull()?.localizedMessage ?: "خطا در ثبت پاسخ داروساز."
+          _staffErrorFa.value = msg
+          _cloudToastFa.value = msg
+        }
+      } finally {
+        _staffActionInFlightCaseId.value = null
+      }
+    }
   }
 
   fun migrateOfflineDataIfNeeded(
@@ -224,30 +413,71 @@ class ManoCloudSyncViewModel(
     }
   }
 
+  fun submitTrustedConsultation(
+    category: ConsultationCategory,
+    ageBand: AgeBand,
+    questionSummaryFa: String,
+    hasUrgentFlag: Boolean,
+    consentAccepted: Boolean,
+    onSuccess: () -> Unit = {},
+  ) {
+    if (_isSubmittingConsultation.value) return
+    _isSubmittingConsultation.value = true
+    _serverConsultationErrorFa.value = null
+    viewModelScope.launch {
+      try {
+        val result =
+          repository.submitTrustedConsultationViaServer(
+            preferredPharmacyId = _selectedPharmacyId.value,
+            category = category,
+            ageBand = ageBand,
+            questionSummaryFa = questionSummaryFa,
+            hasUrgentFlag = hasUrgentFlag,
+            consentAccepted = consentAccepted,
+          )
+        if (result.isSuccess) {
+          val created = result.getOrThrow()
+          _serverConsultations.value =
+            (listOf(created) + _serverConsultations.value).distinctBy { it.id }
+          _cloudToastFa.value = "درخواست غیرفوری پس از تایید گذرنامه تریاژ در داروخانه ثبت شد."
+          onSuccess()
+        } else {
+          val err = result.exceptionOrNull()
+          val msg =
+            if (err is UrgentTriageBlockedException) {
+              "${err.titleFa}: ${err.summaryFa}"
+            } else {
+              err?.localizedMessage ?: "خطا در ثبت امن درخواست مشاوره."
+            }
+          _serverConsultationErrorFa.value = msg
+          _cloudToastFa.value = msg
+        }
+      } finally {
+        _isSubmittingConsultation.value = false
+      }
+    }
+  }
+
+  @Deprecated("Use submitTrustedConsultation for server-verified intake.")
   fun submitConsultation(
     category: ConsultationCategory,
     ageBand: AgeBand,
     questionSummaryFa: String,
     onSuccess: () -> Unit = {},
   ) {
-    viewModelScope.launch {
-      val result = repository.createConsultation(category, ageBand, questionSummaryFa)
-      if (result.isSuccess) {
-        _cloudToastFa.value = "درخواست مشاوره غیرتشخیصی با موفقیت در حساب کاربری ثبت شد."
-        onSuccess()
-      } else {
-        _cloudToastFa.value = "خطا در ثبت درخواست ابری: ${result.exceptionOrNull()?.localizedMessage ?: "نامشخص"}"
-      }
-    }
+    submitTrustedConsultation(
+      category = category,
+      ageBand = ageBand,
+      questionSummaryFa = questionSummaryFa,
+      hasUrgentFlag = false,
+      consentAccepted = true,
+      onSuccess = onSuccess,
+    )
   }
 
+  @Deprecated("Status advances exclusively via trusted pharmacist Cloud Function reviewConsultationCase.")
   fun advanceConsultationStatus(consultationId: String, currentStatus: ConsultationStatus) {
-    viewModelScope.launch {
-      val result = repository.advanceConsultationStatus(consultationId, currentStatus)
-      if (result.isFailure) {
-        _cloudToastFa.value = "امکان تغییر وضعیت وجود ندارد."
-      }
-    }
+    refreshServerConsultations(silent = false)
   }
 
   fun setBookmark(articleSlug: String, bookmarked: Boolean) {

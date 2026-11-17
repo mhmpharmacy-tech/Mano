@@ -1,7 +1,7 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,11 +47,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.R
@@ -64,9 +61,11 @@ import com.example.domain.util.PersianNormalizer
 import com.example.ui.components.AgeSelectorRow
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.ArticleCard
+import com.example.ui.components.ClinicalBulletList
 import com.example.ui.components.ClinicalNote
 import com.example.ui.components.EmptyState
 import com.example.ui.components.LtrText
+import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
@@ -97,6 +96,10 @@ fun TopicsScreen(
   imageStudioViewModel: ManoImageStudioViewModel = viewModel(factory = ManoImageStudioViewModel.provideFactory()),
 ) {
   var showStudioTab by rememberSaveable { mutableStateOf(false) }
+
+  BackHandler(enabled = showStudioTab) {
+    showStudioTab = false
+  }
 
   Column(modifier = Modifier.fillMaxSize()) {
     Row(
@@ -136,18 +139,17 @@ fun TopicsScreen(
       ) {
         item {
           SectionCard {
-            Image(
-              painter = painterResource(id = R.drawable.img_topics_library_banner),
+            ManoBannerFrame(
+              resId = R.drawable.img_topics_library_banner,
               contentDescription = "کتابخانه سلامت کودک مانو کیدز",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxWidth().height(156.dp).clip(RoundedCornerShape(16.dp)),
+              aspectRatio = 16f / 9f,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
               com.example.ui.components.ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 62.dp)
               Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("موضوعات سلامت و راهنماهای جامع", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                  text = "مقالات آموزشی پایه با ذکر رده سنی، علائم هشدار و منابع معتبر علمی (در انتظار بررسی نهایی بالینی).",
+                  text = "مقالات آموزشی پایه با ذکر رده سنی، علائم هشدار و منابع معتبر علمی (بازبینی و تایید علمی داروساز).",
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -371,7 +373,7 @@ fun TopicDetailScreen(
         SeverityAlert(
           severity = AlertSeverity.DANGER,
           title = "چه زمانی باید سریع به پزشک یا اورژانس ۱۱۵ مراجعه کنیم؟",
-          body = article.redFlagsFa.joinToString("\n• ", prefix = "• "),
+          body = article.redFlagsFa.joinToString("\n\n• ", prefix = "• "),
           showCautionMascot = article.isHighRisk,
         )
       }
@@ -379,9 +381,10 @@ fun TopicDetailScreen(
       item {
         SectionCard {
           Text("نکات مراقبت حمایتی در منزل", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-          article.selfCarePointsFa.forEach { point ->
-            Text("• $point", style = MaterialTheme.typography.bodyMedium)
-          }
+          ClinicalBulletList(
+            items = article.selfCarePointsFa,
+            bulletColor = MaterialTheme.colorScheme.primary,
+          )
         }
       }
 
@@ -389,7 +392,7 @@ fun TopicDetailScreen(
         SeverityAlert(
           severity = AlertSeverity.CAUTION,
           title = "اشتباهات رایجی که باید از آن‌ها پرهیز کرد",
-          body = article.caregiverMistakesFa.joinToString("\n• ", prefix = "• "),
+          body = article.caregiverMistakesFa.joinToString("\n\n• ", prefix = "• "),
         )
       }
 

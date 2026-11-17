@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,10 +33,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.ManoSourcesAndClinicalSeed
@@ -49,15 +45,19 @@ import com.example.domain.model.MilestoneItem
 import com.example.domain.model.ReviewStatus
 import com.example.ui.components.AgeSelectorRow
 import com.example.ui.components.AlertSeverity
+import com.example.ui.components.ClinicalBulletList
 import com.example.ui.components.ClinicalNote
 import com.example.ui.components.InteractiveOralSyringeLabCard
 import com.example.ui.components.InteractiveThermometerLabCard
 import com.example.ui.components.LtrText
+import com.example.ui.components.ManoBannerFrame
+import com.example.ui.components.ManoFramedIllustration
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PharmacistCtaCard
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
+import com.example.ui.components.WhoGrowthChartCard
 import com.example.ui.theme.AquaSurface
 import com.example.ui.theme.DarkSky
 import com.example.ui.theme.manoBorderColor
@@ -89,11 +89,12 @@ fun GrowthScreen(
       item {
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.mascot_growth),
+            ManoFramedIllustration(
+              resId = R.drawable.mascot_growth,
               contentDescription = "مانو در حال مراقبت از نهال رشد کودک",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(86.dp).clip(RoundedCornerShape(16.dp)),
+              width = 100.dp,
+              aspectRatio = 0.80f,
+              accentColor = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
               Row(
@@ -102,7 +103,7 @@ fun GrowthScreen(
                 verticalAlignment = Alignment.CenterVertically,
               ) {
                 Text("رشد و تکامل کودک", style = MaterialTheme.typography.headlineSmall)
-                SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
+                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
               }
               Text(
                 text = "پایش نقاط عطف حرکتی، گفتاری و اجتماعی به همراه یادآوری ویزیت‌های دوره‌ای رشد.",
@@ -129,35 +130,14 @@ fun GrowthScreen(
         AgeSelectorRow(selectedAgeBand = selectedAgeBand, onSelect = onSelectAgeBand)
       }
 
-      // Honest Growth Chart Placeholder (never invent WHO/CDC percentile curves)
+      // Real WHO Child Growth Standards Percentile Curve Canvas (0–60 months)
       item {
-        Surface(
-          color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 0.55f, darkAlpha = 0.16f),
-          shape = RoundedCornerShape(16.dp),
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-          modifier = Modifier.fillMaxWidth().testTag("growth_chart_placeholder"),
-        ) {
-          Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-              Icon(Icons.AutoMirrored.Rounded.ShowChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-              Text("نمودار صدک رشد WHO/CDC (در انتظار بارگذاری جدول مرجع)", style = MaterialTheme.typography.titleSmall)
-            }
-            Text(
-              text = "برای حفظ دقت بالینی، مانو از رسم منحنی صدک ساختگی خودداری می‌کند. رسم نمودار واقعی تنها پس از اتصال جدول مرجع استاندارد WHO و ثبت جنسیت و سن دقیق فعال می‌شود.",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            LtrText(text = ManoSourcesAndClinicalSeed.srcWhoGrowth.url)
-            OutlinedButton(
-              onClick = onOpen3DWeighingGuide,
-              modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("growth_open_3d_weighing_btn"),
-            ) {
-              Icon(Icons.Rounded.MonitorWeight, contentDescription = null, modifier = Modifier.size(18.dp))
-              Spacer(Modifier.width(6.dp))
-              Text("راهنمای سه‌بعدی وزن‌کشی صحیح با مانکن کودک")
-            }
-          }
-        }
+        WhoGrowthChartCard(
+          childProfile = childProfile,
+          savedHeightCm = savedHeightCm,
+          selectedAgeBand = selectedAgeBand,
+          onOpen3DWeighingGuide = onOpen3DWeighingGuide,
+        )
       }
 
       item {
@@ -250,11 +230,12 @@ fun SkinScreen(
       item {
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.mascot_skin),
+            ManoFramedIllustration(
+              resId = R.drawable.mascot_skin,
               contentDescription = "مانو در کنار محصولات ملایم مراقبت پوست کودک",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(92.dp).clip(RoundedCornerShape(16.dp)),
+              width = 98.dp,
+              aspectRatio = 0.94f,
+              accentColor = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
               Row(
@@ -263,7 +244,7 @@ fun SkinScreen(
                 verticalAlignment = Alignment.CenterVertically,
               ) {
                 Text("پوست کودک و مراقبت پوشک", style = MaterialTheme.typography.headlineSmall)
-                SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
+                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
               }
               Text(
                 text = "آموزش مراقبت پوست خشک، حساس و سوختگی پوشک با تفکیک کامل از تبلیغات فروشگاهی.",
@@ -278,9 +259,14 @@ fun SkinScreen(
       item {
         SectionCard {
           Text("اصول مراقبت از سوختگی پای نوزاد", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-          Text("• تعویض سریع پوشک خیس یا کثیف و دادن زمان کوتاه هواخوری روزانه.", style = MaterialTheme.typography.bodyMedium)
-          Text("• شست‌وشو با آب ولرم و خشک کردن ملایم بدون کشیدن حوله یا دستمال مرطوب عطردار.", style = MaterialTheme.typography.bodyMedium)
-          Text("• لایه محافظ زینک اکساید ساده بدون عطر؛ پرهیز از کرم‌های کورتونی قوی بدون تجویز پزشک.", style = MaterialTheme.typography.bodyMedium)
+          ClinicalBulletList(
+            items = listOf(
+              "تعویض سریع پوشک خیس یا کثیف و دادن زمان کوتاه هواخوری روزانه.",
+              "شست‌وشو با آب ولرم و خشک کردن ملایم بدون کشیدن حوله یا دستمال مرطوب عطردار.",
+              "لایه محافظ زینک اکساید ساده بدون عطر؛ پرهیز از کرم‌های کورتونی قوی بدون تجویز پزشک.",
+            ),
+            bulletColor = MaterialTheme.colorScheme.primary,
+          )
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
               onClick = onOpenDiaperArticle,
@@ -301,8 +287,13 @@ fun SkinScreen(
       item {
         SectionCard {
           Text("انتخاب محصولات بهداشتی پوست حساس کودک", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-          Text("• ترجیح شوینده‌های ملایم بدون اسانس (Fragrance-free) و فاقد الکل.", style = MaterialTheme.typography.bodyMedium)
-          Text("• حمام کوتاه ۵ تا ۱۰ دقیقه‌ای با آب ولرم و مرطوب‌سازی بلافاصله پس از حمام.", style = MaterialTheme.typography.bodyMedium)
+          ClinicalBulletList(
+            items = listOf(
+              "ترجیح شوینده‌های ملایم بدون اسانس (Fragrance-free) و فاقد الکل.",
+              "حمام کوتاه ۵ تا ۱۰ دقیقه‌ای با آب ولرم و مرطوب‌سازی بلافاصله پس از حمام.",
+            ),
+            bulletColor = MaterialTheme.colorScheme.primary,
+          )
         }
       }
 
@@ -350,11 +341,10 @@ fun DevicesScreen(
     ) {
       item {
         SectionCard {
-          Image(
-            painter = painterResource(id = R.drawable.img_devices_kit),
+          ManoBannerFrame(
+            resId = R.drawable.img_devices_kit,
             contentDescription = "نمای استودیویی مانو در کنار نبولایزر، اسپیسر، دماسنج و سرنگ mL کودک",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp)),
+            aspectRatio = 1.34f,
           )
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 64.dp)
@@ -399,20 +389,22 @@ fun DevicesScreen(
             SourceBadge(reviewStatus = guide.review.status)
           }
           Text(guide.subtitleFa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-          Surface(color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 1f, darkAlpha = 0.16f), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+          Surface(color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 1f, darkAlpha = 0.16f), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
             Text(
               text = guide.distinctionNoteFa,
-              style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.padding(10.dp),
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurface,
+              modifier = Modifier.padding(12.dp),
             )
           }
-          guide.stepsFa.forEach { step ->
-            Text("• $step", style = MaterialTheme.typography.bodyMedium)
-          }
+          ClinicalBulletList(
+            items = guide.stepsFa,
+            bulletColor = MaterialTheme.colorScheme.primary,
+          )
           SeverityAlert(
             severity = AlertSeverity.CAUTION,
             title = "نکات ایمنی مهم",
-            body = guide.cautionNotesFa.joinToString("\n• ", prefix = "• "),
+            body = guide.cautionNotesFa.joinToString("\n\n• ", prefix = "• "),
           )
         }
       }

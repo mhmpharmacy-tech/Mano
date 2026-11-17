@@ -226,6 +226,12 @@ data class ConsultationRequestDemo(
   val followUp: FollowUpNote? = null,
 )
 
+data class PublicPharmacyOption(
+  val pharmacyId: String,
+  val displayNameFa: String,
+  val acceptingCases: Boolean,
+)
+
 data class PharmacistCaseDemo(
   val id: String,
   val aliasFa: String,
@@ -253,3 +259,34 @@ data class ChildProfileDemo(
   val consentGranted: Boolean,
   val ageMonthsExact: Int? = null,
 )
+
+data class StaffInternalNote(
+  val noteId: String,
+  val authorUid: String,
+  val noteText: String,
+  val fromStatus: ConsultationStatus,
+  val toStatus: ConsultationStatus,
+  val createdAtMs: Long,
+)
+
+data class StaffConsultationCase(
+  val caseId: String,
+  val pharmacyId: String,
+  val category: ConsultationCategory,
+  val childAgeBand: AgeBand,
+  val symptomFlowId: String,
+  val questionSummaryFa: String,
+  val status: ConsultationStatus,
+  val createdAtLabelFa: String,
+  val internalNotes: List<StaffInternalNote> = emptyList(),
+  val parentReplyFa: String? = null,
+  val receivedByUid: String? = null,
+  val reviewedByUid: String? = null,
+)
+
+data class StaffAccessStatus(
+  val isVerifiedPharmacist: Boolean = false,
+  val role: String? = null,
+  val pharmacyId: String? = null,
+)
+

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -103,6 +105,7 @@ import com.example.ui.theme.AquaSurface
 import com.example.ui.theme.CautionAmber
 import com.example.ui.theme.CautionSurface
 import com.example.ui.theme.CoralCare
+import com.example.ui.theme.CoralCareInk
 import com.example.ui.theme.DangerCrimson
 import com.example.ui.theme.DangerSurface
 import com.example.ui.theme.DarkBackground
@@ -116,15 +119,18 @@ import com.example.ui.theme.DarkSurfaceHigh
 import com.example.ui.theme.HairlineBorder
 import com.example.ui.theme.InfoBlue
 import com.example.ui.theme.InfoSurface
+import com.example.ui.theme.JadeCareInk
 import com.example.ui.theme.LightMint
 import com.example.ui.theme.LocalManoDarkTheme
 import com.example.ui.theme.MangoCare
 import com.example.ui.theme.PaleWarmSand
 import com.example.ui.theme.PlumCare
+import com.example.ui.theme.PlumCareInk
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SageCare
 import com.example.ui.theme.ShadowSlate
 import com.example.ui.theme.SkyCare
+import com.example.ui.theme.SkyCareInk
 import com.example.ui.theme.StrawberryCare
 import com.example.ui.theme.SuccessEmerald
 import com.example.ui.theme.SuccessSurface
@@ -159,10 +165,10 @@ fun TopicAccentRole.resolveAccentColor(): Color {
   val isDark = LocalManoDarkTheme.current
   return when (this) {
     TopicAccentRole.TEAL -> MaterialTheme.colorScheme.primary
-    TopicAccentRole.CORAL -> if (isDark) DarkCoral else CoralCare
-    TopicAccentRole.SKY -> if (isDark) DarkSky else SkyCare
-    TopicAccentRole.SAGE -> if (isDark) DarkSage else SageCare
-    TopicAccentRole.PLUM -> if (isDark) DarkPlum else PlumCare
+    TopicAccentRole.CORAL -> if (isDark) DarkCoral else CoralCareInk
+    TopicAccentRole.SKY -> if (isDark) DarkSky else SkyCareInk
+    TopicAccentRole.SAGE -> if (isDark) DarkSage else JadeCareInk
+    TopicAccentRole.PLUM -> if (isDark) DarkPlum else PlumCareInk
     TopicAccentRole.GOLD -> if (isDark) DarkGold else CautionAmber
     TopicAccentRole.MANGO -> if (isDark) DarkGold else MangoCare
     TopicAccentRole.AQUA -> if (isDark) DarkSky else AquaCare
@@ -235,10 +241,10 @@ fun ManoIconMedallion(
       modifier
         .size(containerSize)
         .shadow(
-          elevation = 10.dp,
+          elevation = if (isDark) 12.dp else 10.dp,
           shape = shape,
-          ambientColor = accentColor.copy(alpha = 0.42f),
-          spotColor = accentColor.copy(alpha = 0.40f),
+          ambientColor = accentColor.copy(alpha = 0.48f),
+          spotColor = accentColor.copy(alpha = 0.44f),
         )
         .clip(shape)
         .background(
@@ -246,34 +252,47 @@ fun ManoIconMedallion(
             colors =
               listOf(
                 surfaceHighlight,
-                accentColor.copy(alpha = 0.30f),
-                accentColor.copy(alpha = 0.16f),
+                accentColor.copy(alpha = if (isDark) 0.34f else 0.28f),
+                accentColor.copy(alpha = if (isDark) 0.18f else 0.14f),
               )
           )
         )
-        .border(1.2.dp, borderBrush, shape)
+        .border(1.3.dp, borderBrush, shape)
         .drawBehind {
+          // Soft inner radial spotlight for stronger icon separation
+          drawCircle(
+            brush =
+              Brush.radialGradient(
+                colors =
+                  listOf(
+                    PureWhite.copy(alpha = if (isDark) 0.22f else 0.78f),
+                    Color.Transparent,
+                  )
+              ),
+            center = center,
+            radius = size.minDimension * 0.44f,
+          )
           // Soft specular gloss arc at top-left for 3D tactile glass polish
           drawArc(
-            color = PureWhite.copy(alpha = if (isDark) 0.24f else 0.85f),
+            color = PureWhite.copy(alpha = if (isDark) 0.28f else 0.90f),
             startAngle = 200f,
             sweepAngle = 110f,
             useCenter = false,
             topLeft = Offset(size.width * 0.12f, size.height * 0.08f),
             size = androidx.compose.ui.geometry.Size(size.width * 0.74f, size.height * 0.40f),
-            style = Stroke(width = 2.6f, cap = StrokeCap.Round),
+            style = Stroke(width = 2.8f, cap = StrokeCap.Round),
           )
         },
   ) {
     if (iconKind != null) {
       Mano3DIconArtwork(kind = iconKind, size = iconSize)
     } else {
-      // Duotone 3D depth back-glyph
+      // Subtle ambient depth shadow-glyph
       Icon(
         imageVector = icon,
         contentDescription = null,
-        tint = accentColor.copy(alpha = 0.30f),
-        modifier = Modifier.size(iconSize).offset(x = 1.5.dp, y = 2.dp),
+        tint = accentColor.copy(alpha = 0.34f),
+        modifier = Modifier.size(iconSize).offset(x = 1.2.dp, y = 1.8.dp),
       )
       // Crisp primary foreground icon
       Icon(
@@ -308,16 +327,120 @@ fun ManoPoseAvatar(
   size: Dp = 64.dp,
   modifier: Modifier = Modifier,
 ) {
-  Image(
-    painter = painterResource(id = pose.drawableRes),
-    contentDescription = "شخصیت مانو در حالت ${pose.labelFa}",
-    contentScale = ContentScale.Crop,
-    modifier =
-      modifier
-        .size(size)
-        .clip(RoundedCornerShape(16.dp))
-        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp)),
-  )
+  val isDark = LocalManoDarkTheme.current
+  val shape = RoundedCornerShape(18.dp)
+  val accentTint =
+    when (pose) {
+      MascotPose.CAUTION -> manoSemanticAccent(CautionAmber, DarkGold)
+      MascotPose.SAVED -> manoSemanticAccent(SuccessEmerald, DarkSage)
+      else -> MaterialTheme.colorScheme.primary
+    }
+
+  Surface(
+    color = if (isDark) Color(0xFFFAFBFB) else PureWhite,
+    shape = shape,
+    border = BorderStroke(1.4.dp, accentTint.copy(alpha = if (isDark) 0.48f else 0.28f)),
+    shadowElevation = 3.dp,
+    modifier = modifier.size(size),
+  ) {
+    Box(
+      contentAlignment = Alignment.Center,
+      modifier =
+        Modifier
+          .fillMaxSize()
+          .background(
+            Brush.radialGradient(
+              colors =
+                listOf(
+                  PureWhite,
+                  accentTint.copy(alpha = 0.08f),
+                )
+            )
+          )
+          .padding(3.dp),
+    ) {
+      Image(
+        painter = painterResource(id = pose.drawableRes),
+        contentDescription = "شخصیت مانو در حالت ${pose.labelFa}",
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
+      )
+    }
+  }
+}
+
+/**
+ * Framed showcase for wide illustrations/photos (16:9, 3:2, 4:3) matching the
+ * image's natural aspect ratio so characters and labels stay cleanly inside bounds.
+ */
+@Composable
+fun ManoBannerFrame(
+  @DrawableRes resId: Int,
+  contentDescription: String,
+  aspectRatio: Float = 16f / 9f,
+  modifier: Modifier = Modifier,
+  cornerRadius: Dp = 18.dp,
+) {
+  val shape = RoundedCornerShape(cornerRadius)
+  val borderColor = manoBorderColor()
+  Surface(
+    color = MaterialTheme.colorScheme.surfaceVariant,
+    shape = shape,
+    border = BorderStroke(1.2.dp, borderColor),
+    shadowElevation = 2.dp,
+    modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio),
+  ) {
+    Image(
+      painter = painterResource(id = resId),
+      contentDescription = contentDescription,
+      contentScale = ContentScale.Crop,
+      alignment = Alignment.Center,
+      modifier = Modifier.fillMaxSize().clip(shape),
+    )
+  }
+}
+
+/**
+ * Framed showcase for vertical or square studio MANO illustrations (`mascot_growth`,
+ * `mascot_medicine`, `mascot_skin`) using ContentScale.Fit inside an aspect-matched porcelain frame.
+ */
+@Composable
+fun ManoFramedIllustration(
+  @DrawableRes resId: Int,
+  contentDescription: String,
+  width: Dp = 100.dp,
+  aspectRatio: Float = 0.90f,
+  accentColor: Color = MaterialTheme.colorScheme.primary,
+  modifier: Modifier = Modifier,
+) {
+  val shape = RoundedCornerShape(18.dp)
+  Surface(
+    color = PureWhite,
+    shape = shape,
+    border = BorderStroke(1.3.dp, accentColor.copy(alpha = 0.28f)),
+    shadowElevation = 3.dp,
+    modifier = modifier.width(width).aspectRatio(aspectRatio),
+  ) {
+    Box(
+      contentAlignment = Alignment.Center,
+      modifier =
+        Modifier
+          .fillMaxSize()
+          .background(
+            Brush.radialGradient(
+              colors = listOf(PureWhite, accentColor.copy(alpha = 0.08f))
+            )
+          )
+          .padding(5.dp),
+    ) {
+      Image(
+        painter = painterResource(id = resId),
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
+      )
+    }
+  }
 }
 
 @Composable
@@ -361,7 +484,7 @@ fun SourceBadge(
         text = label,
         style = MaterialTheme.typography.labelSmall,
         color = fg,
-        maxLines = 1,
+        maxLines = 2,
       )
     }
   }
@@ -436,7 +559,7 @@ fun SeverityAlert(
           text = title,
           style = MaterialTheme.typography.titleMedium,
           color = fg,
-          fontWeight = FontWeight.Bold,
+          fontWeight = FontWeight.ExtraBold,
           modifier = Modifier.weight(1f),
         )
       }
@@ -859,20 +982,53 @@ fun MedicineCard(
 }
 
 @Composable
+fun ClinicalBulletList(
+  items: List<String>,
+  bulletColor: Color = MaterialTheme.colorScheme.primary,
+  modifier: Modifier = Modifier,
+  textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium,
+) {
+  Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    items.forEach { point ->
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
+      ) {
+        Box(
+          modifier =
+            Modifier
+              .padding(top = 9.dp)
+              .size(6.dp)
+              .clip(CircleShape)
+              .background(bulletColor)
+        )
+        Text(
+          text = point,
+          style = textStyle,
+          color = MaterialTheme.colorScheme.onSurface,
+          modifier = Modifier.weight(1f),
+        )
+      }
+    }
+  }
+}
+
+@Composable
 fun ClinicalNote(
   title: String,
   items: List<String>,
   sources: List<SourceReference> = emptyList(),
-  reviewStatus: ReviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+  reviewStatus: ReviewStatus = ReviewStatus.APPROVED,
   modifier: Modifier = Modifier,
 ) {
   Card(
-    shape = RoundedCornerShape(16.dp),
+    shape = RoundedCornerShape(18.dp),
     colors = CardDefaults.cardColors(containerColor = manoTintedSurface(AquaSurface, MaterialTheme.colorScheme.primary, lightAlpha = 0.6f, darkAlpha = 0.14f)),
     border = BorderStroke(1.dp, manoBorderColor()),
     modifier = modifier.fillMaxWidth(),
   ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
       Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -881,15 +1037,17 @@ fun ClinicalNote(
         Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         SourceBadge(reviewStatus = reviewStatus)
       }
-      items.forEach { point ->
-        Text("• $point", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
-      }
+      ClinicalBulletList(
+        items = items,
+        bulletColor = MaterialTheme.colorScheme.primary,
+        textStyle = MaterialTheme.typography.bodyMedium,
+      )
       if (sources.isNotEmpty()) {
         HorizontalDivider(color = manoBorderColor())
         sources.forEach { src ->
           Text(
             text = "منبع: ${src.publisher} — ${src.title}",
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
           LtrText(text = src.url, color = manoSemanticAccent(InfoBlue, DarkSky))
@@ -906,38 +1064,105 @@ fun PharmacistCtaCard(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val shape = RoundedCornerShape(22.dp)
+  val shape = RoundedCornerShape(24.dp)
   val isDark = LocalManoDarkTheme.current
-  val glowTint = MaterialTheme.colorScheme.primary
+  val connectAccent = if (isDark) DarkPlum else PlumCare
+  val connectTextAccent = if (isDark) DarkPlum else PlumCareInk
   val cardBg = if (isDark) DarkSurface else PureWhite
   Card(
     shape = shape,
     colors = CardDefaults.cardColors(containerColor = cardBg),
-    border = BorderStroke(1.dp, if (isDark) glowTint.copy(alpha = 0.25f) else HairlineBorder),
+    border = BorderStroke(1.2.dp, connectAccent.copy(alpha = if (isDark) 0.36f else 0.24f)),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     modifier =
       modifier
         .fillMaxWidth()
         .shadow(
-          elevation = 8.dp,
+          elevation = 9.dp,
           shape = shape,
-          ambientColor = if (isDark) glowTint.copy(alpha = 0.20f) else ShadowSlate.copy(alpha = 0.12f),
-          spotColor = if (isDark) glowTint.copy(alpha = 0.18f) else ShadowSlate.copy(alpha = 0.10f),
+          ambientColor = connectAccent.copy(alpha = if (isDark) 0.28f else 0.14f),
+          spotColor = connectAccent.copy(alpha = if (isDark) 0.24f else 0.12f),
         ),
   ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        ManoPoseAvatar(pose = MascotPose.LISTEN, size = 56.dp)
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    Column(
+      modifier =
+        Modifier
+          .fillMaxWidth()
+          .drawBehind {
+            drawCircle(
+              brush = Brush.radialGradient(listOf(connectAccent.copy(alpha = if (isDark) 0.16f else 0.10f), Color.Transparent)),
+              center = Offset(size.width * 0.16f, size.height * 0.18f),
+              radius = size.width * 0.45f,
+            )
           }
-          SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
+          .padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+          contentAlignment = Alignment.Center,
+          modifier =
+            Modifier
+              .size(64.dp)
+              .shadow(
+                elevation = 8.dp,
+                shape = CircleShape,
+                ambientColor = connectAccent.copy(alpha = if (isDark) 0.40f else 0.22f),
+                spotColor = connectAccent.copy(alpha = if (isDark) 0.36f else 0.20f),
+              )
+              .clip(CircleShape)
+              .background(
+                Brush.radialGradient(
+                  colors =
+                    listOf(
+                      PureWhite.copy(alpha = if (isDark) 0.15f else 0.98f),
+                      connectAccent.copy(alpha = if (isDark) 0.24f else 0.14f),
+                    )
+                )
+              )
+              .border(
+                width = 1.4.dp,
+                brush =
+                  Brush.linearGradient(
+                    colors =
+                      listOf(
+                        if (isDark) connectAccent.copy(alpha = 0.68f) else PureWhite.copy(alpha = 0.95f),
+                        connectAccent.copy(alpha = 0.38f),
+                      )
+                  ),
+                shape = CircleShape,
+              )
+              .drawBehind {
+                drawArc(
+                  color = PureWhite.copy(alpha = if (isDark) 0.26f else 0.85f),
+                  startAngle = 205f,
+                  sweepAngle = 110f,
+                  useCenter = false,
+                  topLeft = Offset(size.width * 0.12f, size.height * 0.08f),
+                  size = androidx.compose.ui.geometry.Size(size.width * 0.76f, size.height * 0.44f),
+                  style = Stroke(width = 2.4f, cap = StrokeCap.Round),
+                )
+              },
+        ) {
+          Image(
+            painter = painterResource(id = R.drawable.ic_mano_connect),
+            contentDescription = "شخصیت Mano Connect برای ارتباط با داروساز",
+            modifier = Modifier.size(56.dp),
+          )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+          Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = connectTextAccent)
+          SourceBadge(reviewStatus = ReviewStatus.APPROVED)
         }
       }
       Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
       Button(
         onClick = onClick,
+        colors =
+          ButtonDefaults.buttonColors(
+            containerColor = connectAccent,
+            contentColor = if (isDark) DarkBackground else PureWhite,
+          ),
         modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("pharmacist_cta_button"),
       ) {
         Icon(Icons.Rounded.LocalPharmacy, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1218,7 +1443,17 @@ fun CoreNavigationCard(
         .testTag(testTag),
   ) {
     Row(
-      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      modifier =
+        Modifier
+          .fillMaxWidth()
+          .drawBehind {
+            drawCircle(
+              brush = Brush.radialGradient(listOf(accentColor.copy(alpha = if (isDark) 0.15f else 0.08f), Color.Transparent)),
+              center = Offset(size.width * 0.90f, size.height * 0.50f),
+              radius = size.height * 1.15f,
+            )
+          }
+          .padding(16.dp),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -1310,26 +1545,36 @@ fun SectionCard(
   content: @Composable ColumnScope.() -> Unit,
 ) {
   val isDark = LocalManoDarkTheme.current
-  val shape = RoundedCornerShape(22.dp)
+  val shape = RoundedCornerShape(24.dp)
   val glowTint = MaterialTheme.colorScheme.primary
   val cardBg = if (isDark) DarkSurface else PureWhite
   Card(
     shape = shape,
     colors = CardDefaults.cardColors(containerColor = cardBg),
-    border = BorderStroke(1.dp, if (isDark) glowTint.copy(alpha = 0.24f) else HairlineBorder),
+    border = BorderStroke(1.dp, if (isDark) glowTint.copy(alpha = 0.28f) else HairlineBorder),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     modifier =
       modifier
         .fillMaxWidth()
         .shadow(
-          elevation = 8.dp,
+          elevation = 9.dp,
           shape = shape,
-          ambientColor = if (isDark) glowTint.copy(alpha = 0.18f) else ShadowSlate.copy(alpha = 0.12f),
-          spotColor = if (isDark) glowTint.copy(alpha = 0.16f) else ShadowSlate.copy(alpha = 0.10f),
+          ambientColor = if (isDark) glowTint.copy(alpha = 0.20f) else ShadowSlate.copy(alpha = 0.13f),
+          spotColor = if (isDark) glowTint.copy(alpha = 0.18f) else ShadowSlate.copy(alpha = 0.11f),
         ),
   ) {
     Column(
-      modifier = Modifier.padding(16.dp),
+      modifier =
+        Modifier
+          .fillMaxWidth()
+          .drawBehind {
+            drawCircle(
+              brush = Brush.radialGradient(listOf(glowTint.copy(alpha = if (isDark) 0.11f else 0.06f), Color.Transparent)),
+              center = Offset(size.width * 0.85f, size.height * 0.12f),
+              radius = size.width * 0.55f,
+            )
+          }
+          .padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp),
       content = content,
     )

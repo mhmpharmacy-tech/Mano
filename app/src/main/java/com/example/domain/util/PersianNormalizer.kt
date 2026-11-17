@@ -37,6 +37,20 @@ object PersianNormalizer {
 
   fun compact(input: String): String = normalize(input).replace(" ", "")
 
+  fun toAsciiDigits(input: String): String {
+    if (input.isEmpty()) return ""
+    val sb = StringBuilder(input.length)
+    for (ch in input) {
+      when (ch) {
+        in '۰'..'۹' -> sb.append(('0'.code + (ch.code - '۰'.code)).toChar())
+        in '٠'..'٩' -> sb.append(('0'.code + (ch.code - '٠'.code)).toChar())
+        '٫', '،' -> sb.append('.')
+        else -> sb.append(ch)
+      }
+    }
+    return sb.toString()
+  }
+
   fun scoreMatch(query: String, vararg fields: String): Int {
     val normQuery = normalize(query)
     val compactQuery = compact(query)

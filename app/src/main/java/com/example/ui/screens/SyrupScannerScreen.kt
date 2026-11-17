@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -77,6 +78,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.domain.model.ChildProfileDemo
@@ -88,6 +90,7 @@ import com.example.domain.util.LiquidDoseVisualizerEngine
 import com.example.domain.util.LiquidFormulationId
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.LtrText
+import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoIconMedallion
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.SectionCard
@@ -255,11 +258,10 @@ fun SyrupScannerScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
           ) {
-            Image(
-              painter = painterResource(id = R.drawable.img_syrup_scanner_banner),
+            ManoBannerFrame(
+              resId = R.drawable.img_syrup_scanner_banner,
               contentDescription = "مانو با اسکنر هوشمند برچسب شربت و سرنگ مدرج کودک",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxWidth().height(152.dp).clip(RoundedCornerShape(16.dp)),
+              aspectRatio = 16f / 9f,
             )
 
             Row(
@@ -347,7 +349,7 @@ fun SyrupScannerScreen(
             fontWeight = FontWeight.Bold,
           )
           Text(
-            text = "نور کافی روی قسمت غلظت (مثلاً 120 mg / 5 mL یا 100 mg / mL) بتابانید تا اسکنر هوشمند مانو مقدار دقیق را بخواند.",
+            text = "نور کافی روی قسمت غلظت (مثلاً 120 mg / 5 mL یا 100 mg / mL) بتابانید؛ در محیط کم‌نور، فلش دوربین را روشن کنید و زاویه بطری را برای حذف بازتاب نور کمی کج نگه دارید تا برچسب فارسی دقیق‌تر خوانده شود.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
@@ -362,7 +364,7 @@ fun SyrupScannerScreen(
             ) {
               Icon(Icons.Rounded.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
               Spacer(Modifier.width(6.dp))
-              Text("عکس با دوربین", maxLines = 1)
+              Text("عکس با دوربین", maxLines = 2, textAlign = TextAlign.Center)
             }
             OutlinedButton(
               onClick = {
@@ -374,7 +376,7 @@ fun SyrupScannerScreen(
             ) {
               Icon(Icons.Rounded.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
               Spacer(Modifier.width(6.dp))
-              Text("انتخاب از گالری", maxLines = 1)
+              Text("انتخاب از گالری", maxLines = 2, textAlign = TextAlign.Center)
             }
           }
 
@@ -437,12 +439,19 @@ fun SyrupScannerScreen(
                   )
                 }
               }
-              Image(
-                bitmap = scannerUiState.previewBitmap.asImageBitmap(),
-                contentDescription = "پیش‌نمایش تصویر در حال تحلیل",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)),
-              )
+              Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, borderColor),
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 10f),
+              ) {
+                Image(
+                  bitmap = scannerUiState.previewBitmap.asImageBitmap(),
+                  contentDescription = "پیش‌نمایش تصویر در حال تحلیل",
+                  contentScale = ContentScale.Fit,
+                  modifier = Modifier.fillMaxSize().padding(4.dp).clip(RoundedCornerShape(10.dp)),
+                )
+              }
             }
           }
         }
@@ -482,12 +491,13 @@ fun SyrupScannerScreen(
               Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
               ) {
                 Text(
                   text = "۲. بازبینی و ویرایش غلظت خوانده‌شده",
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
+                  modifier = Modifier.weight(1f),
                 )
                 val (badgeBg, badgeTint) =
                   when (ext.confidence) {
@@ -510,12 +520,19 @@ fun SyrupScannerScreen(
               }
 
               if (scannerUiState.previewBitmap != null) {
-                Image(
-                  bitmap = scannerUiState.previewBitmap.asImageBitmap(),
-                  contentDescription = "تصویر برچسب بطری دارو",
-                  contentScale = ContentScale.Crop,
-                  modifier = Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(14.dp)),
-                )
+                Surface(
+                  color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                  shape = RoundedCornerShape(14.dp),
+                  border = BorderStroke(1.dp, borderColor),
+                  modifier = Modifier.fillMaxWidth().aspectRatio(16f / 10f),
+                ) {
+                  Image(
+                    bitmap = scannerUiState.previewBitmap.asImageBitmap(),
+                    contentDescription = "تصویر برچسب بطری دارو",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().padding(4.dp).clip(RoundedCornerShape(10.dp)),
+                  )
+                }
               }
 
               OutlinedTextField(

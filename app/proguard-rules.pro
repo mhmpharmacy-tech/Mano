@@ -1,9 +1,6 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Keep WebView JS bridge methods intact for 3D scene interactions
 -keepclassmembers class * {
@@ -21,13 +18,11 @@
 }
 -keep class kotlinx.serialization.** { *; }
 
-# Keep Firebase App Check providers
+# Keep Firestore DTOs and domain models used via reflection / serialization
+-keep class com.example.data.*Cloud { *; }
+-keep class com.example.domain.model.** { *; }
+-keepclassmembers class com.example.data.** { *; }
+
+# Keep Firebase App Check providers and Firebase AI runtime types
 -keep class com.google.firebase.appcheck.** { *; }
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+-keep class com.google.firebase.ai.** { *; }

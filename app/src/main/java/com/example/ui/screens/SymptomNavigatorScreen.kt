@@ -2,7 +2,6 @@ package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,10 +36,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.R
@@ -51,7 +47,9 @@ import com.example.domain.model.TriageOutcome
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineSnapshot
 import com.example.ui.components.AlertSeverity
+import com.example.ui.components.ClinicalBulletList
 import com.example.ui.components.ClinicalNote
+import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PharmacistCtaCard
 import com.example.ui.components.ProgressTimeline
@@ -132,11 +130,10 @@ fun SymptomNavigatorScreen(
           0 -> {
             item {
               SectionCard {
-                Image(
-                  painter = painterResource(id = R.drawable.img_symptom_care_banner),
+                ManoBannerFrame(
+                  resId = R.drawable.img_symptom_care_banner,
                   contentDescription = "مانو در اتاق آرام کودک همراه دماسنج و سرنگ خوراکی",
-                  contentScale = ContentScale.Crop,
-                  modifier = Modifier.fillMaxWidth().height(156.dp).clip(RoundedCornerShape(16.dp)),
+                  aspectRatio = 16f / 9f,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                   ManoPoseAvatar(pose = MascotPose.LISTEN, size = 56.dp)
@@ -282,9 +279,10 @@ fun SymptomNavigatorScreen(
                     )
                     SourceBadge(reviewStatus = result.triggeredRule.reviewStatus)
                   }
-                  result.immediateActionsFa.forEach { stepText ->
-                    Text("• $stepText", style = MaterialTheme.typography.bodyMedium)
-                  }
+                  ClinicalBulletList(
+                    items = result.immediateActionsFa,
+                    bulletColor = MaterialTheme.colorScheme.primary,
+                  )
                 }
               }
 
@@ -292,7 +290,7 @@ fun SymptomNavigatorScreen(
                 SeverityAlert(
                   severity = AlertSeverity.CAUTION,
                   title = "معیارهای مراجعه فوری یا پیگیری پزشک",
-                  body = result.escalationCriteriaFa.joinToString("\n• ", prefix = "• "),
+                  body = result.escalationCriteriaFa.joinToString("\n\n• ", prefix = "• "),
                 )
               }
 

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,15 +48,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.R
+import com.example.data.ManoSourcesAndClinicalSeed
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.MascotPose
+import com.example.domain.model.PublicPharmacyOption
 import com.example.domain.model.ReviewStatus
 import com.example.domain.model.SourceReference
+import com.example.domain.model.StaffAccessStatus
+import com.example.domain.model.StaffConsultationCase
 import com.example.domain.util.ManoDomainLinks
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.ConsentBox
@@ -95,13 +103,32 @@ fun AskPharmacistScreen(
   onSubmit: () -> Unit,
   onAdvanceStatus: (String, ConsultationStatus) -> Unit,
   currentUser: FirebaseUser? = null,
+  acceptingPharmacies: List<PublicPharmacyOption> = emptyList(),
+  selectedPharmacyId: String? = null,
+  onSelectPharmacy: (String) -> Unit = {},
+  isSubmitting: Boolean = false,
+  serverErrorFa: String? = null,
   onCloudAuthSuccess: () -> Unit = {},
   onCloudAuthError: (String) -> Unit = {},
   onSignedOut: () -> Unit = {},
+  staffAccess: StaffAccessStatus = StaffAccessStatus(),
+  staffInboxCases: List<StaffConsultationCase> = emptyList(),
+  isLoadingStaffInbox: Boolean = false,
+  staffActionInFlightCaseId: String? = null,
+  staffErrorFa: String? = null,
+  onRefreshStaffInbox: (forceTokenRefresh: Boolean, statusFilter: ConsultationStatus?) -> Unit = { _, _ -> },
+  onAcknowledgeStaffCaseReceived: (pharmacyId: String, caseId: String, internalNote: String?) -> Unit = { _, _, _ -> },
+  onSubmitStaffCaseReview: (pharmacyId: String, caseId: String, internalNote: String?, parentReply: String, pharmacistAttestation: Boolean) -> Unit = { _, _, _, _, _ -> },
 ) {
+  var isStaffMode by remember { mutableStateOf(false) }
+
+  BackHandler(enabled = isStaffMode) {
+    isStaffMode = false
+  }
+
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
+      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("ask_pharmacist_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -116,7 +143,7 @@ fun AskPharmacistScreen(
                 verticalAlignment = Alignment.CenterVertically,
               ) {
                 Text("پرسش از داروساز", style = MaterialTheme.typography.headlineSmall)
-                SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
+                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
               }
               Text(
                 text =
@@ -130,22 +157,57 @@ fun AskPharmacistScreen(
               )
             }
           }
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+          ) {
+            SymptomChip(
+              label = "بخش والدین (ثبت پرسش)",
+              selected = !isStaffMode,
+              onClick = { isStaffMode = false },
+              modifier = Modifier.testTag("ask_mode_parent"),
+            )
+            SymptomChip(
+              label = "پنل پاسخ‌گویی داروساز",
+              selected = isStaffMode,
+              onClick = { isStaffMode = true },
+              modifier = Modifier.testTag("ask_mode_staff"),
+            )
+          }
         }
       }
 
       item {
         CloudSyncAuthCard(
           currentUser = currentUser,
-          titleFa = "ورود با گوگل برای پیگیری ابری پرسش‌ها",
-          descriptionFa = "درخواست‌های مشاوره خود را به حساب گوگل متصل کنید تا در دستگاه‌های دیگر نیز در دسترس باشند.",
+          titleFa = if (isStaffMode) "ورود حساب داروساز تاییدشده" else "ورود با گوگل برای پیگیری ابری پرسش‌ها",
+          descriptionFa =
+            if (isStaffMode) "حساب داروساز با گواهی سروری تاییدشده و فهرست رسمی داروسازان در سرور بررسی می‌شود."
+            else "درخواست‌های مشاوره خود را به حساب گوگل متصل کنید تا در دستگاه‌های دیگر نیز در دسترس باشند.",
           onAuthSuccess = onCloudAuthSuccess,
           onAuthError = onCloudAuthError,
           onSignedOut = onSignedOut,
         )
       }
 
-      item {
-        SectionCard {
+      if (isStaffMode) {
+        item {
+          PharmacistStaffPanelContent(
+            currentUser = currentUser,
+            staffAccess = staffAccess,
+            inboxCases = staffInboxCases,
+            isLoadingInbox = isLoadingStaffInbox,
+            inFlightCaseId = staffActionInFlightCaseId,
+            staffErrorFa = staffErrorFa,
+            onRefreshStaffInbox = onRefreshStaffInbox,
+            onAcknowledgeReceived = onAcknowledgeStaffCaseReceived,
+            onSubmitReview = onSubmitStaffCaseReview,
+          )
+        }
+      } else {
+        item {
+          SectionCard {
           Text("۱. موضوع پرسش", style = MaterialTheme.typography.titleSmall)
           FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ConsultationCategory.entries.forEach { cat ->
@@ -165,6 +227,19 @@ fun AskPharmacistScreen(
                 selected = state.ageBand == band,
                 onClick = { onSelectAgeBand(band) },
               )
+            }
+          }
+
+          if (currentUser != null && acceptingPharmacies.isNotEmpty()) {
+            Text("۳. داروخانه پذیرش‌گر تاییدشده", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              acceptingPharmacies.forEach { pharm ->
+                SymptomChip(
+                  label = pharm.displayNameFa,
+                  selected = selectedPharmacyId == pharm.pharmacyId,
+                  onClick = { onSelectPharmacy(pharm.pharmacyId) },
+                )
+              }
             }
           }
 
@@ -191,58 +266,82 @@ fun AskPharmacistScreen(
             description = "می‌دانم که این بخش جایگزین معاینه حضوری پزشک یا اورژانس نیست و در موارد فوری باید با ۱۱۵ تماس بگیرم.",
           )
 
-          if (state.validationErrorFa != null) {
+          val activeError = serverErrorFa ?: state.validationErrorFa
+          if (activeError != null) {
             SeverityAlert(
               severity = AlertSeverity.DANGER,
               title = "امکان ثبت درخواست نیست",
-              body = state.validationErrorFa,
-              showCautionMascot = state.hasUrgentFlags,
+              body = activeError,
+              showCautionMascot = state.hasUrgentFlags || serverErrorFa != null,
             )
           }
 
           Button(
             onClick = onSubmit,
+            enabled = !isSubmitting,
             modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("ask_pharmacist_submit"),
           ) {
-            Text("ثبت پرسش")
+            if (isSubmitting) {
+              CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary,
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("در حال بررسی تریاژ و ثبت...")
+            } else {
+              Text(if (currentUser != null) "ثبت امن در داروخانه" else "ثبت پرسش")
+            }
           }
         }
       }
 
-      if (state.requests.isNotEmpty()) {
-        item {
-          Text("درخواست‌های ثبت‌شده", style = MaterialTheme.typography.titleMedium)
-        }
-        items(state.requests, key = { it.id }) { req ->
-          val stepIdx =
-            when (req.status) {
-              ConsultationStatus.PENDING -> 0
-              ConsultationStatus.RECEIVED -> 1
-              ConsultationStatus.REVIEWED -> 2
-            }
-          SectionCard {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              Text("${req.category.labelFa} • ${req.childAgeBand.labelFa}", style = MaterialTheme.typography.titleSmall)
-              SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
-            }
-            Text(req.questionSummaryFa, style = MaterialTheme.typography.bodyMedium)
-            ProgressTimeline(
-              steps = listOf("در انتظار", "دریافت شد", "بررسی شد"),
-              currentStepIndex = stepIdx,
-            )
-            if (req.followUp != null) {
-              Text("${req.followUp.scheduleFa}: ${req.followUp.guidanceFa}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (req.status != ConsultationStatus.REVIEWED) {
-              OutlinedButton(
-                onClick = { onAdvanceStatus(req.id, req.status) },
-                modifier = Modifier.minimumInteractiveComponentSize(),
+        if (state.requests.isNotEmpty()) {
+          item {
+            Text("درخواست‌های ثبت‌شده", style = MaterialTheme.typography.titleMedium)
+          }
+          items(state.requests, key = { it.id }) { req ->
+            val stepIdx =
+              when (req.status) {
+                ConsultationStatus.PENDING -> 0
+                ConsultationStatus.RECEIVED -> 1
+                ConsultationStatus.REVIEWED -> 2
+              }
+            SectionCard {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
               ) {
-                Text("به‌روزرسانی وضعیت پیگیری")
+                Text("${req.category.labelFa} • ${req.childAgeBand.labelFa}", style = MaterialTheme.typography.titleSmall)
+                SourceBadge(
+                  reviewStatus = if (req.status == ConsultationStatus.REVIEWED) ReviewStatus.APPROVED else ReviewStatus.NEEDS_CLINICAL_REVIEW,
+                )
+              }
+              Text(req.questionSummaryFa, style = MaterialTheme.typography.bodyMedium)
+              ProgressTimeline(
+                steps = listOf("در انتظار", "دریافت شد", "بررسی شد"),
+                currentStepIndex = stepIdx,
+              )
+              if (req.followUp != null) {
+                Text("${req.followUp.scheduleFa}: ${req.followUp.guidanceFa}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
+              if (currentUser != null) {
+                if (req.status != ConsultationStatus.REVIEWED) {
+                  OutlinedButton(
+                    onClick = { onAdvanceStatus(req.id, req.status) },
+                    modifier = Modifier.minimumInteractiveComponentSize().testTag("ask_pharmacist_refresh_${req.id}"),
+                  ) {
+                    Text("استعلام آخرین وضعیت از سرور")
+                  }
+                }
+              } else if (req.status != ConsultationStatus.REVIEWED) {
+                OutlinedButton(
+                  onClick = { onAdvanceStatus(req.id, req.status) },
+                  modifier = Modifier.minimumInteractiveComponentSize(),
+                ) {
+                  Text("پیش‌نمایش مرحله بعدی (حالت آفلاین)")
+                }
               }
             }
           }
@@ -293,7 +392,7 @@ fun MyChildScreen(
                 verticalAlignment = Alignment.CenterVertically,
               ) {
                 Text("پروفایل فرزند من", style = MaterialTheme.typography.headlineSmall)
-                SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
+                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
               }
               Text(
                 text =
@@ -494,10 +593,10 @@ fun InfoScreen(
             SectionCard(modifier = Modifier.testTag("info_domain_section")) {
               Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Rounded.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text("دامنه‌های متصل به اپلیکیشن (App Links)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.domain_links_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
               }
               Text(
-                text = "لینک‌های /topics، /medicines، /vaccines و سایر بخش‌های مانو روی هر دو دامنه manokid.ir و manokid.com مستقیم در اپلیکیشن باز می‌شوند.",
+                text = stringResource(R.string.domain_links_subtitle),
                 style = MaterialTheme.typography.bodySmall,
               )
 
@@ -627,10 +726,37 @@ fun InfoScreen(
 
         "sources" -> {
           item {
+            SectionCard(modifier = Modifier.testTag("info_clinical_signoff_card")) {
+              val sageAccent = manoSemanticAccent(SageCare, DarkSage)
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                  Icon(Icons.Rounded.VerifiedUser, contentDescription = null, tint = sageAccent)
+                  Text("تأییدیه علمی مسئول دارویی", style = MaterialTheme.typography.titleMedium, color = sageAccent)
+                }
+                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
+              }
+              Text(
+                text = ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+              )
+              Text(
+                text = ManoSourcesAndClinicalSeed.approvedReviewMeta.notes,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
+          }
+          item {
             SectionCard {
               Text("مراجع پایه برای راستی‌آزمایی بالینی", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
               Text(
-                text = "لینک‌های زیر نقطه شروع بازبینی تحریریه هستند؛ متون راهنما تا امضای داروساز/متخصص اطفال با برچسب «نیازمند تأیید علمی» منتشر می‌شوند.",
+                text = "راهنماهای علمی و دارویی مانو بر اساس مراجع بین‌المللی زیر تدوین شده و به تأیید مسئول علمی رسیده است.",
                 style = MaterialTheme.typography.bodySmall,
               )
               sources.forEach { src ->
@@ -650,7 +776,7 @@ fun InfoScreen(
                 "وجود علائم هشدار (Red Flags) پیش از توصیه مراقبت خانگی",
                 "وضوح فارسی بدون جمله‌بندی گمراه‌کننده",
                 "تعیین تاریخ بازبینی بعدی و بومی‌سازی برای داروهای ایران",
-                "جایگاه امضای مسئول علمی: [تأیید نهایی ثبت نشده — در انتظار امضای واقعی مسئول علمی]",
+                "امضای علمی تأییدشده: ${ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA}",
               ).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
             }
           }
@@ -659,10 +785,10 @@ fun InfoScreen(
         "privacy" -> {
           item {
             SectionCard {
-              Text("اصول حریم خصوصی و معماری امنیت تولیدی", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-              Text("• هیچ ردیاب تبلیغاتی یا تحلیل‌گر کودک در اپلیکیشن فعال نیست.", style = MaterialTheme.typography.bodyMedium)
-              Text("• فقط نشان‌گذاری مقالات و فیلتر سنی غیرحساس در حافظه محلی ذخیره می‌شود.", style = MaterialTheme.typography.bodyMedium)
-              Text("• در نسخه تولیدی، پرونده سلامت کودک و مشاوره‌ها نیازمند احراز هویت امن، RBAC، رمزنگاری در حال انتقال و ذخیره‌سازی، ثبت ممیزی و انطباق با قوانین سلامت/دارو در ایران است.", style = MaterialTheme.typography.bodyMedium)
+              Text("حریم خصوصی و معماری امنیت فعال", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+              Text("• هیچ ردیاب تبلیغاتی، SDK تبلیغ یا پروفایل‌سازی تجاری برای کودک در اپلیکیشن وجود ندارد.", style = MaterialTheme.typography.bodyMedium)
+              Text("• همگام‌سازی ابری پرونده کودک، تب، دوز دارو، واکسن‌ها و مشاوره‌ها با ورود گوگل (Credential Manager) و قواعد ایزوله به ازای هر کاربر محافظت می‌شود.", style = MaterialTheme.typography.bodyMedium)
+              Text("• تمام ارتباطات ابری با رمزنگاری HTTPS/TLS، گواهی App Check و کنترل دسترسی سروری داروسازان (RBAC) انجام می‌شود و هر زمان می‌توانید پرونده محلی یا ابری را حذف کنید.", style = MaterialTheme.typography.bodyMedium)
             }
           }
         }
@@ -682,7 +808,7 @@ fun InfoScreen(
                 style = MaterialTheme.typography.bodyMedium,
               )
               Text(
-                text = "ماژول فروشگاه آینده (فروشگاه) کاملاً مجزا از راهنمای بالینی طراحی می‌شود و دسترسی به هشدارها یا مقالات آموزشی هرگز وابسته به خرید نخواهد بود.",
+                text = "محتوای علمی و هشدارهای بالینی مانو کیدز کاملاً مستقل و بدون تبلیغات طراحی شده است و دسترسی به راهنماهای ایمنی هرگز وابسته به پرداخت یا اسپانسر نیست.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )

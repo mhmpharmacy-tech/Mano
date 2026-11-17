@@ -1,7 +1,10 @@
 package com.example
 
 import android.content.Context
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.ChildCare
@@ -19,6 +22,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.ManoPreferencesRepository
@@ -30,6 +34,7 @@ import com.example.domain.util.LiquidFormulationId
 import com.example.domain.util.TimelineDosePoint
 import com.example.domain.util.TimelineTempPoint
 import com.example.ui.components.ManoOrbitalHeroStage
+import com.example.ui.components.ManoSquadSection
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.RadialTopicItem
 import com.example.ui.components.TopicAccentRole
@@ -59,7 +64,7 @@ class ManoAuditRemediationTest {
     val repo = ManoPreferencesRepository(context)
     runBlocking {
       repo.setThemeMode(ManoThemeMode.SYSTEM)
-      repo.saveLocalChildProfile(null)
+      repo.setLocalChildProfile(null)
       repo.clearLocalFeverLogs()
       repo.clearLocalDoseLogs()
     }
@@ -73,6 +78,9 @@ class ManoAuditRemediationTest {
         birthDateOrAgeFa = AgeBand.INFANT_3_12M.labelFa,
         ageBand = AgeBand.INFANT_3_12M,
         weightKgText = "7.5",
+        weightDateFa = "امروز",
+        allergiesFa = "ندارد",
+        currentMedsFa = "ندارد",
         consentGranted = true,
       )
 
@@ -123,23 +131,26 @@ class ManoAuditRemediationTest {
         aliasFa = "آوا",
         birthDateOrAgeFa = "۱۸ ماه",
         ageBand = AgeBand.TODDLER_1_3Y,
-        ageMonthsExact = 18,
         weightKgText = "11.0",
+        weightDateFa = "امروز",
+        allergiesFa = "ندارد",
+        currentMedsFa = "ندارد",
         consentGranted = true,
+        ageMonthsExact = 18,
       )
-    repo.saveLocalChildProfile(profile)
+    repo.setLocalChildProfile(profile)
     assertEquals(profile, repo.localChildProfile.first())
 
     val fever =
       TimelineTempPoint(
         id = "f1",
         tempCelsius = 38.4f,
-        siteFa = "زیربغلی",
-        timeLabelFa = "۱۴:۳۰",
         timestampMs = 1_750_000_000_000L,
+        timeLabelFa = "۱۴:۳۰",
+        siteFa = "زیربغلی",
         caregiverFa = "مادر",
         noteFa = "اندازه‌گیری دقیق",
-        isCloud = false,
+        isSyncedCloud = false,
       )
     val dose =
       TimelineDosePoint(
@@ -147,15 +158,14 @@ class ManoAuditRemediationTest {
         medicationSlug = "acetaminophen-pediatric",
         medicationNameFa = "استامینوفن",
         dosageFormFa = "شربت ۱۲۰/۵",
-        volumeMl = 5.0f,
         volumeMlText = "5.0 mL",
-        timeLabelFa = "۱۴:۳۵",
         timestampMs = 1_750_000_300_000L,
+        givenAtLabelFa = "۱۴:۳۵",
         noteFa = "با سرنگ",
-        isCloud = false,
+        isSyncedCloud = false,
       )
-    repo.saveLocalFeverLogs(listOf(fever))
-    repo.saveLocalDoseLogs(listOf(dose))
+    repo.addLocalFeverLog(fever)
+    repo.addLocalDoseLog(dose)
     assertEquals(listOf(fever), repo.localFeverLogs.first())
     assertEquals(listOf(dose), repo.localDoseLogs.first())
 
@@ -164,7 +174,7 @@ class ManoAuditRemediationTest {
     repo.toggleMilestoneCheck("ms_walk_15m")
     assertFalse("ms_walk_15m" in repo.checkedMilestoneIds.first())
 
-    repo.saveLocalChildProfile(null)
+    repo.setLocalChildProfile(null)
     repo.clearLocalFeverLogs()
     repo.clearLocalDoseLogs()
     assertNull(repo.localChildProfile.first())
@@ -229,5 +239,36 @@ class ManoAuditRemediationTest {
         bounds.bottom <= stageBounds.bottom + 1f,
       )
     }
+  }
+
+  @Test
+  @Config(sdk = [36], qualifiers = "w360dp-h780dp-xhdpi", fontScale = 2.0f)
+  fun orbitalAndSquad_maxFontScale_narrowPhone_renderCleanlyWithoutOverflowCrash() {
+    val innerTopics =
+      listOf(
+        RadialTopicItem("fever", "تب کودک", "تب‌سنجی و علائم هشدار", Icons.Rounded.DeviceThermostat, TopicAccentRole.CORAL, PediatricIconKind.FEVER),
+        RadialTopicItem("medicines", "ایمنی دارو", "سرنگ mL", Icons.Rounded.MedicalServices, TopicAccentRole.TEAL, PediatricIconKind.MEDICINE),
+        RadialTopicItem("growth", "رشد و تکامل", "نقاط عطف", Icons.Rounded.ChildCare, TopicAccentRole.SAGE, PediatricIconKind.GROWTH),
+        RadialTopicItem("urgent", "علائم خطر", "اورژانس ۱۱۵", Icons.Rounded.HealthAndSafety, TopicAccentRole.STRAWBERRY, PediatricIconKind.URGENT),
+      )
+
+    composeTestRule.setContent {
+      ManoKidsTheme(darkTheme = true) {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+          ManoOrbitalHeroStage(
+            topics = innerTopics,
+            outerTopics = emptyList(),
+            onSelectTopic = {},
+          )
+          ManoSquadSection(onSelectMember = {})
+        }
+      }
+    }
+    composeTestRule.waitForIdle()
+
+    composeTestRule.onNodeWithTag("mano_mascot_touch").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("orbital_focus_cta").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_squad_drug").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_squad_connect").performScrollTo().assertIsDisplayed()
   }
 }
