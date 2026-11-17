@@ -278,3 +278,37 @@ test("Encyclopedia search, reset, navigation and no-data article operation",asyn
  assert.equal(await page.locator(".library-card:visible").count(),8);
  await page.close();
 });
+
+test("MANO Drug, Growth and Skin: functional filters, synthetic chart and responsive a11y",async()=>{
+ const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on("pageerror",e=>errors.push(e.message));
+ await page.goto(parentUrl);assert.equal(await page.locator(".home-module-card").count(),3);
+ await page.locator('a.home-module-card[href="./mano-drug.html"]').click();
+ assert.equal(await page.locator("[data-entry]:visible").count(),6);
+ await page.locator("#module-search").fill("استامينوفن");
+ assert.equal(await page.locator("[data-entry]:visible").count(),1);
+ await page.locator("#module-reset").click();
+ await page.locator("#module-category").selectOption("rx");
+ assert.equal(await page.locator("[data-entry]:visible").count(),1);
+ await page.locator("[data-entry]:visible summary").click();
+ assert.ok(await page.locator("[data-entry]:visible dl").isVisible());
+ await page.locator('a[href="./mano-growth.html"]').click();
+ assert.equal(await page.locator("#growth-rows tr").count(),5);
+ await page.locator("#growth-example").selectOption("b");await page.locator("#growth-measure").selectOption("height");
+ assert.match(await page.locator("#growth-caption").innerText(),/طول/);assert.equal(await page.locator("#growth-chart circle").count(),5);
+ await page.locator('a[href="./mano-skin.html"]').click();assert.equal(await page.locator("[data-entry]:visible").count(),5);
+ await page.locator("#module-category").selectOption("raised");assert.equal(await page.locator("[data-entry]:visible").count(),1);await page.locator("#module-reset").click();
+ for(const name of ["mano-drug","mano-growth","mano-skin"]){
+  await page.goto(pathToFileURL(path.join(root,name+".html")).href);
+  for(const width of [320,390,430,768,1366]){
+   await page.setViewportSize({width,height:844});
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),name+" overflow "+width);
+  }
+  await page.setViewportSize({width:390,height:844});await page.addScriptTag({path:require.resolve("axe-core/axe.min.js")});
+  const violations=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}})).violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})));
+  fs.writeFileSync(path.join(out,name+"-a11y.json"),JSON.stringify(violations,null,2));
+  assert.deepEqual(violations.filter(v=>["critical","serious"].includes(v.impact)),[],name);
+  await settleVisuals(page);await page.screenshot({path:path.join(out,name+"-mobile.png"),fullPage:true,animations:"disabled"});
+  await page.setViewportSize({width:1366,height:900});await settleVisuals(page);await page.screenshot({path:path.join(out,name+"-desktop.png"),fullPage:true,animations:"disabled"});
+ }
+ assert.deepEqual(errors,[]);await page.close();
+});

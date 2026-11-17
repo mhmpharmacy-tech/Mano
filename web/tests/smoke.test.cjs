@@ -126,3 +126,25 @@ test("Encyclopedia links match the registered eight draft articles",()=>{
   assert.ok(!/<script\b|<form\b/.test(html));
  }
 });
+
+test("Three modules remain draft, source-linked and not clinical tools",()=>{
+ const m=JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8"));
+ const home=fs.readFileSync(path.join(root,"index.html"),"utf8");
+ assert.equal(m.draftModules.length,3);
+ for(const mod of m.draftModules){
+  const html=fs.readFileSync(path.join(root,mod.path),"utf8");
+  assert.ok(home.includes('./'+mod.path));assert.match(html,/noindex,nofollow/);
+  assert.equal(mod.humanReviewer,null);assert.equal(mod.clinicalUseEnabled,false);assert.ok(!/<form\b|<input[^>]+type="file"/.test(html));
+  for(const e of mod.entries)for(const c of e.claims){assert.ok(c.locator);assert.ok(html.includes(m.sourceRegister[c.source].url));}
+ }
+ const mod=require("../modules.js");
+ assert.equal(mod.matches("ستیریزین Cetirizine","allergy","ستيري زين","all"),true);
+ assert.equal(mod.matches("ستیریزین","allergy","ستیریزین","pain"),false);
+ assert.equal(mod.growthSeries("a","weight")[0].value,4.8);
+ assert.equal(mod.growthSeries("b","height")[0].value,57);
+ for(const bad of ["__proto__","constructor","other"])assert.equal(mod.growthSeries(bad,"weight"),null);
+ assert.equal(mod.growthSeries("a","percentile"),null);
+ const data=mod.growthSeries("a","weight");data[0].value=999;assert.equal(mod.growthSeries("a","weight")[0].value,4.8);
+ const script=fs.readFileSync(path.join(root,"modules.js"),"utf8");
+ assert.ok(!/\bfetch\s*\(|\bXMLHttpRequest\b|\blocalStorage\b|\bsessionStorage\b|\bsendBeacon\b/.test(script));
+});

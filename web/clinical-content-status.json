@@ -178,6 +178,126 @@
       "verifiedOn": null,
       "sourceConsultedOn": "2026-11-17",
       "coverage": "Publication overview; full guideline not reviewed in this session"
+    },
+    "MODULE_APAP": {
+      "publisher": "AAP HealthyChildren",
+      "url": "https://www.healthychildren.org/English/safety-prevention/at-home/medication-safety/Pages/Acetaminophen-for-Fever-and-Pain.aspx",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Age and measuring instructions"
+    },
+    "MODULE_IBU": {
+      "publisher": "AAP HealthyChildren",
+      "url": "https://www.healthychildren.org/English/safety-prevention/at-home/medication-safety/Pages/Ibuprofen-for-Fever-and-Pain.aspx",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Age and measurement cautions"
+    },
+    "MODULE_OTC": {
+      "publisher": "AAP HealthyChildren",
+      "url": "https://www.healthychildren.org/English/safety-prevention/at-home/medication-safety/Pages/Choosing-Over-the-Counter-Medicines-for-Your-Child.aspx",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Combination products and age cautions"
+    },
+    "MODULE_AMOX": {
+      "publisher": "MedlinePlus",
+      "url": "https://medlineplus.gov/druginfo/meds/a685001.html",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Precautions and adverse effects"
+    },
+    "MODULE_ABX": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/antibiotic-use/about/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Use as prescribed; viral illness and side effects"
+    },
+    "MODULE_CET": {
+      "publisher": "MedlinePlus",
+      "url": "https://www.medlineplus.gov/druginfo/meds/a623043.html",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Precautions; anaphylaxis; drowsiness"
+    },
+    "MODULE_ORS": {
+      "publisher": "AAP HealthyChildren",
+      "url": "https://www.healthychildren.org/english/health-issues/conditions/abdominal/pages/treating-dehydration-with-electrolyte-solution.aspx",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Using electrolyte replacement solution at home"
+    },
+    "MODULE_COLD": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/common-cold/treatment/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "OTC cold medicine limitations"
+    },
+    "MODULE_WHO_GROWTH": {
+      "publisher": "WHO",
+      "url": "https://www.who.int/tools/child-growth-standards",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Standards from birth to five years"
+    },
+    "MODULE_CDC_GROWTH": {
+      "publisher": "CDC",
+      "url": "https://www.cdc.gov/growth-chart-training/hcp/using-growth-charts/who-using.html",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Assessment; serial measurements; US transition"
+    },
+    "MODULE_ECZEMA": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/conditions/atopic-eczema/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Urgent advice; emollients; treatment"
+    },
+    "MODULE_HIVES": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/conditions/hives/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Symptoms and emergency warning signs"
+    },
+    "MODULE_IMPETIGO": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/conditions/impetigo/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Symptoms; prevention of spread"
+    },
+    "MODULE_RASHES": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/symptoms/rashes-babies-and-children/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Images in different skin tones, urgent signs"
+    },
+    "MODULE_NAPPY": {
+      "publisher": "NHS",
+      "url": "https://www.nhs.uk/baby/caring-for-a-newborn/nappy-rash/",
+      "verifiedOn": null,
+      "sourceConsultedOn": "2026-11-17",
+      "coverage": "Relevant public guidance examined; independent review pending",
+      "locator": "Symptoms and care"
     }
   },
   "releaseBlockers": [
@@ -404,6 +524,181 @@
         }
       ],
       "localReviewRequired": "تفاوت راهنمای WHO، CDC و دستور محصول، کیفیت آب و توصیه رسمی ایران باید قبل از انتشار نسخه عملیاتی حل شود؛ این صفحه دمای واحد تجویز نمی‌کند."
+    }
+  ],
+  "draftModules": [
+    {
+      "path": "mano-drug.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "clinicalUseEnabled": false,
+      "entries": [
+        {
+          "id": "acetaminophen",
+          "claims": [
+            {
+              "source": "MODULE_APAP",
+              "locator": "Age and measuring instructions"
+            },
+            {
+              "source": "MODULE_OTC",
+              "locator": "Combination products and age cautions"
+            }
+          ],
+          "iranLabelVerified": false
+        },
+        {
+          "id": "ibuprofen",
+          "claims": [
+            {
+              "source": "MODULE_IBU",
+              "locator": "Age and measurement cautions"
+            },
+            {
+              "source": "MODULE_OTC",
+              "locator": "Combination products and age cautions"
+            }
+          ],
+          "iranLabelVerified": false
+        },
+        {
+          "id": "amoxicillin",
+          "claims": [
+            {
+              "source": "MODULE_AMOX",
+              "locator": "Precautions and adverse effects"
+            },
+            {
+              "source": "MODULE_ABX",
+              "locator": "Use as prescribed; viral illness and side effects"
+            }
+          ],
+          "iranLabelVerified": false
+        },
+        {
+          "id": "cetirizine",
+          "claims": [
+            {
+              "source": "MODULE_CET",
+              "locator": "Precautions; anaphylaxis; drowsiness"
+            }
+          ],
+          "iranLabelVerified": false
+        },
+        {
+          "id": "ors",
+          "claims": [
+            {
+              "source": "MODULE_ORS",
+              "locator": "Using electrolyte replacement solution at home"
+            }
+          ],
+          "iranLabelVerified": false
+        },
+        {
+          "id": "cold",
+          "claims": [
+            {
+              "source": "MODULE_COLD",
+              "locator": "OTC cold medicine limitations"
+            },
+            {
+              "source": "MODULE_OTC",
+              "locator": "Combination products and age cautions"
+            }
+          ],
+          "iranLabelVerified": false
+        }
+      ]
+    },
+    {
+      "path": "mano-growth.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "clinicalUseEnabled": false,
+      "entries": [
+        {
+          "id": "synthetic-chart",
+          "claims": [
+            {
+              "source": "MODULE_WHO_GROWTH",
+              "locator": "Standards from birth to five years"
+            },
+            {
+              "source": "MODULE_CDC_GROWTH",
+              "locator": "Assessment; serial measurements; US transition"
+            }
+          ],
+          "syntheticOnly": true,
+          "referenceCurvesEnabled": false
+        }
+      ]
+    },
+    {
+      "path": "mano-skin.html",
+      "reviewStatus": "NEEDS_CLINICAL_REVIEW",
+      "humanReviewer": null,
+      "clinicalUseEnabled": false,
+      "entries": [
+        {
+          "id": "eczema",
+          "claims": [
+            {
+              "source": "MODULE_ECZEMA",
+              "locator": "Urgent advice; emollients; treatment"
+            }
+          ],
+          "diagnosticImage": false
+        },
+        {
+          "id": "diaper",
+          "claims": [
+            {
+              "source": "MODULE_NAPPY",
+              "locator": "Symptoms and care"
+            },
+            {
+              "source": "MODULE_RASHES",
+              "locator": "Images in different skin tones, urgent signs"
+            }
+          ],
+          "diagnosticImage": false
+        },
+        {
+          "id": "impetigo",
+          "claims": [
+            {
+              "source": "MODULE_IMPETIGO",
+              "locator": "Symptoms; prevention of spread"
+            },
+            {
+              "source": "MODULE_RASHES",
+              "locator": "Images in different skin tones, urgent signs"
+            }
+          ],
+          "diagnosticImage": false
+        },
+        {
+          "id": "hives",
+          "claims": [
+            {
+              "source": "MODULE_HIVES",
+              "locator": "Symptoms and emergency warning signs"
+            }
+          ],
+          "diagnosticImage": false
+        },
+        {
+          "id": "rash",
+          "claims": [
+            {
+              "source": "MODULE_RASHES",
+              "locator": "Images in different skin tones, urgent signs"
+            }
+          ],
+          "diagnosticImage": false
+        }
+      ]
     }
   ]
 }
