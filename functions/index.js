@@ -185,6 +185,7 @@ exports.manoReviewCase = onCall(config, async (req) => {
   const { pharmacyId, caseId } = requireIds(req.data);
   const reviewerUid = requireStaff(req, pharmacyId);
   await requireActivePharmacy(pharmacyId);
+  const pharmacy = db.collection("pharmacies").doc(pharmacyId);
   const ref = caseRef(pharmacyId, caseId);
   const staff = staffRef(pharmacyId, reviewerUid);
   const auditRef = ref.collection("audit").doc();
@@ -192,7 +193,10 @@ exports.manoReviewCase = onCall(config, async (req) => {
   const result = await db.runTransaction(async (tx) => {
     // Read staff membership inside the transaction to block revoked pharmacists
     // before their approval is committed, even if a stale ID token still has claims.
-    const [snap, staffDoc] = await Promise.all([tx.get(ref), tx.get(staff)]);
+    const [snap, staffDoc, pharmacyDoc] = await Promise.all([tx.get(ref), tx.get(staff), tx.get(pharmacy)]);
+    if (!pharmacyDoc.exists || pharmacyDoc.get("active") !== true) {
+      throw new HttpsError("failed-precondition", "Pharmacy is unavailable.");
+    }
     if (!staffDoc.exists || !isActivePharmacistDirectoryRecord(staffDoc.data(), reviewerUid, pharmacyId)) {
       throw new HttpsError("permission-denied", "Pharmacist membership is inactive or no longer verified.");
     }
