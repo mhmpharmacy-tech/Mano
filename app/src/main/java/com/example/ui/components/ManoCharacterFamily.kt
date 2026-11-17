@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,20 +17,32 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.R
 import java.io.IOException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+internal fun specialistColumnCount(widthDp: Float, fontScale: Float): Int = when {
+  widthDp < 320f || fontScale >= 1.5f -> 1
+  widthDp >= 650f && fontScale <= 1.2f -> 3
+  else -> 2
+}
 
 private data class Specialist(
   val id: String,
@@ -65,9 +78,13 @@ fun ManoCharacterFamily(
   ) {
     Text("با خانواده مانو آشنا شوید", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     Text("راهنمای آموزشی بخش‌های سلامت کودک", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    specialists.chunked(2).forEach { pair ->
-      Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        pair.forEach { specialist ->
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+      val columns = specialistColumnCount(maxWidth.value, LocalDensity.current.fontScale)
+      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        specialists.chunked(columns).forEach { group ->
+          Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            group.forEach { specialist ->
+              key(specialist.id) {
           Card(
             onClick = specialist.onClick,
             modifier = Modifier.weight(1f).testTag("mano_specialist_${specialist.id}"),
@@ -87,6 +104,9 @@ fun ManoCharacterFamily(
               Text(specialist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
           }
+              }
+            }
+          }
         }
       }
     }
@@ -98,18 +118,21 @@ private fun SpecialistArtwork(specialist: Specialist) {
   val context = LocalContext.current
   // Optional 3D raster artwork is bundled locally, never downloaded at runtime.
   // A native vector is always present so missing artwork cannot block navigation.
-  val image = remember(context, specialist.id) {
-    try {
-      context.assets.open("mascots/${specialist.id}.webp").use {
-        BitmapFactory.decodeStream(it)?.asImageBitmap()
+  val image by produceState<ImageBitmap?>(null, context, specialist.id) {
+    value = withContext(Dispatchers.IO) {
+      try {
+        context.assets.open("mascots/${specialist.id}.webp").use {
+          BitmapFactory.decodeStream(it)?.asImageBitmap()
+        }
+      } catch (_: IOException) {
+        null
       }
-    } catch (_: IOException) {
-      null
     }
   }
+  val loaded = image
   val artworkModifier = Modifier.fillMaxWidth().height(128.dp)
-  if (image != null) {
-    Image(bitmap = image, contentDescription = null, modifier = artworkModifier, contentScale = ContentScale.Fit)
+  if (loaded != null) {
+    Image(bitmap = loaded, contentDescription = null, modifier = artworkModifier, contentScale = ContentScale.Fit)
   } else {
     Image(painter = painterResource(specialist.drawable), contentDescription = null, modifier = artworkModifier, contentScale = ContentScale.Fit)
   }
