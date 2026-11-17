@@ -2,6 +2,10 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8" />
+  <!-- The JavaScript bridge is exposed only to this packaged 3D document.
+       No remote scripts, frames, fetch/XHR, network images or form navigation. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>MANO Kids 3D Studio</title>
   <style>

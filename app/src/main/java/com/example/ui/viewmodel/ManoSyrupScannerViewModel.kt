@@ -104,7 +104,7 @@ class FirebaseSyrupScannerAiEngine : SyrupScannerAiEngine {
       1) تفاوت بین قطره استامینوفن (100 mg/mL = acetaminophen_drops_100)، شربت 120 mg/5mL (acetaminophen_syrup_120_5) و سوسپانسیون 160 mg/5mL (acetaminophen_syrup_160_5) را با دقت حیاتی تفکیک کنید.
       2) اگر تصویر تار است، دارو نیست، یا غلظت به‌وضوح خوانده نمی‌شود، confidenceLevel را LOW و matchedFormulationId را CUSTOM_UNVERIFIED بگذارید و هرگز حدس خطرناک نزنید.
       3) اگر نام ماده موثره ایبوپروفن (100 mg/5mL) بود -> ibuprofen_syrup_100_5 و سیتیریزین (5 mg/5mL) -> cetirizine_syrup_5_5.
-      زمینه کودک جهت یادداشت ایمنی: $childContextSummaryFa
+      4) از تصویر فقط اطلاعات دارو و غلظت را استخراج کنید؛ از اطلاعات سلامت کودک استفاده نکنید.
       """.trimIndent()
 
     val response =

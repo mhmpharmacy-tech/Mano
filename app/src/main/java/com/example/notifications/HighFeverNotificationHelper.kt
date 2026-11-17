@@ -20,6 +20,12 @@ object HighFeverNotificationHelper {
   const val CHANNEL_ID = "mano_high_fever_alerts"
   private const val NOTIFICATION_ID = 3901
 
+  fun dismissLocalAlert(context: Context): Boolean =
+    runCatching {
+      NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+      true
+    }.getOrDefault(false)
+
   fun hasNotificationPermission(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
     return ContextCompat.checkSelfPermission(

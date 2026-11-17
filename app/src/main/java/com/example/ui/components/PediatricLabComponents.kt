@@ -433,7 +433,7 @@ fun InteractiveOralSyringeLabCard(
                   Icon(Icons.Rounded.Lock, contentDescription = null, tint = dangerAccent, modifier = Modifier.size(16.dp))
                 }
                 Text(
-                  text = LiquidDoseVisualizerEngine.formatMl(doseResult.recommendedMl),
+                  text = if (doseResult.isBlocked) "غیرفعال" else LiquidDoseVisualizerEngine.formatMl(doseResult.recommendedMl),
                   style = MaterialTheme.typography.titleLarge,
                   fontWeight = FontWeight.Bold,
                   color = liquidAccent,

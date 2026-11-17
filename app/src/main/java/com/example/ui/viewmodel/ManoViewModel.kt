@@ -28,6 +28,11 @@ import com.example.domain.model.TopicCategory
 import com.example.domain.model.TriageEvaluationResult
 import com.example.domain.model.VaccineRecord
 import com.example.domain.model.VaccineReminderSettings
+import com.example.domain.util.ChildProfilePrivacy
+import com.example.notifications.VaccineReminderScheduler
+import com.example.notifications.VaccineNotificationHelper
+import com.example.notifications.HighFeverNotificationHelper
+import com.example.widget.FeverTimelineWidgetStore
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
 import com.example.domain.util.PersianNormalizer
@@ -323,7 +328,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
           return
         }
         // Immediate clinical safety short-circuit: fever >= 38.0 in infant < 3m triggers urgent alert immediately
-        if (flow.id == "fever" && age == AgeBand.NEWBORN && parsedTemp != null && parsedTemp >= 38.0) {
+        if (age == AgeBand.NEWBORN && parsedTemp != null && parsedTemp >= 38.0) {
           val result =
             TriageEngine.evaluate(
               flow = flow,
@@ -490,34 +495,6 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  fun advanceDemoRequestStatus(id: String) {
-    _uiState.update { state ->
-      val updated =
-        state.askPharmacist.requests.map { req ->
-          if (req.id != id) req
-          else {
-            val nextStatus =
-              when (req.status) {
-                ConsultationStatus.PENDING -> ConsultationStatus.RECEIVED
-                ConsultationStatus.RECEIVED -> ConsultationStatus.REVIEWED
-                ConsultationStatus.REVIEWED -> ConsultationStatus.REVIEWED
-              }
-            val nextNote =
-              if (nextStatus == ConsultationStatus.REVIEWED) {
-                FollowUpNote(
-                  scheduleFa = "بررسی‌شده",
-                  guidanceFa = "پاسخ نهایی تنها پس از بررسی داروساز تاییدشده نمایش داده می‌شود.",
-                )
-              } else {
-                req.followUp
-              }
-            req.copy(status = nextStatus, followUp = nextNote)
-          }
-        }
-      state.copy(askPharmacist = state.askPharmacist.copy(requests = updated))
-    }
-  }
-
   // --- Consent-Gated My Child Profile (DataStore) ---
   fun saveChildProfileDemo(
     aliasFa: String,
@@ -563,21 +540,45 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
 
   fun exportChildProfileSummary(overrideProfile: ChildProfileDemo? = null) {
     val profile = overrideProfile ?: localChildProfile.value ?: return
-    val json =
-      """
-      {
-        "source": "MANO_KIDS_LOCAL_SUMMARY",
-        "alias": "${profile.aliasFa}",
-        "ageBand": "${profile.ageBand.labelFa}",
-        "birthOrAge": "${profile.birthDateOrAgeFa}",
-        "weightKg": "${profile.weightKgText}",
-        "weightDate": "${profile.weightDateFa}",
-        "allergies": "${profile.allergiesFa}",
-        "currentMedications": "${profile.currentMedsFa}"
+    _uiState.update {
+      it.copy(exportedProfileJson = ChildProfilePrivacy.exportProfileSummaryJson(profile))
+    }
+  }
+
+  /**
+   * Local-only data deletion; never claim the authenticated user's Firestore
+   * records or remote backups have been deleted. UI must confirm this separately.
+   */
+  fun deleteAllLocalChildHealthData() {
+    viewModelScope.launch {
+      try {
+        prefs.clearAllLocalChildHealthData()
+        val context = getApplication<Application>().applicationContext
+        val remindersCancelled = VaccineReminderScheduler.cancelAllForLocalDataRemoval(context)
+        val vaccineNotificationDismissed = VaccineNotificationHelper.dismissLocalReminder(context)
+        val feverNotificationDismissed = HighFeverNotificationHelper.dismissLocalAlert(context)
+        val widgetUpdated = runCatching {
+          FeverTimelineWidgetStore.clearAndUpdateWidgets(context)
+          true
+        }.getOrDefault(false)
+        val ancillaryOk =
+          remindersCancelled && vaccineNotificationDismissed &&
+            feverNotificationDismissed && widgetUpdated
+        _uiState.update {
+          it.copy(
+            exportedProfileJson = null,
+            toastMessageFa =
+              if (ancillaryOk) {
+                "سوابق آفلاین مانو پاک شدند. داده‌های ابری و کش احتمالی Firebase حذف نشده‌اند."
+              } else {
+                "سوابق آفلاین مانو پاک شدند؛ ممکن است حذف اعلان یا ویجت نیازمند اقدام دستی باشد. داده‌های ابری و کش احتمالی Firebase حذف نشده‌اند."
+              },
+          )
+        }
+      } catch (_: Exception) {
+        showToast("حذف داده‌ها کامل نشد؛ لطفاً دوباره تلاش کنید.")
       }
-      """
-        .trimIndent()
-    _uiState.update { it.copy(exportedProfileJson = json) }
+    }
   }
 
   fun deleteChildProfileDemo() {

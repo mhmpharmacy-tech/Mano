@@ -530,6 +530,33 @@ class ManoPreferencesRepository(private val context: Context) {
     }
   }
 
+  /**
+   * Delete all child-specific data stored in the local Preferences DataStore in
+   * one atomic edit. UI theme, static article bookmarks and orbital preferences
+   * are intentionally kept. This does NOT delete Firestore records, widget
+   * snapshots, system notifications or remotely cached data.
+   */
+  suspend fun clearAllLocalChildHealthData() {
+    context.manoDataStore.edit { prefs ->
+      prefs.remove(Keys.SELECTED_AGE_BAND)
+      prefs.remove(Keys.SAVED_VISIT_DRAFTS_JSON)
+      prefs.remove(Keys.SAVED_NUTRITION_PLANS_JSON)
+      prefs.remove(Keys.CHILD_HEIGHT_CM)
+      prefs.remove(Keys.CHECKED_MED_SAFETY_IDS)
+      prefs.remove(Keys.CHILD_BIRTH_DATE_EPOCH_MS)
+      prefs.remove(Keys.VACCINE_RECORDS_JSON)
+      prefs[Keys.VACCINE_REMINDER_ENABLED] = false
+      prefs.remove(Keys.VACCINE_REMINDER_LEAD_DAYS)
+      prefs.remove(Keys.NOTIFIED_VACCINE_REMINDER_KEYS)
+      prefs.remove(Keys.CHILD_ALIAS_FA)
+      prefs.remove(Keys.SAVED_SYRUP_SCANS_JSON)
+      prefs.remove(Keys.LOCAL_CHILD_PROFILE_JSON)
+      prefs.remove(Keys.LOCAL_FEVER_LOGS_JSON)
+      prefs.remove(Keys.LOCAL_DOSE_LOGS_JSON)
+      prefs.remove(Keys.CHECKED_MILESTONE_IDS)
+    }
+  }
+
   suspend fun toggleMilestoneCheck(id: String) {
     context.manoDataStore.edit { prefs ->
       val current = prefs[Keys.CHECKED_MILESTONE_IDS]?.toMutableSet() ?: mutableSetOf()

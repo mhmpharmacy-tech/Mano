@@ -223,7 +223,7 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("nav_medicines").performClick()
     composeTestRule.waitForIdle()
 
-    // Verify new Syringe Dose tab directly inside MedicinesScreen
+    // Verify the Syringe Training tab is accessible but never issues a computed dose
     composeTestRule.onNodeWithTag("med_tab_syringe").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("interactive_syringe_lab_card").assertIsDisplayed()
@@ -243,12 +243,12 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("syringe_weight_chip_16.0").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("syringe_selected_ml_label").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("syringe_selected_ml_label").assertTextEquals("6.0 mL")
+    composeTestRule.onNodeWithTag("syringe_selected_ml_label").assertTextEquals("غیرفعال")
 
-    // Verify newborn (<3 months) locks home dose at 0.0 mL with emergency warning
+    // Verify newborn (<3 months) displays no computed dose and retains emergency warning
     composeTestRule.onNodeWithTag("syringe_age_chip_2").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("syringe_selected_ml_label").performScrollTo().assertTextEquals("0.0 mL")
+    composeTestRule.onNodeWithTag("syringe_selected_ml_label").performScrollTo().assertTextEquals("غیرفعال")
     composeTestRule.onNodeWithTag("syringe_dose_alert_banner").performScrollTo().assertIsDisplayed()
 
     composeTestRule.onNodeWithTag("devices_list").performScrollToNode(hasTestTag("interactive_thermometer_lab_card"))

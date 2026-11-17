@@ -38,6 +38,10 @@ class VaccineReminderWorker(
       )
 
     if (pendingAlerts.isNotEmpty()) {
+      // Parent may have purged all local child data while this worker was
+      // calculating. Re-check live consent/reminder state immediately before
+      // posting to avoid resurfacing an old child's data after deletion.
+      if (isStopped || !prefs.vaccineReminderSettings.first().enabled) return Result.success()
       val posted =
         VaccineNotificationHelper.postVaccineReminderNotification(
           context = applicationContext,

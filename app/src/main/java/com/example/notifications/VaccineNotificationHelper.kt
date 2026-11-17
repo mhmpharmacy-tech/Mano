@@ -21,6 +21,12 @@ object VaccineNotificationHelper {
   const val EXTRA_OPEN_VACCINES = "com.example.OPEN_VACCINES"
   private const val NOTIFICATION_ID = 4201
 
+  fun dismissLocalReminder(context: Context): Boolean =
+    runCatching {
+      NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+      true
+    }.getOrDefault(false)
+
   fun hasNotificationPermission(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
     return ContextCompat.checkSelfPermission(

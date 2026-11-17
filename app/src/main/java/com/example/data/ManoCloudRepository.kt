@@ -367,32 +367,7 @@ class ManoCloudRepository(
     }
   }
 
-  suspend fun advanceConsultationStatus(consultationId: String, currentStatus: ConsultationStatus): Result<Unit> {
-    val uid = requireUserId()
-    val nextStatus =
-      when (currentStatus) {
-        ConsultationStatus.PENDING -> ConsultationStatus.RECEIVED
-        ConsultationStatus.RECEIVED -> ConsultationStatus.REVIEWED
-        ConsultationStatus.REVIEWED -> return Result.success(Unit)
-      }
-    val docRef = db.collection("users").document(uid).collection("consultations").document(consultationId)
-    return try {
-      docRef
-        .update(
-          mapOf(
-            "status" to nextStatus.name,
-            "updatedAt" to FieldValue.serverTimestamp(),
-          )
-        )
-        .await()
-      Result.success(Unit)
-    } catch (e: CancellationException) {
-      throw e
-    } catch (e: Exception) {
-      handleFirestoreError(e, OperationType.UPDATE, docRef.path)
-      Result.failure(e)
-    }
-  }
+  // Consultation status changes are restricted to the trusted backend.
 
   // --- ARTICLE BOOKMARKS ---
 

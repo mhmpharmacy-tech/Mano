@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.annotation.SuppressLint
+import java.io.ByteArrayInputStream
 import android.net.Uri
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -93,6 +94,31 @@ import kotlin.math.abs
 private const val ASSET_VIRTUAL_HOST = "appassets.androidplatform.net"
 private const val STUDIO_ENTRY_URL = "https://$ASSET_VIRTUAL_HOST/assets/three/index.html"
 
+// Strict local resource allowlist: these six versioned files are bundled with the APK.
+// Never allow navigation, remote scripts, unexpected local assets or path traversal
+// while a JavaScript bridge is exposed to the studio document.
+private val STUDIO_ALLOWED_ASSET_FILES =
+  setOf("index.html", "scene.js", "three.module.min.js", "three.core.min.js", "OrbitControls.js", "RoomEnvironment.js")
+
+internal fun isTrustedThreeStudioAssetUri(uri: Uri): Boolean {
+  if (uri.scheme != "https" || uri.encodedAuthority != ASSET_VIRTUAL_HOST) return false
+  if (uri.encodedQuery != null || uri.encodedFragment != null) return false
+  val assetPrefix = "/assets/three/"
+  val rawPath = uri.encodedPath ?: return false
+  if (!rawPath.startsWith(assetPrefix)) return false
+  return rawPath.removePrefix(assetPrefix) in STUDIO_ALLOWED_ASSET_FILES
+}
+
+private fun blockedThreeStudioResource(statusCode: Int = 403): WebResourceResponse =
+  WebResourceResponse(
+    "text/plain",
+    "UTF-8",
+    statusCode,
+    if (statusCode == 404) "Not Found" else "Forbidden",
+    mapOf("Cache-Control" to "no-store"),
+    ByteArrayInputStream(ByteArray(0)),
+  )
+
 private data class GuidedWorkbenchStep(
   val stepNumber: Int,
   val shortTitleFa: String,
@@ -113,8 +139,8 @@ private val guidedWorkbenchSteps =
     ),
     GuidedWorkbenchStep(
       stepNumber = 3,
-      shortTitleFa = "۳. خط هدف سرنگ",
-      instructionFa = "لغزنده سرنگ را حرکت دهید تا پیستون دقیقاً روی حلقه سبز هدف قرار بگیرد و حباب هوا خارج شود.",
+      shortTitleFa = "۳. خواندن درجات",
+      instructionFa = "با لغزنده، خواندن درجات سرنگ را تمرین کنید. مقدار نمایش‌داده‌شده صرفاً مثال آموزشی است و دوز دارو نیست.",
     ),
     GuidedWorkbenchStep(
       stepNumber = 4,
@@ -143,7 +169,7 @@ private val guidedWeighingSteps =
     GuidedWorkbenchStep(
       stepNumber = 4,
       shortTitleFa = "۴. قفل عدد و ثبت وزن",
-      instructionFa = "تا قفل شدن عدد روی نمایشگر (LOCKED) صبر کنید؛ وزن دقیق مبنای ایمن محاسبه دوز داروی کودک است.",
+      instructionFa = "تا ثابت شدن عدد روی نمایشگر صبر کنید. ثبت وزن برای ارزیابی توسط متخصص مفید است؛ مانو در این نسخه دوز محاسبه نمی‌کند.",
     ),
   )
 
@@ -177,24 +203,9 @@ fun Pediatric3DStudioScreen(
   val sliderMinMl = if (isDropsMode) 0.1f else 0.5f
   val sliderMaxMl = if (isDropsMode) 3.0f else 20.0f
 
-  val syncedTargetMl: Float? =
-    remember(prefillMl, childProfile, childBirthDateEpochMs, matchedFormulation) {
-      when {
-        prefillMl > 0f -> prefillMl.coerceIn(sliderMinMl, sliderMaxMl)
-        childProfile != null || matchedFormulation != null -> {
-          val ageM = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile, childBirthDateEpochMs)
-          val weightKg = LiquidDoseVisualizerEngine.initialWeightKgFromProfile(childProfile)
-          val eval =
-            LiquidDoseVisualizerEngine.evaluate(
-              formulation = matchedFormulation ?: LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5,
-              ageMonths = ageM,
-              weightKg = weightKg,
-            )
-          if (!eval.isBlocked && eval.recommendedMl > 0f) eval.recommendedMl.coerceIn(sliderMinMl, sliderMaxMl) else null
-        }
-        else -> null
-      }
-    }
+  // Training-only view: never accept a personalized dose target, including route prefills.
+  // The manual syringe slider teaches reading graduations, not medication dosing.
+  val syncedTargetMl: Float? = null
 
   val childWeightKg =
     remember(childProfile) {
@@ -226,11 +237,11 @@ fun Pediatric3DStudioScreen(
   var feverAlert by remember(prefillFever, latestTempCelsius) {
     mutableStateOf(prefillFever || (latestTempCelsius != null && latestTempCelsius >= 38.0f))
   }
-  var dockExpanded by remember(prefillMl, initialScene) {
-    mutableStateOf(prefillMl > 0f || initialScene == "weighing")
+  var dockExpanded by remember(initialScene) {
+    mutableStateOf(initialScene == "weighing")
   }
-  var guidedStep by remember(prefillMl) {
-    mutableIntStateOf(if (prefillMl > 0f) 3 else 0)
+  var guidedStep by remember(initialScene) {
+    mutableIntStateOf(0)
   }
   var weighingStep by remember(initialScene) {
     mutableIntStateOf(1)
@@ -363,6 +374,12 @@ fun Pediatric3DStudioScreen(
           settings.allowFileAccess = false
           settings.allowContentAccess = false
           settings.mediaPlaybackRequiresUserGesture = true
+          settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+          settings.javaScriptCanOpenWindowsAutomatically = false
+          settings.setSupportMultipleWindows(false)
+          settings.allowFileAccessFromFileURLs = false
+          settings.allowUniversalAccessFromFileURLs = false
+          settings.setGeolocationEnabled(false)
           settings.cacheMode = WebSettings.LOAD_DEFAULT
 
           addJavascriptInterface(
@@ -379,30 +396,34 @@ fun Pediatric3DStudioScreen(
 
           webViewClient =
             object : WebViewClient() {
+              override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?,
+              ): Boolean =
+                // Block navigation even to other local scripts; the only top-level
+                // document allowed to hold AndroidBridge is the packaged studio.
+                request?.url?.toString() != STUDIO_ENTRY_URL
+
+              @Suppress("DEPRECATION")
+              override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean =
+                url != STUDIO_ENTRY_URL
+
               override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?,
-              ): WebResourceResponse? {
-                val uri: Uri = request?.url ?: return null
-                if (uri.host != ASSET_VIRTUAL_HOST) return null
-                val rawPath = uri.path ?: return null
-                if (!rawPath.startsWith("/assets/")) return null
-                val assetPath = rawPath.removePrefix("/assets/")
+              ): WebResourceResponse {
+                val uri = request?.url ?: return blockedThreeStudioResource()
+                if (!isTrustedThreeStudioAssetUri(uri)) return blockedThreeStudioResource()
+                val assetPath = uri.encodedPath!!.removePrefix("/assets/")
                 return runCatching {
-                  val mime =
-                    when {
-                      assetPath.endsWith(".html") -> "text/html"
-                      assetPath.endsWith(".js") || assetPath.endsWith(".mjs") -> "application/javascript"
-                      assetPath.endsWith(".css") -> "text/css"
-                      else -> "application/octet-stream"
-                    }
+                  val mime = if (assetPath.endsWith(".html")) "text/html" else "application/javascript"
                   val stream = ctx.assets.open(assetPath)
-                  val headers = mapOf("Access-Control-Allow-Origin" to "*")
-                  WebResourceResponse(mime, "UTF-8", 200, "OK", headers, stream)
-                }.getOrNull()
+                  WebResourceResponse(mime, "UTF-8", 200, "OK", emptyMap(), stream)
+                }.getOrElse { blockedThreeStudioResource(statusCode = 404) }
               }
 
               override fun onPageFinished(view: WebView?, url: String?) {
+                if (url != STUDIO_ENTRY_URL) return
                 pageLoaded = true
                 runJs("window.Mano3D && window.Mano3D.setThemeMode($isDark);")
                 runJs("window.Mano3D && window.Mano3D.setScene('$activeScene');")
@@ -415,7 +436,7 @@ fun Pediatric3DStudioScreen(
       },
     )
 
-    // Top status & live child dose/temp sync pill
+    // Top status and training-only warning
     Column(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -446,6 +467,20 @@ fun Pediatric3DStudioScreen(
             color = MaterialTheme.colorScheme.onSurface,
           )
         }
+      }
+
+      Surface(
+        color = manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 0.96f, darkAlpha = 0.20f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, cautionAccent.copy(alpha = 0.4f)),
+        modifier = Modifier.testTag("studio_training_only_warning"),
+      ) {
+        Text(
+          text = "شبیه‌ساز آموزشی؛ عدد سرنگ، دوز پیشنهادی برای کودک نیست. محاسبه دوز غیرفعال است.",
+          style = MaterialTheme.typography.labelSmall,
+          color = cautionAccent,
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        )
       }
 
       if (syncedTargetMl != null || latestTempCelsius != null) {
@@ -491,16 +526,16 @@ fun Pediatric3DStudioScreen(
 
       if (prefillScannedDrugFa.isNotBlank()) {
         Surface(
-          color = manoTintedSurface(SuccessSurface, DarkSage, lightAlpha = 0.94f, darkAlpha = 0.24f),
+          color = manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 0.94f, darkAlpha = 0.24f),
           shape = RoundedCornerShape(14.dp),
-          border = BorderStroke(1.dp, successAccent.copy(alpha = 0.45f)),
+          border = BorderStroke(1.dp, cautionAccent.copy(alpha = 0.45f)),
           modifier = Modifier.testTag("studio_3d_scanned_bottle_banner"),
         ) {
           val concText = matchedFormulation?.concentrationLabelFa?.let { " • $it" }.orEmpty()
           Text(
-            text = "برچسب تاییدشده اسکنر: $prefillScannedDrugFa$concText",
+            text = "نام استخراج‌شده از تصویر (تأیید داروساز انجام نشده): $prefillScannedDrugFa$concText",
             style = MaterialTheme.typography.labelSmall,
-            color = successAccent,
+            color = cautionAccent,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
           )
@@ -663,7 +698,7 @@ fun Pediatric3DStudioScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
               ) {
                 Text(
-                  text = "حجم سرنگ خوراکی: ${String.format(Locale.US, "%.1f", syringeMl)} mL",
+                  text = "حجم نمایشی سرنگ (صرفاً تمرین): ${String.format(Locale.US, "%.1f", syringeMl)} mL",
                   style = MaterialTheme.typography.labelLarge,
                   color = if (isTargetMatched) successAccent else MaterialTheme.colorScheme.primary,
                 )

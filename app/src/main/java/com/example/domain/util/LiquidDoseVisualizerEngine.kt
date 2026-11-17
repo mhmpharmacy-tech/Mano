@@ -126,6 +126,10 @@ object LiquidDoseVisualizerEngine {
   const val MIN_AGE_MONTHS = 0
   const val MAX_AGE_MONTHS = 144
 
+  /**
+   * The public-facing dose recommendation engine is disabled pending clinical validation.
+   * Scanner auto-fill and 3D dose prefill must never bypass this gate.
+   */
   fun evaluate(
     formulation: LiquidFormulationId,
     ageMonths: Int,
@@ -134,128 +138,47 @@ object LiquidDoseVisualizerEngine {
     val safeAge = ageMonths.coerceIn(MIN_AGE_MONTHS, MAX_AGE_MONTHS)
     val safeWeight = ((weightKg * 2f).roundToInt() / 2f).coerceIn(MIN_WEIGHT_KG, MAX_WEIGHT_KG)
 
-    // 1. Strict Newborn / Infant clinical safety gates
-    if (safeAge < formulation.minHomeAgeMonths) {
-      val (severity, title, body) =
-        when {
-          safeAge < 3 ->
-            Triple(
-              AlertSeverity.DANGER,
-              "هشدار اورژانسی نوزاد زیر ۳ ماه — دوز خانگی نمایش داده نمی‌شود",
-              "در نوزاد زیر ۳ ماه، تب ۳۸.۰ درجه یا نیاز به دارو نیازمند معاینه فوری پزشک است. سرنگ روی ۰.۰ mL قفل شده است؛ خودسرانه دارو ندهید.",
-            )
-          formulation == LiquidFormulationId.IBUPROFEN_SYRUP_100_5 && safeAge < 6 ->
-            Triple(
-              AlertSeverity.DANGER,
-              "منع مصرف بدون نسخه ایبوپروفن در شیرخوار زیر ۶ ماه",
-              "سوسپانسیون ایبوپروفن برای کودکان زیر ۶ ماه بدون دستور مستقیم پزشک مجاز نیست و سرنگ روی ۰.۰ mL قفل شده است.",
-            )
-          else ->
-            Triple(
-              AlertSeverity.CAUTION,
-              "نیازمند تجویز پزشک برای رده سنی زیر ${formulation.minHomeAgeMonths} ماه",
-              "برای این رده سنی (${formatAgeFa(safeAge)})، مقدار دقیق ${formulation.shortLabelFa} باید مستقیماً توسط پزشک یا داروساز تعیین شود.",
-            )
-        }
-      return LiquidDoseVisualizationResult(
-        formulation = formulation,
-        ageMonths = safeAge,
-        weightKg = safeWeight,
-        isBlocked = true,
-        recommendedMl = 0f,
-        minSafeMl = 0f,
-        maxSafeMl = 0f,
-        recommendedMg = 0,
-        isWeightBased = formulation != LiquidFormulationId.CETIRIZINE_SYRUP_5_5,
-        alertSeverity = severity,
-        alertTitleFa = title,
-        alertBodyFa = body,
+    val (severity, title, body) = when {
+      safeAge < 3 -> Triple(
+        AlertSeverity.DANGER,
+        "دوز دارو غیرفعال — هشدار ویژه نوزاد",
+        "تب ۳۸ درجه سانتی‌گراد یا بالاتر در کودک زیر ۳ ماه نیازمند ارزیابی فوری پزشکی است. مانو دوز خانگی پیشنهاد نمی‌کند.",
+      )
+      formulation == LiquidFormulationId.IBUPROFEN_SYRUP_100_5 && safeAge < 6 -> Triple(
+        AlertSeverity.DANGER,
+        "ایبوپروفن زیر ۶ ماه نیازمند نظر پزشک است",
+        "محاسبه و پرکردن خودکار سرنگ غیرفعال است. برای مصرف و مقدار دارو با پزشک مشورت کنید.",
+      )
+      else -> Triple(
+        AlertSeverity.CAUTION,
+        "محاسبه دوز هنوز تأیید بالینی نشده است",
+        "محاسبه و پیشنهاد مقدار دارو غیرفعال است. سن و وزن برای تجویز کافی نیستند؛ غلظت، سابقه و موارد منع مصرف باید توسط داروساز یا پزشک بررسی شوند.",
       )
     }
-
-    // 2. Age-banded non-mg/kg dosing (Cetirizine 5 mg / 5 mL)
-    if (formulation == LiquidFormulationId.CETIRIZINE_SYRUP_5_5) {
-      val ml = if (safeAge < 72) 2.5f else 5.0f
-      val maxMl = if (safeAge < 72) 2.5f else 10.0f
-      val mg = (ml * formulation.mgPerMl).roundToInt()
-      return LiquidDoseVisualizationResult(
-        formulation = formulation,
-        ageMonths = safeAge,
-        weightKg = safeWeight,
-        isBlocked = false,
-        recommendedMl = ml,
-        minSafeMl = ml,
-        maxSafeMl = maxMl,
-        recommendedMg = mg,
-        isWeightBased = false,
-        alertSeverity = AlertSeverity.INFO,
-        alertTitleFa = "دوز سنی استاندارد (${formatAgeFa(safeAge)})",
-        alertBodyFa = "برای ${formatAgeFa(safeAge)}، دوز رایج ${formatMl(ml)} ($mg mg) یک‌بار در روز است. برای بیش از ۲.۵ یا ۵ mL تنها با نظر پزشک اقدام کنید.",
-      )
-    }
-
-    // 3. Weight-based liquid dosing (Acetaminophen & Ibuprofen)
-    val rawMinMg = (safeWeight * formulation.minMgPerKg).coerceAtMost(formulation.maxSingleDoseMg)
-    val rawTargetMg = (safeWeight * formulation.targetMgPerKg).coerceAtMost(formulation.maxSingleDoseMg)
-    val rawMaxMg = (safeWeight * formulation.maxMgPerKg).coerceAtMost(formulation.maxSingleDoseMg)
-
-    val minMl = snapToStep((rawMinMg / formulation.mgPerMl).toFloat(), formulation.stepMl)
-      .coerceIn(formulation.stepMl, formulation.maxSyringeScaleMl)
-    val targetMl = snapToStep((rawTargetMg / formulation.mgPerMl).toFloat(), formulation.stepMl)
-      .coerceIn(formulation.stepMl, formulation.maxSyringeScaleMl)
-    val maxMl = snapToStep((rawMaxMg / formulation.mgPerMl).toFloat(), formulation.stepMl)
-      .coerceIn(targetMl, formulation.maxSyringeScaleMl)
-
-    val actualMg = (targetMl * formulation.mgPerMl).roundToInt()
-    val dropsHighWeightCaution =
-      formulation == LiquidFormulationId.ACETAMINOPHEN_DROPS_100 && safeWeight >= 14.0f
-
-    val severity = if (dropsHighWeightCaution) AlertSeverity.CAUTION else AlertSeverity.SUCCESS
-    val title =
-      if (dropsHighWeightCaution) {
-        "پیشنهاد شکل دارویی مناسب‌تر برای وزن ${formatKg(safeWeight)}"
-      } else {
-        "مقدار تخمینی آموزشی بر پایه وزن (${formatKg(safeWeight)}) و سن (${formatAgeFa(safeAge)})"
-      }
-    val body =
-      if (dropsHighWeightCaution) {
-        "حجم قطره برای این وزن نسبتاً زیاد است (${formatMl(targetMl)}). معمولاً برای کودکان بالای ۱۲ تا ۱۴ کیلوگرم، شربت ۱۲۰/۵ یا ۱۶۰/۵ راحت‌تر و دقیق‌تر است. ${formulation.safetyTipFa}"
-      } else {
-        "بر پایه محدوده استاندارد ${formulation.minMgPerKg.toInt()} تا ${formulation.maxMgPerKg.toInt()} mg/kg، محدوده مجاز هر نوبت ${formatMl(minMl)} تا ${formatMl(maxMl)} است. پیش از کشیدن دارو، غلظت روی جعبه را تطبیق دهید."
-      }
 
     return LiquidDoseVisualizationResult(
       formulation = formulation,
       ageMonths = safeAge,
       weightKg = safeWeight,
-      isBlocked = false,
-      recommendedMl = targetMl,
-      minSafeMl = minMl,
-      maxSafeMl = maxMl,
-      recommendedMg = actualMg,
-      isWeightBased = true,
+      isBlocked = true,
+      recommendedMl = 0f,
+      minSafeMl = 0f,
+      maxSafeMl = 0f,
+      recommendedMg = 0,
+      isWeightBased = formulation != LiquidFormulationId.CETIRIZINE_SYRUP_5_5,
       alertSeverity = severity,
       alertTitleFa = title,
       alertBodyFa = body,
     )
   }
 
-  /**
-   * Reverse-estimates child weight (kg) when the parent drags the syringe plunger directly
-   * along the barrel for weight-based formulations. Returns null if age-blocked or age-banded.
-   */
+  /** No reverse estimation from a dragged syringe before clinical approval. */
+  @Suppress("UNUSED_PARAMETER")
   fun estimateWeightFromDraggedMl(
     formulation: LiquidFormulationId,
     ageMonths: Int,
     draggedMl: Float,
-  ): Float? {
-    if (ageMonths < formulation.minHomeAgeMonths) return null
-    if (formulation == LiquidFormulationId.CETIRIZINE_SYRUP_5_5 || formulation.targetMgPerKg <= 0.0) return null
-    val clampedMl = draggedMl.coerceIn(0.1f, formulation.maxSyringeScaleMl)
-    val mg = clampedMl * formulation.mgPerMl
-    val estimatedKg = (mg / formulation.targetMgPerKg).toFloat()
-    return ((estimatedKg * 2f).roundToInt() / 2f).coerceIn(MIN_WEIGHT_KG, MAX_WEIGHT_KG)
-  }
+  ): Float? = null
 
   fun initialAgeMonthsFromProfile(
     profile: ChildProfileDemo?,
@@ -281,6 +204,10 @@ object LiquidDoseVisualizerEngine {
   fun parseAgeMonthsFromText(raw: String): Int? {
     val clean = PersianNormalizer.normalize(raw).trim()
     if (clean.isEmpty()) return null
+    // A band label ("۳ تا ۱۲ ماه", "1-3 years") is not an exact age.
+    // Parsing its upper bound as the child's age can bypass infant safeguards.
+    val rangePattern = Regex("""\b\d+\s*(?:تا|الی|[-–—])\s*\d+\b""")
+    if (rangePattern.containsMatchIn(clean)) return null
     val yearsMatch = Regex("""(\d+)\s*سال""").find(clean)
     val monthsMatch = Regex("""(\d+)\s*ماه""").find(clean)
     val years = yearsMatch?.groupValues?.getOrNull(1)?.toIntOrNull()

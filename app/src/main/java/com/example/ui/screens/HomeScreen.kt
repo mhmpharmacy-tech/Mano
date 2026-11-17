@@ -75,6 +75,7 @@ import com.example.ui.components.GalacticRing
 import com.example.ui.components.HomeFeverTimelineWidget
 import com.example.ui.components.LtrText
 import com.example.ui.components.ManoOrbitalHeroStage
+import com.example.ui.components.ManoCharacterFamily
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.PharmacistCtaCard
 import com.example.ui.components.RadialTopicItem
@@ -325,6 +326,18 @@ fun HomeScreen(
           snapshot = timelineSnapshot,
           onQuickSaveTemp = onQuickSaveFever,
           onOpenFullTimeline = onOpenFeverTimeline,
+        )
+      }
+
+      // Specialist mascot shortcuts; urgent guidance and fever timeline stay above this section.
+      item {
+        ManoCharacterFamily(
+          onMedicines = onNavigateMedicines,
+          onGrowth = onNavigateGrowth,
+          onSkin = onNavigateSkin,
+          onNutrition = onNavigateNutrition,
+          onCare = { onNavigateSymptoms("fever") },
+          onConnect = onNavigateAskPharmacist,
         )
       }
 
