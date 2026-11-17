@@ -374,3 +374,36 @@ test("Additional modules retain educational content when JavaScript is disabled"
  for(const name of ["mano-nutrition","mano-care"]){await page.goto(pathToFileURL(path.join(root,name+".html")).href);assert.ok(await page.locator("#module-search").isDisabled());assert.equal(await page.locator("[data-entry]:visible").count(),5)}
  await page.goto(pathToFileURL(path.join(root,"mano-connect.html")).href);assert.ok(await page.locator("#connect-example").isDisabled());assert.equal(await page.locator("[data-connect-case]:visible").count(),4);assert.equal(await page.locator("form").count(),0);await context.close();
 });
+
+test("Local review board: deliberate approval, file resume, responsive layout",async()=>{
+ const os=require("node:os"),tmp=fs.mkdtempSync(path.join(os.tmpdir(),"mano-review-ui-"));
+ const {buildPreview}=require("../tools/build-preview.cjs");
+ const folder=path.join(tmp,"preview");buildPreview(folder);
+ const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});
+ const errors=[];page.on("pageerror",e=>errors.push(e.message));
+ try{
+  await page.goto(pathToFileURL(path.join(folder,"clinical-review.html")).href);
+  assert.equal(await page.locator("#review-item option").count(),47);
+  await page.locator("#reviewer").fill("EXAMPLE");
+  await page.locator("#review-group").selectOption("article");assert.equal(await page.locator("#review-item option").count(),8);
+  await page.locator("#review-decision").selectOption("approved");await page.locator("#review-save").click();
+  assert.match(await page.locator("#review-message").innerText(),/معیارها/);
+  assert.ok(await page.locator("#review-export").isDisabled());
+  for(const box of await page.locator("[data-check]").all())await box.check();
+  await page.locator("#review-save").click();assert.ok(await page.locator("#review-export").isEnabled());
+  const event=page.waitForEvent("download");await page.locator("#review-export").click();const download=await event;
+  const filename=path.join(tmp,"decision.json");await download.saveAs(filename);
+  const data=JSON.parse(fs.readFileSync(filename,"utf8"));assert.equal(data.releaseAuthorized,false);assert.equal(data.decisions.length,1);
+  await page.reload();assert.ok(await page.locator("#review-export").isDisabled());
+  await page.locator("#review-file").setInputFiles(filename);await page.locator("#review-import").click();
+  await page.waitForFunction(()=>!document.getElementById("review-export").disabled);
+  await page.locator("#review-group").selectOption("article");
+  assert.equal(await page.locator("#review-decision").inputValue(),"approved");
+  for(const width of [320,390,430,768,1366]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),"review overflow "+width)}
+  await page.setViewportSize({width:390,height:844});await page.addScriptTag({path:require.resolve("axe-core/axe.min.js")});
+  const v=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}})).violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})));
+  fs.writeFileSync(path.join(out,"clinical-review-a11y.json"),JSON.stringify(v,null,2));assert.deepEqual(v.filter(v=>["critical","serious"].includes(v.impact)),[]);
+  await settleVisuals(page);await page.screenshot({path:path.join(out,"clinical-review-mobile.png"),fullPage:true,animations:"disabled"});
+  assert.deepEqual(errors,[]);
+ }finally{await page.close();fs.rmSync(tmp,{recursive:true,force:true})}
+});
