@@ -21,7 +21,45 @@
  // Fixed educational example identifiers, never real patient or triage inputs.
  const connectExamples=Object.freeze({label:"training",feeding:"training",urgent:"emergency",unknown:"uncertain"});
  function exampleRoute(id){return Object.hasOwn(connectExamples,id)?connectExamples[id]:null}
+
+ // Fixed educational examples only; integer hundredths of mg / mL preserve exact comparisons.
+ const labelExamples = Object.freeze({"apap32":{"title":"استامینوفن؛ 160 mg/5 mL","provenance":"FDA · نمونه تاریخی آمریکا","form":"oral-liquid","volume":500,"ingredients":[["acetaminophen",16000]]},"apap100":{"title":"استامینوفن؛ 80 mg/0.8 mL","provenance":"FDA · نمونه تاریخی آمریکا","form":"oral-liquid","volume":80,"ingredients":[["acetaminophen",8000]]},"apap80":{"title":"استامینوفن؛ 80 mg/mL","provenance":"FDA · نمونه تاریخی آمریکا","form":"oral-liquid","volume":100,"ingredients":[["acetaminophen",8000]]},"apapMath":{"title":"استامینوفن؛ 32 mg/mL","provenance":"فقط بیان ریاضی label A؛ نه فرآورده واقعی","form":"oral-liquid","volume":100,"ingredients":[["acetaminophen",3200]]},"co200":{"title":"کوآموکسی‌کلاو؛ 200/28.5 mg/5 mL","provenance":"DailyMed · نمونه برچسب آمریکا","form":"oral-suspension-reconstituted","volume":500,"ingredients":[["amoxicillin",20000],["clavulanic-acid",2850]]},"co400":{"title":"کوآموکسی‌کلاو؛ 400/57 mg/5 mL","provenance":"DailyMed · نمونه برچسب آمریکا","form":"oral-suspension-reconstituted","volume":500,"ingredients":[["amoxicillin",40000],["clavulanic-acid",5700]]},"co600":{"title":"کوآموکسی‌کلاو؛ 600/42.9 mg/5 mL","provenance":"DailyMed · نمونه برچسب آمریکا","form":"oral-suspension-reconstituted","volume":500,"ingredients":[["amoxicillin",60000],["clavulanic-acid",4290]]}});
+ function compareLabels(first,second){
+  if(!Object.hasOwn(labelExamples,first)||!Object.hasOwn(labelExamples,second))return null;
+  const a=labelExamples[first],b=labelExamples[second];
+  const sameIngredients=a.ingredients.length===b.ingredients.length&&a.ingredients.every((i,k)=>i[0]===b.ingredients[k][0]);
+  const result={status:"different-ingredients-or-form",titles:[a.title,b.title],provenance:[a.provenance,b.provenance],rows:[]};
+  if(!sameIngredients||a.form!==b.form)return result;
+  const equal=a.ingredients.every((i,k)=>i[1]*b.volume===b.ingredients[k][1]*a.volume);
+  const sameRatio=a.ingredients.every((i,k)=>i[1]*b.ingredients[0][1]===b.ingredients[k][1]*a.ingredients[0][1]);
+  result.status=equal?"same-strength-not-equivalence":!sameRatio?"different-ratio":"different-strength";
+  result.rows=a.ingredients.map((i,k)=>({ingredient:i[0],a:i[1]/a.volume,b:b.ingredients[k][1]/b.volume}));
+  return result;
+ }
+ function initLabelLab(doc){
+  const a=doc.getElementById("label-a"),b=doc.getElementById("label-b"),out=doc.getElementById("label-result");
+  if(!a||!b||!out)return;
+  const titleText={"same-strength-not-equivalence":"غلظت عددی برابر؛ هم‌ارزی یا جایگزینی تأیید نشده","different-ratio":"تفاوت نسبت اجزای ترکیبی؛ جایگزینی تأیید نشده","different-strength":"غلظت متفاوت؛ حجم مصرف قبلی را تکرار نکنید","different-ingredients-or-form":"مقایسه عددی متوقف شد؛ ماده مؤثره یا شکل دارویی متفاوت است."};
+  const names={"acetaminophen":"استامینوفن","amoxicillin":"آموکسی‌سیلین","clavulanic-acid":"اسید کلاوولانیک"};
+  const number=n=>Number(n).toLocaleString("fa-IR",{maximumFractionDigits:3});
+  function render(){
+   const result=compareLabels(a.value,b.value);
+   out.replaceChildren();
+   const h=doc.createElement("strong");h.id="label-status";h.textContent=result?titleText[result.status]:"نمونه نامعتبر؛ مقایسه متوقف شد.";out.append(h);
+   out.dataset.result=result?.status||"invalid";
+   if(!result)return;
+   for(let i=0;i<2;i++){const p=doc.createElement("p");p.textContent=(i===0?"A: ":"B: ")+result.titles[i]+" — "+result.provenance[i];out.append(p)}
+   if(result.rows.length){
+    const table=doc.createElement("table"),cap=doc.createElement("caption");cap.textContent="قدرت برچسب؛ mg/mL (نه دوز)";table.append(cap);
+    const head=doc.createElement("thead"),tr=doc.createElement("tr");for(const text of ["ماده مؤثره","نمونه A","نمونه B"]){const th=doc.createElement("th");th.scope="col";th.textContent=text;tr.append(th)}head.append(tr);table.append(head);
+    const body=doc.createElement("tbody");for(const row of result.rows){const tr=doc.createElement("tr"),th=doc.createElement("th");th.scope="row";th.textContent=names[row.ingredient];tr.append(th);for(const n of [row.a,row.b]){const td=doc.createElement("td");td.textContent=number(n);tr.append(td)}body.append(tr)}table.append(body);out.append(table);
+   }
+   const p=doc.createElement("p");p.textContent="هیچ نتیجه‌ای در این ابزار مجوز درمان یا جایگزینی نیست؛ برچسب و دستور مصرف باید توسط داروساز بررسی شود.";out.append(p);
+  }
+  a.addEventListener("change",render);b.addEventListener("change",render);a.disabled=b.disabled=false;render();
+ }
  function init(doc){
+  initLabelLab(doc);
   const connect=doc.getElementById("connect-example"),connectReset=doc.getElementById("connect-reset");
   if(connect&&connectReset){
    const cases=Array.from(doc.querySelectorAll("[data-connect-case]")),status=doc.getElementById("connect-status");
@@ -72,5 +110,5 @@
   }
   ex.addEventListener("change",render);metric.addEventListener("change",render);ex.disabled=metric.disabled=false;render();
  }
- return {normalize,matches,growthSeries,exampleRoute,init};
+ return {normalize,matches,growthSeries,exampleRoute,compareLabels,init};
 });

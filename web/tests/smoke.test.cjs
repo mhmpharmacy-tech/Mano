@@ -183,3 +183,18 @@ test("Static preview packaging is allowlisted and remains unapproved",()=>{
   assert.throws(()=>buildPreview(dest),/new directory/);
  }finally{fs.rmSync(tmp,{recursive:true,force:true})}
 });
+
+test("Label comparison is exact, fixed, and never returns a dose or substitution verdict",()=>{
+ const {compareLabels}=require("../modules.js");
+ let r=compareLabels("apap32","apap100");
+ assert.equal(r.status,"different-strength");assert.deepEqual(r.rows,[{ingredient:"acetaminophen",a:32,b:100}]);
+ r=compareLabels("apap32","apapMath");assert.equal(r.status,"same-strength-not-equivalence");
+ r=compareLabels("co400","co600");assert.equal(r.status,"different-ratio");assert.deepEqual(r.rows,[{ingredient:"amoxicillin",a:80,b:120},{ingredient:"clavulanic-acid",a:11.4,b:8.58}]);
+ assert.equal(compareLabels("co200","co400").status,"different-strength");
+ assert.equal(compareLabels("apap32","co600").status,"different-ingredients-or-form");
+ for(const invalid of ["__proto__","constructor","missing","",null])assert.equal(compareLabels(invalid,"apap32"),null);
+ assert.equal(compareLabels("apap32","apap32").status,"same-strength-not-equivalence");
+ r=compareLabels("apap32","apap100");r.rows[0].a=999;assert.equal(compareLabels("apap32","apap100").rows[0].a,32);
+ const t=JSON.parse(fs.readFileSync(path.join(root,"iran-product-template.json"),"utf8"));
+ assert.equal(t.status,"EMPTY_UNVERIFIED_TEMPLATE");assert.equal(t.clinicalUseEnabled,false);assert.equal(t.substitutionAuthorized,false);assert.equal(t.irc,null);assert.equal(t.sourceRecordUrl,null);assert.equal(t.reviewedAt,null);
+});

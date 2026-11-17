@@ -383,7 +383,7 @@ test("Local review board: deliberate approval, file resume, responsive layout",a
  const errors=[];page.on("pageerror",e=>errors.push(e.message));
  try{
   await page.goto(pathToFileURL(path.join(folder,"clinical-review.html")).href);
-  assert.equal(await page.locator("#review-item option").count(),53);
+  assert.equal(await page.locator("#review-item option").count(),54);
   await page.locator("#reviewer").fill("EXAMPLE");
   await page.locator("#review-group").selectOption("article");assert.equal(await page.locator("#review-item option").count(),8);
   await page.locator("#review-decision").selectOption("approved");await page.locator("#review-save").click();
@@ -406,4 +406,22 @@ test("Local review board: deliberate approval, file resume, responsive layout",a
   await settleVisuals(page);await page.screenshot({path:path.join(out,"clinical-review-mobile.png"),fullPage:true,animations:"disabled"});
   assert.deepEqual(errors,[]);
  }finally{await page.close();fs.rmSync(tmp,{recursive:true,force:true})}
+});
+
+test("Label lab displays differences, refuses unlike ingredients and links the empty Iran template",async()=>{
+ const page=await browser.newPage({viewport:{width:320,height:844}});
+ await page.goto(pathToFileURL(path.join(root,"mano-drug.html")).href);
+ const result=page.locator("#label-result");
+ assert.equal(await result.getAttribute("data-result"),"different-strength");
+ await page.locator("#label-b").selectOption("apapMath");assert.equal(await result.getAttribute("data-result"),"same-strength-not-equivalence");assert.match(await result.innerText(),/هم‌ارزی یا جایگزینی تأیید نشده/);
+ await page.locator("#label-a").selectOption("co400");await page.locator("#label-b").selectOption("co600");
+ assert.equal(await result.getAttribute("data-result"),"different-ratio");assert.equal(await result.locator("tbody tr").count(),2);
+ await page.locator("#label-b").selectOption("apap32");assert.equal(await result.getAttribute("data-result"),"different-ingredients-or-form");assert.equal(await result.locator("table").count(),0);
+ assert.equal(await page.locator('a[href="./iran-product-template.json"]').count(),1);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+ await page.locator("#label-b").selectOption("co600");
+ await page.setViewportSize({width:390,height:844});await page.addScriptTag({path:require.resolve("axe-core/axe.min.js")});
+ const v=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}})).violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})));
+ fs.writeFileSync(path.join(out,"drug-label-lab-a11y.json"),JSON.stringify(v,null,2));assert.deepEqual(v.filter(v=>["critical","serious"].includes(v.impact)),[]);
+ await page.close();
 });

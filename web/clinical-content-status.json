@@ -866,6 +866,23 @@
           ],
           "iranLabelVerified": false,
           "clinicalUseEnabled": false
+        },
+        {
+          "id": "label-comparison",
+          "claims": [
+            {
+              "source": "DRUG_FDA_CONC",
+              "locator": "Q2 and Q4–Q6; historically reported concentrations"
+            },
+            {
+              "source": "DRUG_COAMOX",
+              "locator": "2.6 Switching between dosage forms and strengths"
+            }
+          ],
+          "iranLabelVerified": false,
+          "clinicalUseEnabled": false,
+          "fixedExamplesOnly": true,
+          "substitutionAuthorized": false
         }
       ]
     },

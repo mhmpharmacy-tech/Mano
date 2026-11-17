@@ -9,7 +9,7 @@ function buildReviewQueue(directory = root) {
   const read = name => fs.readFileSync(path.join(directory, name));
   const registry = JSON.parse(read("clinical-content-status.json"));
   const pages = ["index.html", "staff-demo.html", ...registry.draftArticles.map(a => a.path), ...registry.draftModules.map(a => a.path)];
-  const dependencies = ["clinical-content-status.json", "logic.js", "app.js", "modules.js", "staff-demo.js", "styles.css", "modules.css", "articles.css", "staff-demo.css"];
+  const dependencies = ["clinical-content-status.json", "logic.js", "app.js", "modules.js", "staff-demo.js", "styles.css", "modules.css", "articles.css", "staff-demo.css","iran-product-template.json"];
   const assets = fs.readdirSync(path.join(directory,"assets")).map(name => "assets/" + name);
   const hashes = Object.fromEntries([...new Set([...pages, ...dependencies, ...assets])].sort().map(name => {
     if (!/^(?:assets\/)?[a-zA-Z0-9_.-]+$/.test(name) || !fs.lstatSync(path.join(directory,name)).isFile()) throw Error("Unexpected review asset");
