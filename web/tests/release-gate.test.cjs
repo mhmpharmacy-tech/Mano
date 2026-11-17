@@ -27,3 +27,21 @@ test("Public health content has an explicit source registry and unreviewed statu
     assert.ok(Object.values(manifest.sourceRegister).every(r=>typeof r.verifiedOn==="string" && r.verifiedOn.length>0));
   }
 });
+
+test("Every HTML page in the unapproved preview explicitly prevents indexing",()=>{
+  const manifest = JSON.parse(fs.readFileSync(path.join(root,"clinical-content-status.json"),"utf8"));
+  if (manifest.status === "APPROVED_FOR_PUBLIC_CLINICAL_RELEASE") return;
+  function walk(dir){
+    return fs.readdirSync(dir,{withFileTypes:true}).flatMap(entry=>{
+      const p=path.join(dir,entry.name);
+      if(entry.isDirectory() && !["node_modules","browser-artifacts",".git"].includes(entry.name)) return walk(p);
+      return entry.isFile() && /\.html$/i.test(entry.name) ? [p] : [];
+    });
+  }
+  const pages=walk(root);
+  assert.ok(pages.length>=17,"Expected full six-module preview");
+  for(const page of pages){
+    const html=fs.readFileSync(page,"utf8");
+    assert.match(html,/<meta\s+name="robots"\s+content="noindex,nofollow"\s*\/?\s*>/i,path.relative(root,page));
+  }
+});
