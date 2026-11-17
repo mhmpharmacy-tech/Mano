@@ -49,3 +49,10 @@
 @media(max-width:850px){.article-layout{grid-template-columns:1fr}.article-sidebar{position:static;grid-row:1}.article-sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px}.article-sidebar nav strong{grid-column:1/-1}.article-related{display:none}}
 @media(max-width:550px){.article-header-inner{min-height:68px}.article-back{font-size:12px}.article-hero-grid{grid-template-columns:1fr;gap:10px;padding-block:22px}.article-illustration{min-height:0;display:none}.article-intro{font-size:15px}.article-age-grid{grid-template-columns:1fr}.article-layout{padding-top:15px;gap:12px}.article-main{gap:12px}.article-main section,.article-disclosure{border-radius:13px;padding:17px}.article-sidebar nav a{font-size:12px}.article-action{width:100%}}
 @media print {.article-header,.article-sidebar,.article-illustration,.footer,.urgent-call,.article-action{display:none!important}.article-layout{display:block}.article-main section,.article-disclosure{break-inside:avoid;border:1px solid #bbb;margin:8px 0}.article-hero{background:#fff}}
+
+/* Safety-first reading order; mobile content is never pushed down by a table of contents. */
+.article-urgent-strip{background:#fff2ed;border-bottom:1px solid #e4b3a6;color:#733421;font-size:13px}
+.article-urgent-strip>.shell{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-block:7px}
+.article-urgent-strip a{color:#733421;font-weight:800;text-decoration:underline;text-underline-offset:3px;flex-shrink:0;padding:9px 2px}
+@media(max-width:850px){.article-sidebar{grid-row:auto}.article-related{display:grid}}
+@media(max-width:550px){.article-urgent-strip>.shell{flex-wrap:wrap;gap:0}.article-urgent-strip a{padding-block:3px}}

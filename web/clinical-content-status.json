@@ -122,6 +122,11 @@
           "topic": "fluids, worsening, urgent pediatric assessment",
           "source": "AAP-Fever",
           "locator": "When to call the pediatrician"
+        },
+        {
+          "topic": "Antipyretic purpose and limits of temperature response",
+          "source": "NICE-NG143",
+          "locator": "1.4 (temperature response); 1.6 antipyretic interventions"
         }
       ]
     },
