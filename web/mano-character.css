@@ -20,3 +20,10 @@ html[data-mano-quiet] :is([data-mano-state],.home-module-art img,.hero-art,.hero
 @media (prefers-reduced-motion:reduce){
  .home-module-card .home-module-art img {animation:none!important;transition:none!important;transform:none!important;}
 }
+
+/* Quiet mode also suppresses ancestor card movement and hover offsets. */
+html[data-mano-quiet] :is(.home-module-card,.home-module-art img,.hero-art,.hero-art *) {
+ animation:none!important;transition:none!important;
+}
+html[data-mano-quiet] .home-module-card:hover,
+html[data-mano-quiet] .home-module-card:hover .home-module-art img {transform:none!important;}
