@@ -1,0 +1,10 @@
+/* No new visual identity; opt-in motion only. */
+[data-mano-state] {object-fit:contain;}
+@media (prefers-reduced-motion:no-preference){
+ [data-mano-state="welcome"].mano-motion {animation:mano-welcome .4s ease-out both;}
+ @keyframes mano-welcome {from{opacity:.85;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+}
+@media (prefers-reduced-motion:reduce){
+ [data-mano-state].mano-motion {animation:none!important;transition:none!important;}
+}
+[data-mano-state="alert"].mano-motion {animation:none!important;transition:none!important;}
