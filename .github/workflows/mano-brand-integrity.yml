@@ -1,5 +1,6 @@
 name: MANO Brand Integrity
 on:
+  workflow_dispatch:
   push:
     branches: [feature/mano-brand-engine]
 permissions:
