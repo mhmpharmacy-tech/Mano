@@ -13,3 +13,21 @@ jobs:
         with:
           node-version: '24'
       - run: node --test web/brand-integrity.test.cjs
+  browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - run: npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/mano-brand-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mano-brand-browser-screenshots
+          path: brand-screenshots/
+          if-no-files-found: warn
+          retention-days: 7
