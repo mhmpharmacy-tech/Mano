@@ -46,7 +46,7 @@
         <p>از تب و سرفه تا پوست، تغذیه و داروهای رایج کودک؛ اطلاعات قابل‌فهم، نشانه‌های مهم مراجعه و پرسش‌هایی که بهتر است از داروساز بپرسی.</p>
         <div class="hero-actions">
           <a class="btn primary" href="#screening">بررسی نشانه‌های هشدار <span aria-hidden="true">←</span></a>
-          <a class="btn secondary" href="#pathways">دیدن موضوعات</a>
+          <a class="btn secondary" href="#journey">مسیر خانواده</a>
         </div>
         <div class="hero-trust"><span>راهنمای آموزشی، نه تشخیص</span><span>بدون دوز خودکار دارو</span><span>بدون نیاز به ثبت‌نام</span></div>
       </div>
@@ -67,6 +67,21 @@
       <a href="#about">جزئیات</a>
     </aside>
   </div>
+
+  <section class="section mano-journey" id="journey" aria-labelledby="journey-title">
+    <div class="shell journey-layout">
+      <img src="./assets/mano_pose_listen.png" alt="مانو در حال گوش دادن" loading="lazy" decoding="async">
+      <div><span class="overline">مسیر خانواده</span><h2 id="journey-title">از دغدغه امروز شروع کنیم</h2>
+      <p>موضوع موردنیاز را انتخاب کنید تا به راهنمای آموزشی مرتبط بروید. این ابزار ارزیابی یا توصیه پزشکی شخصی نیست و اطلاعاتی ذخیره نمی‌کند.</p>
+      <a class="journey-safety" href="#screening">نگران علائم خطر هستید؟ راهنمای هشدار را ببینید؛ در وضعیت اورژانسی منتظر ابزار نمانید.</a>
+      <div class="journey-controls"><label for="journey-age">گروه سنی (اختیاری؛ فقط برای نمایش انتخاب شما)</label><select id="journey-age" disabled><option value="">انتخاب نشده</option><option>نوزاد</option><option>شیرخوار</option><option>پیش‌دبستانی</option><option>سن مدرسه و نوجوان</option></select>
+      <label for="journey-topic">موضوع موردنیاز</label><select id="journey-topic" disabled><option value="drug">دارو و مصرف ایمن</option><option value="growth">رشد و تکامل</option><option value="skin">پوست کودک</option><option value="nutrition">تغذیه و مکمل</option><option value="care">مراقبت روزانه</option><option value="connect">آمادگی برای مشاوره</option></select></div>
+      <p id="journey-summary" role="status">راهنما بر اساس موضوع انتخاب می‌شود، نه سن یا وضعیت بالینی.</p>
+      <a id="journey-open" class="btn primary" href="./mano-drug.html">مشاهده راهنمای موضوع</a> <a class="btn secondary" href="#library">همه مقالات</a>
+      <noscript><p>انتخاب تعاملی غیرفعال است. از <a href="#modules">فهرست بخش‌ها</a> استفاده کنید.</p></noscript>
+      </div>
+    </div>
+  </section>
 
   <section class="section" id="pathways">
     <div class="shell">
