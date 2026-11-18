@@ -52,3 +52,23 @@
 .mano-world-grid a:hover,.mano-family .home-module-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px #124e581a}
 }
 @media(prefers-reduced-motion:reduce){.mano-world-grid a,.mano-family .home-module-card{transition:none;transform:none}}
+
+/* Internal-page typography refinement; accepted homepage remains unchanged. */
+.module-page .module-kicker{font-family:inherit;letter-spacing:normal;font-size:13px}
+.module-page .module-hero h1{font-size:clamp(25px,3.2vw,40px);font-weight:850;line-height:1.6;letter-spacing:normal}
+.module-page .module-content{line-height:1.9}
+.module-page .module-card h2,.module-page .module-panel h2{font-size:clamp(19px,2vw,23px);font-weight:800;letter-spacing:normal}
+.module-page .module-card p,.module-page .module-panel p{font-size:15px}
+.module-page .module-card .module-en,.module-page .module-card .module-sources,.module-page .module-panel .module-sources{font-size:12px}
+.module-page .module-card .module-small,.module-page .module-panel .module-small{font-size:13px}
+.module-page .module-card{box-shadow:0 5px 18px rgba(18,78,88,.045)}
+.module-page .module-card-top{padding-block-end:8px;border-bottom:2px solid var(--mano-world-tint,#e1f4ed)}
+.module-page .module-hero-grid>img{filter:drop-shadow(0 8px 12px #124e581a)}
+@media(max-width:600px){
+.module-page .module-hero-grid{grid-template-columns:minmax(0,1fr) 72px;gap:10px}
+.module-page .module-hero h1{font-size:23px}
+.module-page .module-card p,.module-page .module-panel p{font-size:14px}
+.module-page .module-card .module-sources,.module-page .module-panel .module-sources{font-size:12px}
+.module-page .module-head .brand{min-width:0}
+.module-page .module-back{max-width:115px;line-height:1.65}
+}
