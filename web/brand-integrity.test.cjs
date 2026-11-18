@@ -47,3 +47,13 @@ test('motion stylesheet supports reduced motion and quiet state',()=>{
  assert.match(css,/prefers-reduced-motion:reduce/);
  assert.match(css,/data-mano-quiet/);
 });
+
+test('narrow layouts reserve space for intact artwork',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'mano-family.css'),'utf8');
+ assert.match(css,/mask-image:none;mix-blend-mode:normal/);
+ assert.match(css,/@media\(max-width:360px\)/);
+});
+test('quiet state suppresses hover offsets',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'mano-character.css'),'utf8');
+ assert.match(css,/data-mano-quiet[^\n]*home-module-card:hover/);
+});
