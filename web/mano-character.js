@@ -4,7 +4,16 @@
  if(typeof module==="object" && module.exports) module.exports=api;
  else {
   root.ManoCharacter=api;
-  const init=()=>root.document.querySelectorAll('img[data-mano-state]').forEach(img=>api.apply(img,img.getAttribute('data-mano-state')));
+  const init=()=>{
+   const doc=root.document;
+   doc.querySelectorAll('img[data-mano-state]').forEach(img=>api.apply(img,img.getAttribute('data-mano-state')));
+   const result=doc.getElementById('screening-result');
+   if(result && typeof root.MutationObserver==="function"){
+    const sync=()=>doc.documentElement.toggleAttribute('data-mano-quiet',api.needsQuiet(result.hidden,result.classList));
+    new root.MutationObserver(sync).observe(result,{attributes:true,attributeFilter:['hidden','class']});
+    sync();
+   }
+  };
   if(root.document.readyState==="loading") root.document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
  }
@@ -17,5 +26,8 @@
   img.setAttribute("data-mano-state",state);
   return true;
  }
- return Object.freeze({states,apply});
+ function needsQuiet(hidden,classes){
+  return !hidden && !!classes && (classes.contains("alert") || classes.contains("prompt"));
+ }
+ return Object.freeze({states,apply,needsQuiet});
 });
