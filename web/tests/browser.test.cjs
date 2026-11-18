@@ -291,11 +291,11 @@ test("MANO Drug, Growth and Skin: functional filters, synthetic chart and respon
  assert.equal(await page.locator("[data-entry]:visible").count(),2);
  await page.locator('[data-entry="coamoxiclav"] summary').click();
  assert.ok(await page.locator('[data-entry="coamoxiclav"] dl').isVisible());
- await page.locator('a[href="./mano-growth.html"]').click();
+ await page.locator('.mano-world-nav a[href="./mano-growth.html"]').click();
  assert.equal(await page.locator("#growth-rows tr").count(),5);
  await page.locator("#growth-example").selectOption("b");await page.locator("#growth-measure").selectOption("height");
  assert.match(await page.locator("#growth-caption").innerText(),/طول/);assert.equal(await page.locator("#growth-chart circle").count(),5);
- await page.locator('a[href="./mano-skin.html"]').click();assert.equal(await page.locator("[data-entry]:visible").count(),5);
+ await page.locator('.mano-world-nav a[href="./mano-skin.html"]').click();assert.equal(await page.locator("[data-entry]:visible").count(),5);
  await page.locator("#module-category").selectOption("raised");assert.equal(await page.locator("[data-entry]:visible").count(),1);await page.locator("#module-reset").click();
  for(const name of ["mano-drug","mano-growth","mano-skin"]){
   await page.goto(pathToFileURL(path.join(root,name+".html")).href);
@@ -336,10 +336,10 @@ test("Nutrition, Care and Connect: safe learning flows, responsive screens and a
  assert.equal(await page.locator("[data-entry]:visible").count(),5);
  await page.locator("#module-category").selectOption("safety");assert.equal(await page.locator("[data-entry]:visible").count(),2);
  await page.locator("#module-reset").click();await page.locator("#module-search").fill("عسل");assert.equal(await page.locator("[data-entry]:visible").count(),1);
- await page.locator('a[href="./mano-care.html"]').click();assert.equal(await page.locator("[data-entry]:visible").count(),5);
+ await page.locator('.mano-world-nav a[href="./mano-care.html"]').click();assert.equal(await page.locator("[data-entry]:visible").count(),5);
  await page.locator("#module-category").selectOption("warning");assert.equal(await page.locator("[data-entry]:visible").count(),2);
  await page.locator(".care-checklist input").first().check();assert.equal(await page.locator(".care-checklist input:checked").count(),1);
- await page.locator('a[href="./mano-connect.html"]').click();assert.equal(await page.locator("[data-connect-case]:visible").count(),1);
+ await page.locator('.mano-world-nav a[href="./mano-connect.html"]').click();await page.locator("#connect-example:enabled").waitFor({state:"visible"});assert.equal(await page.locator("[data-connect-case]:visible").count(),1);
  await page.locator("#connect-example").selectOption("urgent");
  assert.equal(await page.locator('[data-connect-case="urgent"]:visible').count(),1);assert.equal(await page.locator('[data-connect-case="urgent"] .urgent-call').getAttribute("href"),"tel:115");
  assert.equal(await page.locator("[data-connect-case]:visible details").count(),0);
@@ -412,7 +412,7 @@ test("Label lab displays differences, refuses unlike ingredients and links the e
  const page=await browser.newPage({viewport:{width:320,height:844}});
  await page.goto(pathToFileURL(path.join(root,"mano-drug.html")).href);
  const result=page.locator("#label-result");
- assert.equal(await result.getAttribute("data-result"),"different-strength");
+ await page.locator('#label-result[data-result="different-strength"]').waitFor({state:"visible"});assert.equal(await result.getAttribute("data-result"),"different-strength");
  await page.locator("#label-b").selectOption("apapMath");assert.equal(await result.getAttribute("data-result"),"same-strength-not-equivalence");assert.match(await result.innerText(),/هم‌ارزی یا جایگزینی تأیید نشده/);
  await page.locator("#label-a").selectOption("co400");await page.locator("#label-b").selectOption("co600");
  assert.equal(await result.getAttribute("data-result"),"different-ratio");assert.equal(await result.locator("tbody tr").count(),2);
@@ -424,4 +424,23 @@ test("Label lab displays differences, refuses unlike ingredients and links the e
  const v=await page.evaluate(async()=> (await window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}})).violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})));
  fs.writeFileSync(path.join(out,"drug-label-lab-a11y.json"),JSON.stringify(v,null,2));assert.deepEqual(v.filter(v=>["critical","serious"].includes(v.impact)),[]);
  await page.close();
+});
+
+
+test("MANO family navigation: six Persian links, unique active page and local SVG symbols",async()=>{
+ const page=await browser.newPage({viewport:{width:320,height:844}});
+ try{
+ const modules=["drug","growth","skin","nutrition","care","connect"];
+ await page.goto(pathToFileURL(path.join(root,"mano-drug.html")).href);
+ for(const id of modules){
+  const nav=page.locator(".mano-world-nav");
+  await nav.locator('a[href="./mano-'+id+'.html"]').click();
+  await page.waitForURL("**/mano-"+id+".html");
+  assert.equal(await nav.locator("a").count(),6);
+  assert.equal(await nav.locator('[aria-current="page"]').count(),1);
+  assert.equal(await nav.locator('[aria-current="page"]').getAttribute("href"),"./mano-"+id+".html");
+  for(const key of modules)assert.equal(await nav.locator('a[href="./mano-'+key+'.html"] use').getAttribute("href"),"./assets/mano-module-icons.svg#"+key);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+ }
+ }finally{await page.close()}
 });
