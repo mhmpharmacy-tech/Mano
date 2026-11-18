@@ -18,3 +18,7 @@
 @media(max-width:760px){.mano-family .home-module-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mano-family .home-module-art,.mano-family .home-module-art img{height:140px;max-height:140px}.mano-family .home-module-copy{padding:12px 10px 38px}.mano-family .home-module-copy small{padding:0}}
 @media(max-width:340px){.mano-family .home-module-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.mano-family .home-module-card{transition:none;transform:none}}
+
+.mano-family .mano-module-emblem{display:block;width:54px;height:54px;position:absolute;inset-inline-start:16px;top:148px;background:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 4px 12px #124e5820;pointer-events:none}
+.mano-family .home-module-copy{padding-top:24px}
+@media(max-width:760px){.mano-family .mano-module-emblem{top:113px;width:44px;height:44px;inset-inline-start:10px}}
