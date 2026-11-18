@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,9 +23,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,14 +42,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.domain.model.AgeBand
 import com.example.domain.model.MascotPose
+import com.example.domain.model.ReviewStatus
 import com.example.domain.model.SymptomFlow
 import com.example.domain.model.TriageOutcome
 import com.example.domain.util.FeverDoseTimelineEngine
@@ -49,6 +65,7 @@ import com.example.domain.util.FeverDoseTimelineSnapshot
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.ClinicalBulletList
 import com.example.ui.components.ClinicalNote
+import com.example.ui.components.LtrText
 import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PharmacistCtaCard
@@ -58,6 +75,19 @@ import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
 import com.example.ui.components.SymptomChip
 import com.example.ui.components.VisitDraftEntryBannerCard
+import com.example.ui.theme.CautionAmber
+import com.example.ui.theme.CautionSurface
+import com.example.ui.theme.DangerCrimson
+import com.example.ui.theme.DangerSurface
+import com.example.ui.theme.DarkCoral
+import com.example.ui.theme.DarkGold
+import com.example.ui.theme.DarkSage
+import com.example.ui.theme.SageCare
+import com.example.ui.theme.SuccessSurface
+import com.example.ui.theme.manoBorderColor
+import com.example.ui.theme.manoSemanticAccent
+import com.example.ui.theme.manoTintedSurface
+import com.example.ui.viewmodel.SafetyChecklistUiState
 import com.example.ui.viewmodel.SymptomWizardState
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -79,8 +109,25 @@ fun SymptomNavigatorScreen(
     FeverDoseTimelineEngine.buildSnapshot(emptyList(), emptyList(), emptyList(), emptyList()),
   savedVisitDraftsCount: Int = 0,
   onOpenVisitDraftStudio: () -> Unit = {},
+  safetyChecklistState: SafetyChecklistUiState = SafetyChecklistUiState.Idle,
+  onGenerateSafetyChecklist: (primaryFlow: SymptomFlow, coSymptomsFa: List<String>) -> Unit = { _, _ -> },
+  onToggleSafetyChecklistItem: (String) -> Unit = {},
 ) {
   val currentFlow = flows.firstOrNull { it.id == wizard.selectedSymptomId } ?: flows.first()
+
+  val companionSymptomOptions =
+    remember {
+      listOf(
+        "بی‌قراری یا گریه مداوم",
+        "کاهش اشتها یا امتناع از شیر/مایعات",
+        "سرفه یا گرفتگی بینی",
+        "خواب‌آلودگی غیرمعمول",
+        "اسهال یا استفراغ خفیف",
+        "بثورات یا قرمزی پوست",
+        "کشیدن گوش یا گوش‌درد",
+      )
+    }
+  var selectedCompanionSymptoms by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
   BackHandler(enabled = wizard.step > 0) {
     onBack()
@@ -89,7 +136,7 @@ fun SymptomNavigatorScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(modifier = Modifier.fillMaxSize().widthIn(max = 840.dp)) {
       LazyColumn(
-        modifier = Modifier.weight(1f).fillMaxWidth(),
+        modifier = Modifier.weight(1f).fillMaxWidth().testTag("symptom_navigator_list"),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
       ) {
@@ -99,10 +146,34 @@ fun SymptomNavigatorScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+              ) {
+                Surface(
+                  color = MaterialTheme.colorScheme.primaryContainer,
+                  shape = RoundedCornerShape(50),
+                ) {
+                  Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                  ) {
+                    Icon(
+                      imageVector = Icons.Rounded.HealthAndSafety,
+                      contentDescription = null,
+                      tint = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.size(14.dp),
+                    )
+                    LtrText(text = "MANO Safety Triage", color = MaterialTheme.colorScheme.primary)
+                  }
+                }
+                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
+              }
               Text("هدایتگر گام‌به‌گام علائم کودک", style = MaterialTheme.typography.headlineMedium)
               Text(
-                text = "ابزار آموزشی و غربالگری علائم هشدار — تشخیص پزشکی یا تجویز دارو انجام نمی‌دهد.",
+                text = "ابزار آموزشی، غربالگری علائم هشدار و چک‌لیست هوشمند مراجعه به پزشک متخصص کودکان — بدون تشخیص یا تجویز دارو.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
@@ -153,6 +224,33 @@ fun SymptomNavigatorScreen(
                   }
                 }
                 Text(currentFlow.subtitleFa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                HorizontalDivider(color = manoBorderColor())
+
+                Text(
+                  text = "علائم همراه (اختیاری — برای دقت بیشتر چک‌لیست هوشمند ویزیت متخصص کودکان):",
+                  style = MaterialTheme.typography.labelLarge,
+                  fontWeight = FontWeight.SemiBold,
+                  color = MaterialTheme.colorScheme.primary,
+                )
+                FlowRow(
+                  horizontalArrangement = Arrangement.spacedBy(6.dp),
+                  verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                  companionSymptomOptions.forEachIndexed { idx, symptomLabel ->
+                    val isSelected = symptomLabel in selectedCompanionSymptoms
+                    FilterChip(
+                      selected = isSelected,
+                      onClick = {
+                        selectedCompanionSymptoms =
+                          if (isSelected) selectedCompanionSymptoms - symptomLabel
+                          else selectedCompanionSymptoms + symptomLabel
+                      },
+                      label = { Text(symptomLabel, style = MaterialTheme.typography.labelMedium) },
+                      modifier = Modifier.minimumInteractiveComponentSize().testTag("companion_symptom_chip_$idx"),
+                    )
+                  }
+                }
               }
             }
           }
@@ -295,6 +393,24 @@ fun SymptomNavigatorScreen(
               }
 
               item {
+                GeminiPediatricianSafetyChecklistCard(
+                  currentFlow = currentFlow,
+                  companionSymptoms = selectedCompanionSymptoms,
+                  companionOptions = companionSymptomOptions,
+                  onToggleCompanionSymptom = { item ->
+                    selectedCompanionSymptoms =
+                      if (item in selectedCompanionSymptoms) selectedCompanionSymptoms - item
+                      else selectedCompanionSymptoms + item
+                  },
+                  checklistState = safetyChecklistState,
+                  onGenerate = {
+                    onGenerateSafetyChecklist(currentFlow, selectedCompanionSymptoms)
+                  },
+                  onToggleCheckItem = onToggleSafetyChecklistItem,
+                )
+              }
+
+              item {
                 OutlinedButton(
                   onClick = { onOpenArticle(result.relatedArticleSlug) },
                   modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("triage_related_article_btn"),
@@ -340,6 +456,24 @@ fun SymptomNavigatorScreen(
         }
 
         if (wizard.step < 3) {
+          item {
+            GeminiPediatricianSafetyChecklistCard(
+              currentFlow = currentFlow,
+              companionSymptoms = selectedCompanionSymptoms,
+              companionOptions = companionSymptomOptions,
+              onToggleCompanionSymptom = { item ->
+                selectedCompanionSymptoms =
+                  if (item in selectedCompanionSymptoms) selectedCompanionSymptoms - item
+                  else selectedCompanionSymptoms + item
+              },
+              checklistState = safetyChecklistState,
+              onGenerate = {
+                onGenerateSafetyChecklist(currentFlow, selectedCompanionSymptoms)
+              },
+              onToggleCheckItem = onToggleSafetyChecklistItem,
+            )
+          }
+
           item {
             VisitDraftEntryBannerCard(
               snapshot = timelineSnapshot,
@@ -387,6 +521,271 @@ fun SymptomNavigatorScreen(
               Text(if (wizard.step == 2) "مشاهده نتیجه راهنما" else "ادامه")
             }
           }
+        }
+      }
+    }
+  }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GeminiPediatricianSafetyChecklistCard(
+  currentFlow: SymptomFlow,
+  companionSymptoms: List<String>,
+  companionOptions: List<String>,
+  onToggleCompanionSymptom: (String) -> Unit,
+  checklistState: SafetyChecklistUiState,
+  onGenerate: () -> Unit,
+  onToggleCheckItem: (String) -> Unit,
+) {
+  val dangerAccent = manoSemanticAccent(DangerCrimson, DarkCoral)
+  val cautionAccent = manoSemanticAccent(CautionAmber, DarkGold)
+  val sageAccent = manoSemanticAccent(SageCare, DarkSage)
+
+  SectionCard(modifier = Modifier.testTag("symptom_gemini_safety_checklist_card")) {
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.weight(1f),
+      ) {
+        Box(
+          modifier =
+            Modifier
+              .width(4.dp)
+              .height(26.dp)
+              .clip(RoundedCornerShape(50))
+              .background(sageAccent)
+        )
+        Column {
+          LtrText(text = "MANO Safety • Gemini Pediatrician Checklist", color = sageAccent)
+          Text(
+            text = "چک‌لیست هوشمند زمان مراجعه به پزشک متخصص کودکان",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+          )
+        }
+      }
+      Icon(
+        imageVector = Icons.Rounded.AutoAwesome,
+        contentDescription = null,
+        tint = sageAccent,
+        modifier = Modifier.size(22.dp),
+      )
+    }
+
+    Text(
+      text = "با انتخاب علامت اصلی (${currentFlow.titleFa}) و علائم همراه، هوش مصنوعی مانو یک چک‌لیست ایمنی مستند از علائم هشدار فوری، زمان مراجعه هم‌روز به متخصص کودکان و سوالات کلیدی ویزیت تهیه می‌کند.",
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+
+    FlowRow(
+      horizontalArrangement = Arrangement.spacedBy(6.dp),
+      verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+      companionOptions.take(5).forEachIndexed { index, option ->
+        val selected = option in companionSymptoms
+        FilterChip(
+          selected = selected,
+          onClick = { onToggleCompanionSymptom(option) },
+          label = { Text(option, style = MaterialTheme.typography.labelSmall) },
+          modifier = Modifier.minimumInteractiveComponentSize().testTag("safety_checklist_symptom_chip_$index"),
+        )
+      }
+    }
+
+    Button(
+      onClick = onGenerate,
+      enabled = checklistState !is SafetyChecklistUiState.Loading,
+      modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("generate_safety_checklist_btn"),
+    ) {
+      if (checklistState is SafetyChecklistUiState.Loading) {
+        CircularProgressIndicator(
+          modifier = Modifier.size(18.dp),
+          strokeWidth = 2.dp,
+          color = MaterialTheme.colorScheme.onPrimary,
+        )
+        Spacer(Modifier.width(8.dp))
+        Text("در حال تنظیم چک‌لیست ایمنی با Gemini...")
+      } else {
+        Icon(Icons.Rounded.Checklist, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("تولید چک‌لیست ایمنی مراجعه به متخصص کودکان")
+      }
+    }
+
+    when (checklistState) {
+      SafetyChecklistUiState.Idle -> Unit
+      is SafetyChecklistUiState.Loading -> {
+        Text(
+          text = checklistState.contextSummaryFa,
+          style = MaterialTheme.typography.labelSmall,
+          color = MaterialTheme.colorScheme.primary,
+        )
+      }
+      is SafetyChecklistUiState.Error -> {
+        SeverityAlert(
+          severity = AlertSeverity.CAUTION,
+          title = "خطا در تولید چک‌لیست ایمنی",
+          body = checklistState.messageFa,
+          actionLabel = "تلاش مجدد",
+          onAction = onGenerate,
+          modifier = Modifier.testTag("safety_checklist_error_alert"),
+        )
+      }
+      is SafetyChecklistUiState.Ready -> {
+        val payload = checklistState.payload
+        HorizontalDivider(color = manoBorderColor())
+
+        Text(
+          text = payload.checklistTitleFa,
+          style = MaterialTheme.typography.titleSmall,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+          text = payload.urgencySummaryFa,
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        if (payload.immediateEmergencySignsFa.isNotEmpty()) {
+          Surface(
+            color = manoTintedSurface(DangerSurface, DarkCoral, lightAlpha = 0.85f, darkAlpha = 0.16f),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, dangerAccent.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth(),
+          ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+              Text(
+                text = "۱. علائم خطر فوری (مراجعه بلافاصله به اورژانس ۱۱۵):",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = dangerAccent,
+              )
+              payload.immediateEmergencySignsFa.forEachIndexed { idx, sign ->
+                val itemKey = "er_$idx"
+                val isChecked = itemKey in checklistState.checkedItems
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier =
+                    Modifier
+                      .fillMaxWidth()
+                      .clickable { onToggleCheckItem(itemKey) }
+                      .minimumInteractiveComponentSize()
+                      .testTag("safety_checklist_er_item_$idx"),
+                ) {
+                  Checkbox(checked = isChecked, onCheckedChange = { onToggleCheckItem(itemKey) })
+                  Spacer(Modifier.width(6.dp))
+                  Text(sign, style = MaterialTheme.typography.bodySmall)
+                }
+              }
+            }
+          }
+        }
+
+        if (payload.sameDayPediatricianVisitSignsFa.isNotEmpty()) {
+          Surface(
+            color = manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 0.75f, darkAlpha = 0.16f),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, cautionAccent.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth(),
+          ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+              Text(
+                text = "۲. چه زمانی همان روز به پزشک متخصص کودکان مراجعه کنیم؟",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = cautionAccent,
+              )
+              payload.sameDayPediatricianVisitSignsFa.forEachIndexed { idx, sign ->
+                val itemKey = "same_day_$idx"
+                val isChecked = itemKey in checklistState.checkedItems
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier =
+                    Modifier
+                      .fillMaxWidth()
+                      .clickable { onToggleCheckItem(itemKey) }
+                      .minimumInteractiveComponentSize()
+                      .testTag("safety_checklist_sameday_item_$idx"),
+                ) {
+                  Checkbox(checked = isChecked, onCheckedChange = { onToggleCheckItem(itemKey) })
+                  Spacer(Modifier.width(6.dp))
+                  Text(sign, style = MaterialTheme.typography.bodySmall)
+                }
+              }
+            }
+          }
+        }
+
+        if (payload.homeMonitoringChecklistFa.isNotEmpty()) {
+          Surface(
+            color = manoTintedSurface(SuccessSurface, DarkSage, lightAlpha = 0.65f, darkAlpha = 0.14f),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, sageAccent.copy(alpha = 0.35f)),
+            modifier = Modifier.fillMaxWidth(),
+          ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+              Text(
+                text = "۳. چک‌لیست پایش ایمن در خانه تا زمان ویزیت:",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = sageAccent,
+              )
+              payload.homeMonitoringChecklistFa.forEachIndexed { idx, step ->
+                val itemKey = "home_$idx"
+                val isChecked = itemKey in checklistState.checkedItems
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier =
+                    Modifier
+                      .fillMaxWidth()
+                      .clickable { onToggleCheckItem(itemKey) }
+                      .minimumInteractiveComponentSize()
+                      .testTag("safety_checklist_home_item_$idx"),
+                ) {
+                  Checkbox(checked = isChecked, onCheckedChange = { onToggleCheckItem(itemKey) })
+                  Spacer(Modifier.width(6.dp))
+                  Text(step, style = MaterialTheme.typography.bodySmall)
+                }
+              }
+            }
+          }
+        }
+
+        if (payload.questionsForPediatricianFa.isNotEmpty()) {
+          Text(
+            text = "سوالات پیشنهادی برای پرسیدن از متخصص کودکان در مطب:",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+          )
+          payload.questionsForPediatricianFa.forEach { q ->
+            Text("• $q", style = MaterialTheme.typography.bodySmall)
+          }
+        }
+
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+          Icon(
+            imageVector = Icons.Rounded.VerifiedUser,
+            contentDescription = null,
+            tint = sageAccent,
+            modifier = Modifier.size(16.dp),
+          )
+          Text(
+            text = payload.clinicalSourceCitationFa,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
         }
       }
     }

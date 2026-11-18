@@ -289,8 +289,8 @@ fun ManoSquadCharacterCard(
   val textAccent = member.textAccentColor(isDark)
   val tintSurface = member.tintedSurfaceColor(isDark)
   val cardShape = RoundedCornerShape(24.dp)
-  val cardContainer = if (isDark) DarkSurface else PureWhite
-  val borderColor = accent.copy(alpha = if (isDark) 0.40f else 0.26f)
+  val cardContainer = com.example.ui.theme.manoCardSurface()
+  val borderColor = accent.copy(alpha = if (isDark) 0.40f else 0.28f)
 
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
@@ -439,10 +439,17 @@ fun ManoSquadCharacterCard(
                 )
               },
         ) {
-          Image(
-            painter = painterResource(id = member.characterResId),
-            contentDescription = "کاراکتر ${member.englishName} برای بخش ${member.responsibilityFa}",
-            modifier = Modifier.fillMaxSize().padding(3.dp).clip(CircleShape),
+          ManoV1SquadCharacterCanvas(
+            member = member,
+            isDark = isDark,
+            modifier =
+              Modifier
+                .fillMaxSize()
+                .padding(3.dp)
+                .clip(CircleShape)
+                .semantics {
+                  contentDescription = "کاراکتر ${member.englishName} برای بخش ${member.responsibilityFa}"
+                },
           )
         }
 

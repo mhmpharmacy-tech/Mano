@@ -43,27 +43,18 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun homeScreen_displaysWelcomingCardCoreNavButtonsAndRtlDirection() {
+  fun homeScreen_displaysWelcomingCardOrbitalStageAndRtlDirection() {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
     composeTestRule.onNodeWithText("مراقبت از کودک، با خیال آسوده‌تر").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_orbital_stage").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_mascot_touch").performScrollTo().assertIsDisplayed()
 
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("core_nav_emergency_triage"))
-    composeTestRule.onNodeWithTag("core_nav_emergency_triage").assertIsDisplayed()
-    composeTestRule.onNodeWithText("تریاژ و علائم فوری").assertIsDisplayed()
-
-    // Verify RTL layout order: leading icon is placed to the right of the trailing arrow
-    val iconBounds = composeTestRule.onNodeWithTag("core_nav_emergency_triage_icon", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-    val arrowBounds = composeTestRule.onNodeWithTag("core_nav_emergency_triage_arrow", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-    org.junit.Assert.assertTrue("Expected RTL ordering with icon on the right of arrow", iconBounds.left > arrowBounds.right)
-
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("core_nav_medication_safety"))
-    composeTestRule.onNodeWithTag("core_nav_medication_safety").assertIsDisplayed()
-    composeTestRule.onNodeWithText("ایمنی داروهای کودک").assertIsDisplayed()
-
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("core_nav_growth_tracker"))
-    composeTestRule.onNodeWithTag("core_nav_growth_tracker").assertIsDisplayed()
-    composeTestRule.onNodeWithText("پایش رشد و تکامل").assertIsDisplayed()
+    // Verify RTL layout order on the orbital ring switcher: inner ring sits to the right of outer ring
+    composeTestRule.onNodeWithTag("orbital_ring_switcher").performScrollTo().assertIsDisplayed()
+    val innerBounds = composeTestRule.onNodeWithTag("orbital_ring_inner").fetchSemanticsNode().boundsInRoot
+    val outerBounds = composeTestRule.onNodeWithTag("orbital_ring_outer").fetchSemanticsNode().boundsInRoot
+    org.junit.Assert.assertTrue("Expected RTL ordering with inner ring on the right of outer ring", innerBounds.left > outerBounds.right)
   }
 
   @Test
@@ -90,32 +81,36 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun homeScreen_coreNavigationCardsOpenTargetSections() {
+  fun homeScreen_orbitalNodesOpenTargetSectionsAndSpecializedPillars() {
     composeTestRule.waitForIdle()
 
-    // 1. Emergency Triage
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("core_nav_emergency_triage"))
-    composeTestRule.onNodeWithTag("core_nav_emergency_triage").performClick()
+    // 1. Pause spin and open initial crown item (fever -> Symptoms)
+    composeTestRule.onNodeWithTag("orbital_toggle_spin").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("wizard_next_btn").assertIsDisplayed()
 
     composeTestRule.onNodeWithTag("topbar_back").performClick()
     composeTestRule.waitForIdle()
 
-    // 2. Medication Safety
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("core_nav_medication_safety"))
-    composeTestRule.onNodeWithTag("core_nav_medication_safety").performClick()
+    // 2. Step to Medicines on inner orbit and open
+    composeTestRule.onNodeWithTag("orbital_rotate_next").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithText("داروهای کودک و ایمنی مصرف").assertIsDisplayed()
 
     composeTestRule.onNodeWithTag("topbar_back").performClick()
     composeTestRule.waitForIdle()
 
-    // 3. Growth Tracker
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("core_nav_growth_tracker"))
-    composeTestRule.onNodeWithTag("core_nav_growth_tracker").performClick()
+    // 3. Step to MANO Safety pillar on inner orbit and open
+    composeTestRule.onNodeWithTag("orbital_rotate_next").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("رشد و تکامل کودک").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("overlap_checker_card"))
+    composeTestRule.onNodeWithTag("overlap_checker_card").assertIsDisplayed()
   }
 
   @Test
@@ -181,8 +176,7 @@ class ExampleRobolectricTest {
   @Test
   fun homeQuickSearch_opensUnifiedSearchSheetAndFindsMedication() {
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_quick_search_bar"))
-    composeTestRule.onNodeWithTag("home_quick_search_bar").performClick()
+    composeTestRule.onNodeWithTag("topbar_search").performClick()
     composeTestRule.waitForIdle()
 
     composeTestRule.onNodeWithTag("global_search_input").assertIsDisplayed().performTextInput("بروفن")
@@ -262,25 +256,25 @@ class ExampleRobolectricTest {
   @Config(sdk = [36], qualifiers = "w411dp-h915dp-xxhdpi")
   fun homeScreen_galacticDualRingsSwitchAndNavigateToOuterSections() {
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_ring_switcher").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("orbital_ring_switcher").assertIsDisplayed()
     composeTestRule.onNodeWithTag("orbital_ring_inner").assertIsDisplayed()
     composeTestRule.onNodeWithTag("orbital_ring_outer").assertIsDisplayed()
     composeTestRule.onNodeWithTag("orbital_item_vaccines").assertIsDisplayed()
     composeTestRule.onNodeWithTag("orbital_item_studio3d").assertIsDisplayed()
 
     // Pause continuous motion cleanly and switch to outer galactic ring
-    composeTestRule.onNodeWithTag("orbital_toggle_spin").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("orbital_toggle_spin").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_ring_outer").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("orbital_ring_outer").performClick()
     composeTestRule.waitForIdle()
     composeTestRule
       .onNode(hasText("سرفه و خس‌خس", substring = true) and hasAnyAncestor(hasTestTag("orbital_active_topic")))
       .assertIsDisplayed()
 
     // Step backwards (wraps cleanly to 3D Studio) and open via focus CTA
-    composeTestRule.onNodeWithTag("orbital_rotate_prev").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("orbital_rotate_prev").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("orbital_focus_cta").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
   }

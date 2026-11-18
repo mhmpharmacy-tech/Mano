@@ -271,4 +271,84 @@ class ManoAuditRemediationTest {
     composeTestRule.onNodeWithTag("mano_squad_drug").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("mano_squad_connect").performScrollTo().assertIsDisplayed()
   }
+
+  @Test
+  fun safetyTriageAiViewModel_generatesPediatricianChecklistAndDocumentedQa_andRendersProductComparison() {
+    val fakeEngine =
+      object : com.example.ui.viewmodel.SafetyTriageAiEngine {
+        override suspend fun generateSafetyChecklistJson(prompt: String): String =
+          """
+          {
+            "checklistTitleFa": "چک‌لیست مراجعه به متخصص کودکان برای تب و بی‌قراری",
+            "urgencySummaryFa": "در کودک نوپا با تب و بی‌قراری، پایش علائم تنفسی و آب بدن در اولویت است.",
+            "immediateEmergencySignsFa": ["تب در نوزاد زیر ۳ ماه", "تنگی نفس یا کبودی لب‌ها"],
+            "sameDayPediatricianVisitSignsFa": ["تداوم تب بیش از ۷۲ ساعت", "کاهش واضح دفعات ادرار"],
+            "homeMonitoringChecklistFa": ["ثبت دمای بدن هر ۴ ساعت", "استفاده از سرنگ مدرج mL"],
+            "questionsForPediatricianFa": ["چه علائمی نیاز به مراجعه مجدد فوری دارد؟"],
+            "clinicalSourceCitationFa": "AAP / WHO Pediatric Fever Guidelines"
+          }
+          """.trimIndent()
+
+        override suspend fun generateDocumentedQaJson(prompt: String): String =
+          """
+          {
+            "directAnswerFa": "تفاوت اصلی قطره و شربت استامینوفن در غلظت میلی‌گرم بر میلی‌لیتر است.",
+            "actionableStepsFa": ["غلظت روی جعبه را بررسی کنید", "فقط از سرنگ مدرج mL استفاده کنید"],
+            "whenToVisitPediatricianFa": ["در صورت شک به دوز اشتباه یا بی‌حالی کودک"],
+            "citedSourcesFa": ["AAP — Safe Liquid Medication Dosing"],
+            "safetyDisclaimerFa": "این پاسخ آموزشی و غیرتشخیصی است."
+          }
+          """.trimIndent()
+      }
+
+    val vm = com.example.ui.viewmodel.ManoSafetyTriageAiViewModel(fakeEngine)
+    val feverFlow = com.example.data.ManoSourcesAndClinicalSeed.symptomFlows.first { it.id == "fever" }
+
+    vm.generatePediatricianSafetyChecklist(
+      primaryFlow = feverFlow,
+      coSelectedSymptomsFa = listOf("بی‌قراری یا گریه مداوم"),
+      wizard = com.example.ui.viewmodel.SymptomWizardState(selectedSymptomId = "fever", temperatureText = "38.6"),
+      childProfile = null,
+    )
+    composeTestRule.waitForIdle()
+
+    val checklistReady = vm.checklistState.value as com.example.ui.viewmodel.SafetyChecklistUiState.Ready
+    assertEquals("چک‌لیست مراجعه به متخصص کودکان برای تب و بی‌قراری", checklistReady.payload.checklistTitleFa)
+    assertEquals(2, checklistReady.payload.immediateEmergencySignsFa.size)
+
+    vm.toggleChecklistItem("er_0")
+    val afterToggle = vm.checklistState.value as com.example.ui.viewmodel.SafetyChecklistUiState.Ready
+    assertTrue("er_0" in afterToggle.checkedItems)
+
+    vm.askDocumentedQuestion(
+      questionFa = "تفاوت قطره و شربت استامینوفن چیست؟",
+      ageBand = AgeBand.TODDLER_1_3Y,
+      relatedFaqs = com.example.data.ManoFaqSeed.faqs.take(2),
+    )
+    composeTestRule.waitForIdle()
+
+    val qaReady = vm.qaState.value as com.example.ui.viewmodel.DocumentedQaUiState.Ready
+    assertTrue(qaReady.payload.directAnswerFa.contains("غلظت"))
+
+    composeTestRule.setContent {
+      ManoKidsTheme(darkTheme = false) {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+          com.example.ui.components.ManoSpecializedEcosystemSection(onSelectPillar = {})
+          com.example.ui.components.ScientificHealthProductComparisonSection()
+        }
+      }
+    }
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("mano_specialized_ecosystem_section").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_pillar_documented_qa").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_pillar_mano_safety").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_pillar_product_comparison").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_pillar_mano_connect").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_pillar_mano_followup").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_pillar_mano_pharmacy").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("scientific_product_comparison_section").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("comparison_cat_chip_antipyretic_forms").performScrollTo().performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("comparison_option_card_antipyretic_forms_0").performScrollTo().assertIsDisplayed()
+  }
 }

@@ -1,99 +1,45 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Air
-import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.ChildCare
+import androidx.compose.material.icons.rounded.CompareArrows
 import androidx.compose.material.icons.rounded.DeviceThermostat
+import androidx.compose.material.icons.rounded.FactCheck
 import androidx.compose.material.icons.rounded.HealthAndSafety
-import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.LocalDrink
+import androidx.compose.material.icons.rounded.LocalPharmacy
 import androidx.compose.material.icons.rounded.MedicalServices
-import androidx.compose.material.icons.rounded.MonitorHeart
-import androidx.compose.material.icons.rounded.Policy
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Spa
+import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.Vaccines
 import androidx.compose.material.icons.rounded.ViewInAr
-import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.R
 import com.example.domain.model.AgeBand
 import com.example.domain.model.Article
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineSnapshot
-import com.example.domain.util.ManoDomainLinks
-import com.example.ui.components.AgeSelectorRow
-import com.example.ui.components.AlertSeverity
-import com.example.ui.components.ArticleCard
-import com.example.ui.components.CoreNavigationCard
 import com.example.ui.components.GalacticRing
-import com.example.ui.components.HomeFeverTimelineWidget
-import com.example.ui.components.LtrText
-import com.example.ui.components.ManoBannerFrame
+import com.example.ui.components.ManoEcosystemPillar
 import com.example.ui.components.ManoOrbitalHeroStage
-import com.example.ui.components.ManoSquadMember
-import com.example.ui.components.ManoSquadSection
 import com.example.ui.components.PediatricIconKind
-import com.example.ui.components.PharmacistCtaCard
 import com.example.ui.components.RadialTopicItem
-import com.example.ui.components.SectionCard
-import com.example.ui.components.SeverityAlert
 import com.example.ui.components.TopicAccentRole
-import com.example.ui.util.ManoLinkShareHelper
-import com.example.ui.theme.AquaSurface
-import com.example.ui.theme.DarkJade
-import com.example.ui.theme.DarkOrange
-import com.example.ui.theme.DarkSky
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.JadeCareInk
-import com.example.ui.theme.LocalManoDarkTheme
-import com.example.ui.theme.OrangeCareInk
-import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SkyCareInk
-import com.example.ui.theme.manoBorderColor
-import com.example.ui.theme.manoCardSurface
-import com.example.ui.theme.manoTintedSurface
 
 @Composable
 fun HomeScreen(
@@ -130,35 +76,145 @@ fun HomeScreen(
   onSaveGalacticSelection: (ringName: String, topicId: String) -> Unit = { _, _ -> },
   onNavigateSyrupScanner: () -> Unit = {},
   savedSyrupScansCount: Int = 0,
+  onNavigateEcosystemPillar: (ManoEcosystemPillar) -> Unit = {},
 ) {
-  val filteredByAge =
-    remember(articles, selectedAgeBand) {
-      if (selectedAgeBand == null) articles.take(3)
-      else articles.filter { selectedAgeBand in it.ageBands }.take(3)
-    }
-
   val galacticInnerTopics =
     remember {
       listOf(
-        RadialTopicItem("fever", "تب کودک", "تب‌سنجی و علائم هشدار", Icons.Rounded.DeviceThermostat, TopicAccentRole.CORAL, PediatricIconKind.FEVER),
-        RadialTopicItem("medicines", "ایمنی دارو و سرنگ", "اندازه‌گیری mL و غلظت", Icons.Rounded.MedicalServices, TopicAccentRole.TEAL, PediatricIconKind.MEDICINE),
-        RadialTopicItem("vaccines", "تقویم واکسن", "نوبت‌های شمسی و یادآور", Icons.Rounded.Vaccines, TopicAccentRole.PLUM, PediatricIconKind.MEDICINE),
-        RadialTopicItem("growth", "رشد و تکامل", "نقاط عطف سنی و خواب", Icons.Rounded.ChildCare, TopicAccentRole.SAGE, PediatricIconKind.GROWTH),
-        RadialTopicItem("nutrition", "مشاور تغذیه", "برنامه غذایی متناسب با سن", Icons.Rounded.Restaurant, TopicAccentRole.MANGO, PediatricIconKind.FORMULA),
-        RadialTopicItem("urgent", "علائم خطر فوری", "چه زمانی به اورژانس برویم؟", Icons.Rounded.HealthAndSafety, TopicAccentRole.STRAWBERRY, PediatricIconKind.URGENT),
+        RadialTopicItem(
+          id = "fever",
+          titleFa = "تب کودک",
+          subtitleFa = "تب‌سنجی و علائم هشدار",
+          icon = Icons.Rounded.DeviceThermostat,
+          accentRole = TopicAccentRole.CORAL,
+          iconKind = PediatricIconKind.FEVER,
+        ),
+        RadialTopicItem(
+          id = "medicines",
+          titleFa = "ایمنی دارو و سرنگ",
+          subtitleFa = "اندازه‌گیری mL و غلظت",
+          icon = Icons.Rounded.MedicalServices,
+          accentRole = TopicAccentRole.TEAL,
+          iconKind = PediatricIconKind.MEDICINE,
+        ),
+        RadialTopicItem(
+          id = "mano_safety",
+          titleFa = "بررسی تداخل دارو",
+          subtitleFa = "MANO Safety • هشدار دارویی",
+          icon = Icons.Rounded.Shield,
+          accentRole = TopicAccentRole.CORAL,
+          iconKind = PediatricIconKind.MEDICINE,
+        ),
+        RadialTopicItem(
+          id = "mano_connect",
+          titleFa = "ارتباط با داروساز",
+          subtitleFa = "MANO Connect • مشاوره امن",
+          icon = Icons.Rounded.SupportAgent,
+          accentRole = TopicAccentRole.SAGE,
+          iconKind = PediatricIconKind.PHARMACY,
+        ),
+        RadialTopicItem(
+          id = "documented_qa",
+          titleFa = "پرسش‌وپاسخ مستند",
+          subtitleFa = "دستیار علمی با منبع معتبر",
+          icon = Icons.AutoMirrored.Rounded.Help,
+          accentRole = TopicAccentRole.PLUM,
+          iconKind = PediatricIconKind.FAQ,
+        ),
+        RadialTopicItem(
+          id = "product_comparison",
+          titleFa = "مقایسه محصولات",
+          subtitleFa = "مقایسه علمی محصولات سلامت",
+          icon = Icons.Rounded.CompareArrows,
+          accentRole = TopicAccentRole.MANGO,
+          iconKind = PediatricIconKind.FORMULA,
+        ),
+        RadialTopicItem(
+          id = "growth",
+          titleFa = "رشد و تکامل",
+          subtitleFa = "نقاط عطف سنی و خواب",
+          icon = Icons.Rounded.ChildCare,
+          accentRole = TopicAccentRole.SAGE,
+          iconKind = PediatricIconKind.GROWTH,
+        ),
+        RadialTopicItem(
+          id = "urgent",
+          titleFa = "علائم خطر فوری",
+          subtitleFa = "چه زمانی به اورژانس برویم؟",
+          icon = Icons.Rounded.HealthAndSafety,
+          accentRole = TopicAccentRole.STRAWBERRY,
+          iconKind = PediatricIconKind.URGENT,
+        ),
       )
     }
 
   val galacticOuterTopics =
     remember {
       listOf(
-        RadialTopicItem("cough", "سرفه و خس‌خس", "تنفس و سرفه طولانی", Icons.Rounded.Air, TopicAccentRole.SKY, PediatricIconKind.COUGH),
-        RadialTopicItem("scanner", "اسکنر شربت و قطره", "خواندن غلظت با دوربین هوشمند", Icons.Rounded.QrCodeScanner, TopicAccentRole.TEAL, PediatricIconKind.MEDICINE),
-        RadialTopicItem("formula", "شیرخشک و تغذیه", "راهنمای علمی بدون تبلیغ", Icons.Rounded.LocalDrink, TopicAccentRole.MANGO, PediatricIconKind.FORMULA),
-        RadialTopicItem("diaper", "سوختگی پوشک", "مراقبت پوست و تعویض", Icons.Rounded.Spa, TopicAccentRole.PLUM, PediatricIconKind.DIAPER),
-        RadialTopicItem("diarrhea", "اسهال و استفراغ", "پیشگیری از کم‌آبی", Icons.Rounded.WaterDrop, TopicAccentRole.AQUA, PediatricIconKind.HYDRATION),
-        RadialTopicItem("constipation", "یبوست و دل‌درد", "دفع و نفخ کودک", Icons.Rounded.MonitorHeart, TopicAccentRole.GOLD, PediatricIconKind.STOMACH),
-        RadialTopicItem("studio3d", "استودیو سه‌بعدی", "تمرین سرنگ، تب‌سنج و توزین", Icons.Rounded.ViewInAr, TopicAccentRole.AQUA, PediatricIconKind.DEVICE),
+        RadialTopicItem(
+          id = "cough",
+          titleFa = "سرفه و خس‌خس",
+          subtitleFa = "تنفس و سرفه طولانی",
+          icon = Icons.Rounded.Air,
+          accentRole = TopicAccentRole.SKY,
+          iconKind = PediatricIconKind.COUGH,
+        ),
+        RadialTopicItem(
+          id = "mano_followup",
+          titleFa = "پیگیری مشاوره",
+          subtitleFa = "MANO Follow-up • نتیجه",
+          icon = Icons.Rounded.FactCheck,
+          accentRole = TopicAccentRole.MANGO,
+          iconKind = PediatricIconKind.PHARMACY,
+        ),
+        RadialTopicItem(
+          id = "mano_pharmacy",
+          titleFa = "پنل داروخانه",
+          subtitleFa = "MANO Pharmacy • میز داروساز",
+          icon = Icons.Rounded.LocalPharmacy,
+          accentRole = TopicAccentRole.TEAL,
+          iconKind = PediatricIconKind.PHARMACY,
+        ),
+        RadialTopicItem(
+          id = "scanner",
+          titleFa = "اسکنر شربت و قطره",
+          subtitleFa = "خواندن غلظت با دوربین هوشمند",
+          icon = Icons.Rounded.QrCodeScanner,
+          accentRole = TopicAccentRole.TEAL,
+          iconKind = PediatricIconKind.MEDICINE,
+        ),
+        RadialTopicItem(
+          id = "vaccines",
+          titleFa = "تقویم واکسن",
+          subtitleFa = "نوبت‌های شمسی و یادآور",
+          icon = Icons.Rounded.Vaccines,
+          accentRole = TopicAccentRole.PLUM,
+          iconKind = PediatricIconKind.MEDICINE,
+        ),
+        RadialTopicItem(
+          id = "nutrition",
+          titleFa = "مشاور تغذیه",
+          subtitleFa = "برنامه غذایی و شیرخشک",
+          icon = Icons.Rounded.Restaurant,
+          accentRole = TopicAccentRole.MANGO,
+          iconKind = PediatricIconKind.FORMULA,
+        ),
+        RadialTopicItem(
+          id = "diaper",
+          titleFa = "پوست و پوشک",
+          subtitleFa = "مراقبت پوست و تعویض",
+          icon = Icons.Rounded.Spa,
+          accentRole = TopicAccentRole.PLUM,
+          iconKind = PediatricIconKind.DIAPER,
+        ),
+        RadialTopicItem(
+          id = "studio3d",
+          titleFa = "استودیو سه‌بعدی",
+          subtitleFa = "تمرین سرنگ، تب‌سنج و توزین",
+          icon = Icons.Rounded.ViewInAr,
+          accentRole = TopicAccentRole.AQUA,
+          iconKind = PediatricIconKind.DEVICE,
+        ),
       )
     }
 
@@ -170,6 +226,12 @@ fun HomeScreen(
       "diaper" -> onNavigateSkin()
       "diarrhea" -> onNavigateSymptoms("diarrhea_vomiting")
       "medicines" -> onNavigateMedicines()
+      "mano_safety" -> onNavigateEcosystemPillar(ManoEcosystemPillar.MANO_SAFETY)
+      "mano_connect" -> onNavigateEcosystemPillar(ManoEcosystemPillar.MANO_CONNECT)
+      "documented_qa" -> onNavigateEcosystemPillar(ManoEcosystemPillar.DOCUMENTED_QA)
+      "product_comparison" -> onNavigateEcosystemPillar(ManoEcosystemPillar.PRODUCT_COMPARISON)
+      "mano_followup" -> onNavigateEcosystemPillar(ManoEcosystemPillar.MANO_FOLLOW_UP)
+      "mano_pharmacy" -> onNavigateEcosystemPillar(ManoEcosystemPillar.MANO_PHARMACY)
       "scanner" -> onNavigateSyrupScanner()
       "vaccines" -> onNavigateVaccines()
       "nutrition" -> onNavigateNutrition()
@@ -181,13 +243,18 @@ fun HomeScreen(
     }
   }
 
-  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-    LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("home_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
+  // Full-screen stage focused exclusively on MANO and the Dual-Ring Galactic Orbit
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    androidx.compose.foundation.lazy.LazyColumn(
+      modifier =
+        Modifier
+          .fillMaxSize()
+          .widthIn(max = 840.dp)
+          .padding(horizontal = 14.dp, vertical = 6.dp)
+          .testTag("home_list"),
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      // WELCOMING DUAL-RING GALACTIC ORBITAL CENTERPIECE AROUND PROMINENT MANO MASCOT
       item {
         val restoredRing =
           savedGalacticRingName?.let { name -> GalacticRing.entries.firstOrNull { it.name == name } }
@@ -203,447 +270,6 @@ fun HomeScreen(
             onSaveGalacticSelection(ring.name, topicId)
           },
         )
-      }
-
-      // UNIFIED QUICK SEARCH ENTRY BAR
-      item {
-        val searchAccent = MaterialTheme.colorScheme.primary
-        Surface(
-          onClick = onOpenGlobalSearch,
-          color = manoCardSurface(),
-          shape = RoundedCornerShape(20.dp),
-          border = BorderStroke(1.2.dp, searchAccent.copy(alpha = 0.24f)),
-          modifier =
-            Modifier
-              .fillMaxWidth()
-              .shadow(
-                elevation = 7.dp,
-                shape = RoundedCornerShape(20.dp),
-                ambientColor = searchAccent.copy(alpha = 0.14f),
-                spotColor = com.example.ui.theme.ShadowSlate.copy(alpha = 0.10f),
-              )
-              .minimumInteractiveComponentSize()
-              .testTag("home_quick_search_bar"),
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-          ) {
-            Surface(
-              color = searchAccent.copy(alpha = 0.12f),
-              shape = RoundedCornerShape(12.dp),
-              modifier = Modifier.size(34.dp),
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  imageVector = Icons.Rounded.Search,
-                  contentDescription = null,
-                  tint = searchAccent,
-                  modifier = Modifier.size(19.dp),
-                )
-              }
-            }
-            Text(
-              text = "جست‌وجوی سریع دارو، تب نوزاد، سرفه، شیرخشک...",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.weight(1f),
-            )
-          }
-        }
-      }
-
-      // URGENT EMERGENCY & RED-FLAG ACTION CARD (High-priority above-the-scroll safety)
-      item {
-        SeverityAlert(
-          severity = AlertSeverity.DANGER,
-          title = "هشدار فوری: چه زمانی باید فوراً به اورژانس ۱۱۵ مراجعه کنیم؟",
-          body =
-            "تب ۳۸.۰ درجه یا بیشتر در نوزاد زیر ۳ ماه، تنفس سخت یا تند، کبودی لب‌ها، تشنج، بی‌حالی شدید یا کم‌آبی جدی نیازمند مراجعه فوری بدون انتظار است.",
-          showCautionMascot = true,
-          actionLabel = "بررسی علائم هشدار و اقدام فوری",
-          onAction = { onNavigateTopicDetail("when-to-see-doctor") },
-          modifier = Modifier.testTag("home_urgent_red_flag_card"),
-        )
-      }
-
-      // SIX BESPOKE MANO VECTOR CHARACTERS (Color-coded interactive squad connecting to each section)
-      item {
-        ManoSquadSection(
-          onSelectMember = { member ->
-            when (member) {
-              ManoSquadMember.DRUG -> onNavigateMedicines()
-              ManoSquadMember.GROWTH -> onNavigateGrowth()
-              ManoSquadMember.SKIN -> onNavigateSkin()
-              ManoSquadMember.NUTRITION -> onNavigateNutrition()
-              ManoSquadMember.CARE -> onNavigateSymptoms("fever")
-              ManoSquadMember.CONNECT -> onNavigateAskPharmacist()
-            }
-          }
-        )
-      }
-
-      // THREE STACKED FULL-WIDTH CORE NAVIGATION CARDS
-      item {
-        val isDark = LocalManoDarkTheme.current
-        val cardSurface = if (isDark) DarkSurface else PureWhite
-        val triageAccent = if (isDark) DarkOrange else OrangeCareInk
-        val medAccent = if (isDark) DarkJade else JadeCareInk
-        val growthAccent = if (isDark) DarkSky else SkyCareInk
-
-        Column(
-          modifier = Modifier.fillMaxWidth().testTag("core_navigation_stack"),
-          verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-          Text(
-            text = stringResource(R.string.core_sections_title),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.testTag("core_sections_header"),
-          )
-
-          CoreNavigationCard(
-            title = stringResource(R.string.nav_emergency_triage_title),
-            subtitle = stringResource(R.string.nav_emergency_triage_subtitle),
-            badgeText = stringResource(R.string.nav_emergency_triage_badge),
-            icon = Icons.Rounded.HealthAndSafety,
-            iconKind = PediatricIconKind.URGENT,
-            accentColor = triageAccent,
-            containerColor = cardSurface,
-            iconContainerColor = triageAccent.copy(alpha = 0.10f),
-            onClick = { onNavigateSymptoms("fever") },
-            testTag = "core_nav_emergency_triage",
-          )
-
-          CoreNavigationCard(
-            title = stringResource(R.string.nav_medication_safety_title),
-            subtitle = stringResource(R.string.nav_medication_safety_subtitle),
-            badgeText = stringResource(R.string.nav_medication_safety_badge),
-            icon = Icons.Rounded.MedicalServices,
-            iconKind = PediatricIconKind.MEDICINE,
-            accentColor = medAccent,
-            containerColor = cardSurface,
-            iconContainerColor = medAccent.copy(alpha = 0.10f),
-            onClick = onNavigateMedicines,
-            testTag = "core_nav_medication_safety",
-          )
-
-          CoreNavigationCard(
-            title = stringResource(R.string.nav_growth_tracker_title),
-            subtitle = stringResource(R.string.nav_growth_tracker_subtitle),
-            badgeText = stringResource(R.string.nav_growth_tracker_badge),
-            icon = Icons.Rounded.ChildCare,
-            iconKind = PediatricIconKind.GROWTH,
-            accentColor = growthAccent,
-            containerColor = cardSurface,
-            iconContainerColor = growthAccent.copy(alpha = 0.10f),
-            onClick = onNavigateGrowth,
-            testTag = "core_nav_growth_tracker",
-          )
-        }
-      }
-
-      // LIVE 24H FEVER & DOSE TIMELINE DASHBOARD WIDGET
-      item {
-        HomeFeverTimelineWidget(
-          snapshot = timelineSnapshot,
-          onQuickSaveTemp = onQuickSaveFever,
-          onOpenFullTimeline = onOpenFeverTimeline,
-        )
-      }
-
-      // SMART SYRUP LABEL CAMERA SCANNER QUICK-LAUNCH CARD
-      item {
-        SectionCard(modifier = Modifier.testTag("home_syrup_scanner_card")) {
-          ManoBannerFrame(
-            resId = R.drawable.img_syrup_scanner_banner,
-            contentDescription = "اسکنر هوشمند برچسب شربت و قطره با دوربین",
-            aspectRatio = 16f / 9f,
-          )
-          Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-              Surface(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(8.dp),
-              ) {
-                Text(
-                  text = stringResource(R.string.syrup_scanner_badge),
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.primary,
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                )
-              }
-              if (savedSyrupScansCount > 0) {
-                Text(
-                  text = "$savedSyrupScansCount اسکن ذخیره‌شده",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-              }
-            }
-            Text(
-              text = stringResource(R.string.syrup_scanner_title),
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
-            )
-            Text(
-              text = stringResource(R.string.syrup_scanner_subtitle),
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-          Button(
-            onClick = onNavigateSyrupScanner,
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("home_syrup_scanner_btn"),
-          ) {
-            Icon(Icons.Rounded.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("اسکن برچسب دارو و تنظیم سرنگ سه‌بعدی")
-          }
-        }
-      }
-
-      // راهنمای مناسب سن کودک
-      item {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Text(
-              text = "راهنمای مناسب سن کودک",
-              style = MaterialTheme.typography.titleLarge,
-              color = MaterialTheme.colorScheme.onBackground,
-            )
-            TextButton(onClick = onNavigateMyChild, modifier = Modifier.minimumInteractiveComponentSize()) {
-              Text("فرزند من")
-            }
-          }
-          AgeSelectorRow(
-            selectedAgeBand = selectedAgeBand,
-            onSelect = onSelectAgeBand,
-            includeAllOption = true,
-          )
-          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            filteredByAge.forEach { article ->
-              ArticleCard(
-                article = article,
-                isBookmarked = article.slug in bookmarkedSlugs,
-                onToggleBookmark = { onToggleBookmark(article.slug) },
-                onOpen = { onNavigateTopicDetail(article.slug) },
-              )
-            }
-          }
-          OutlinedButton(
-            onClick = { onNavigateTopics(null, "") },
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("see_all_topics_button"),
-          ) {
-            Text("مشاهده همه موضوعات سلامت")
-          }
-        }
-      }
-
-      // UNIFIED SPECIALIZED PEDIATRIC TOOLS & 3D STUDIO HUB (replaces repetitive dual illustrated cards)
-      item {
-        SectionCard(modifier = Modifier.testTag("home_unified_tools_card")) {
-          Text(
-            text = "ابزارهای تخصصی، ۳بعدی و واکسیناسیون",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary,
-          )
-          Text(
-            text = "دسترسی یکپارچه به آزمایشگاه سرنگ mL، راهنمای سه‌بعدی مانو، مشاور تغذیه و تقویم واکسن.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-              onClick = onNavigateMedicines,
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("home_medicines_btn"),
-            ) {
-              Text("داروهای کودک")
-            }
-            OutlinedButton(
-              onClick = { onNavigateTopicDetail("safe-liquid-medicine") },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize(),
-            ) {
-              Text("آموزش سرنگ mL")
-            }
-          }
-          FilledTonalButton(
-            onClick = onOpenMedicationChecklist,
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("home_med_checklist_btn"),
-          ) {
-            Icon(Icons.Rounded.Checklist, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(
-              text =
-                if (checkedMedSafetyCount > 0) "چک‌لیست ایمنی پیش از دارو ($checkedMedSafetyCount/8 بررسی‌شده)"
-                else "چک‌لیست تعاملی ایمنی مصرف دارو",
-              fontWeight = FontWeight.SemiBold,
-            )
-          }
-          HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-              onClick = onNavigateGrowth,
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("home_growth_btn"),
-            ) {
-              Text("رشد و صدک WHO")
-            }
-            OutlinedButton(
-              onClick = onNavigateDevices,
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("home_devices_btn"),
-            ) {
-              Text("وسایل مراقبتی")
-            }
-          }
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-              onClick = { onNavigate3DStudio("workbench") },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("home_3d_workbench_btn"),
-            ) {
-              Text("آزمایشگاه سه‌بعدی ابزار (3D)")
-            }
-            OutlinedButton(
-              onClick = { onNavigate3DStudio("mano") },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("home_3d_mano_btn"),
-            ) {
-              Text("مانو سه‌بعدی (3D)")
-            }
-          }
-          OutlinedButton(
-            onClick = { onNavigate3DStudio("weighing") },
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("home_3d_weighing_btn"),
-          ) {
-            Text("راهنمای سه‌بعدی وزن‌کشی با مانکن کودک (3D)")
-          }
-          OutlinedButton(
-            onClick = onNavigateNutrition,
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("home_nutrition_btn"),
-          ) {
-            Text("پیشنهاد غذای سالم و مقوی کودک (هوشمند)")
-          }
-          FilledTonalButton(
-            onClick = onNavigateVaccines,
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("home_vaccines_btn"),
-          ) {
-            Icon(Icons.Rounded.Vaccines, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(
-              text =
-                if (vaccineBadgeLabelFa.isNotBlank()) "برنامه واکسیناسیون کودک ($vaccineBadgeLabelFa)"
-                else "برنامه واکسیناسیون و یادآوری نوبت واکسن",
-              fontWeight = FontWeight.SemiBold,
-            )
-          }
-        }
-      }
-
-      // ارتباط با داروساز
-      item {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text("ارتباط با داروساز", style = MaterialTheme.typography.titleLarge)
-          PharmacistCtaCard(onClick = onNavigateAskPharmacist)
-        }
-      }
-
-      // منابع علمی، حریم خصوصی و هویت پروژه
-      item {
-        SectionCard {
-          ManoBannerFrame(
-            resId = R.drawable.family_support,
-            contentDescription = "خانواده در حال گفت‌وگو و یادداشت‌برداری همراه با مانو",
-            aspectRatio = 1.48f,
-          )
-          Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("منابع علمی، شفافیت و حریم خصوصی", style = MaterialTheme.typography.titleMedium)
-            Text(
-              text = "مانو جایگزین پزشک یا تشخیص‌دهنده خودکار نیست. محتوای بالینی این راهنما دارای برچسب شفافیت علمی است.",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-          HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-          ) {
-            OutlinedButton(
-              onClick = { onNavigateInfo("sources") },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize(),
-            ) {
-              Text("منابع علمی")
-            }
-            OutlinedButton(
-              onClick = { onNavigateInfo("privacy") },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize(),
-            ) {
-              Icon(Icons.Rounded.Policy, contentDescription = null, modifier = Modifier.size(16.dp))
-              Spacer(Modifier.width(4.dp))
-              Text("حریم خصوصی")
-            }
-          }
-          Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            val context = LocalContext.current
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.SpaceBetween,
-              modifier = Modifier.fillMaxWidth(),
-            ) {
-              Text(
-                text = "دامنه‌های متصل به اپلیکیشن (App Links):",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-              )
-              TextButton(
-                onClick = { onNavigateInfo("domain") },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("home_domain_settings_btn"),
-              ) {
-                Text("تنظیمات اتصال")
-              }
-            }
-            @OptIn(ExperimentalLayoutApi::class)
-            FlowRow(
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-              verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-              ManoDomainLinks.PRIMARY_DOMAINS.forEach { domain ->
-                val url = ManoDomainLinks.homeUrl(domain)
-                Surface(
-                  color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 0.7f, darkAlpha = 0.16f),
-                  shape = RoundedCornerShape(10.dp),
-                  border = BorderStroke(1.dp, manoBorderColor()),
-                  modifier =
-                    Modifier
-                      .clickable {
-                        ManoLinkShareHelper.openExternalBrowserUrl(context, url)
-                          .onFailure { ManoLinkShareHelper.copyToClipboard(context, domain, url) }
-                      }
-                      .minimumInteractiveComponentSize()
-                      .testTag("home_domain_chip_$domain"),
-                ) {
-                  Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                  ) {
-                    Icon(Icons.Rounded.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                    LtrText(text = domain, color = MaterialTheme.colorScheme.primary)
-                  }
-                }
-              }
-            }
-          }
-        }
-        Spacer(Modifier.height(12.dp))
       }
     }
   }

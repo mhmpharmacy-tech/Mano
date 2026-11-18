@@ -194,6 +194,7 @@ import com.example.ui.screens.VaccinesScreen
 import com.example.ui.viewmodel.CloudDataState
 import com.example.ui.viewmodel.ManoCloudSyncViewModel
 import com.example.ui.viewmodel.ManoNutritionViewModel
+import com.example.ui.viewmodel.ManoSafetyTriageAiViewModel
 import com.example.ui.viewmodel.ManoSyrupScannerViewModel
 import com.example.ui.viewmodel.ManoViewModel
 import com.example.ui.viewmodel.ManoVisitDraftViewModel
@@ -275,6 +276,9 @@ fun ManoApp(
   val nutritionUiState by nutritionVm.uiState.collectAsStateWithLifecycle()
   val syrupScannerVm: ManoSyrupScannerViewModel = viewModel()
   val syrupScannerUiState by syrupScannerVm.uiState.collectAsStateWithLifecycle()
+  val safetyTriageAiVm: ManoSafetyTriageAiViewModel = viewModel()
+  val safetyChecklistUiState by safetyTriageAiVm.checklistState.collectAsStateWithLifecycle()
+  val documentedQaUiState by safetyTriageAiVm.qaState.collectAsStateWithLifecycle()
 
   val snackbarHostState = remember { SnackbarHostState() }
   val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -1028,6 +1032,30 @@ fun ManoApp(
                   onSaveGalacticSelection = viewModel::saveGalacticOrbitSelection,
                   onNavigateSyrupScanner = { navController.navigate(SyrupScannerRoute) { launchSingleTop = true } },
                   savedSyrupScansCount = effectiveSyrupScans.size,
+                  onNavigateEcosystemPillar = { pillar ->
+                    when (pillar) {
+                      com.example.ui.components.ManoEcosystemPillar.DOCUMENTED_QA -> {
+                        navController.navigate(FaqRoute()) { launchSingleTop = true }
+                      }
+                      com.example.ui.components.ManoEcosystemPillar.MANO_SAFETY -> {
+                        requestedMedicinesTabKey = "overlap"
+                        navController.navigate(MedicinesRoute) { launchSingleTop = true }
+                      }
+                      com.example.ui.components.ManoEcosystemPillar.PRODUCT_COMPARISON -> {
+                        requestedMedicinesTabKey = "comparison"
+                        navController.navigate(MedicinesRoute) { launchSingleTop = true }
+                      }
+                      com.example.ui.components.ManoEcosystemPillar.MANO_CONNECT -> {
+                        navController.navigate(AskPharmacistRoute(initialMode = "parent")) { launchSingleTop = true }
+                      }
+                      com.example.ui.components.ManoEcosystemPillar.MANO_FOLLOW_UP -> {
+                        navController.navigate(AskPharmacistRoute(initialMode = "followup")) { launchSingleTop = true }
+                      }
+                      com.example.ui.components.ManoEcosystemPillar.MANO_PHARMACY -> {
+                        navController.navigate(AskPharmacistRoute(initialMode = "staff")) { launchSingleTop = true }
+                      }
+                    }
+                  },
                 )
               }
 
@@ -1114,6 +1142,16 @@ fun ManoApp(
                   timelineSnapshot = timelineSnapshot,
                   savedVisitDraftsCount = effectiveSavedVisitDrafts.size,
                   onOpenVisitDraftStudio = { showVisitDraftSheet = true },
+                  safetyChecklistState = safetyChecklistUiState,
+                  onGenerateSafetyChecklist = { primaryFlow, coSymptomsFa ->
+                    safetyTriageAiVm.generatePediatricianSafetyChecklist(
+                      primaryFlow = primaryFlow,
+                      coSelectedSymptomsFa = coSymptomsFa,
+                      wizard = uiState.symptomWizard,
+                      childProfile = effectiveChildProfile,
+                    )
+                  },
+                  onToggleSafetyChecklistItem = safetyTriageAiVm::toggleChecklistItem,
                 )
               }
 
@@ -1433,10 +1471,19 @@ fun ManoApp(
                   onAgeSelect = viewModel::selectAgeBand,
                   onToggleExpand = viewModel::toggleFaqExpanded,
                   onNavigateSymptoms = { navController.navigate(SymptomsRoute()) },
+                  documentedQaState = documentedQaUiState,
+                  onAskDocumentedQuestion = { questionFa ->
+                    safetyTriageAiVm.askDocumentedQuestion(
+                      questionFa = questionFa,
+                      ageBand = selectedAgeBand ?: effectiveChildProfile?.ageBand,
+                      relatedFaqs = viewModel.filteredFaqs(selectedAgeBand).ifEmpty { viewModel.filteredFaqs(null) },
+                    )
+                  },
                 )
               }
 
-              composable<AskPharmacistRoute> {
+              composable<AskPharmacistRoute> { entry ->
+                val args = entry.toRoute<AskPharmacistRoute>()
                 AskPharmacistScreen(
                   state = effectiveConsultations,
                   onSelectCategory = viewModel::setAskCategory,
@@ -1502,6 +1549,8 @@ fun ManoApp(
                   onSubmitStaffCaseReview = { pharmacyId, caseId, note, reply, attestation ->
                     cloudVm?.submitStaffCaseReview(pharmacyId, caseId, note, reply, attestation)
                   },
+                  initialMode = args.initialMode,
+                  onShowFeedback = viewModel::showToast,
                 )
               }
 

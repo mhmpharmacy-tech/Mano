@@ -48,6 +48,9 @@ enum class PediatricIconKind {
   URGENT,
   FAQ,
   PHARMACY,
+  SAFETY_SHIELD,
+  COMPARE_LAB,
+  FOLLOW_UP,
 }
 
 /**
@@ -75,6 +78,9 @@ fun Mano3DIconArtwork(
         PediatricIconKind.URGENT -> draw3DUrgentHeartShield()
         PediatricIconKind.FAQ -> draw3DFaqBubbles()
         PediatricIconKind.PHARMACY -> draw3DPharmacyCross()
+        PediatricIconKind.SAFETY_SHIELD -> draw3DSafetyShield()
+        PediatricIconKind.COMPARE_LAB -> draw3DCompareLab()
+        PediatricIconKind.FOLLOW_UP -> draw3DFollowUpTracker()
       }
     }
   }
@@ -520,3 +526,127 @@ private fun DrawScope.draw3DPharmacyCross() {
   drawCircle(color = PureWhite, radius = w * 0.13f, center = center)
   drawCircle(color = StrawberryCare, radius = w * 0.08f, center = center)
 }
+
+private fun DrawScope.draw3DSafetyShield() {
+  val w = size.width
+  val h = size.height
+  val shield =
+    Path().apply {
+      moveTo(w * 0.50f, h * 0.10f)
+      cubicTo(w * 0.86f, h * 0.18f, w * 0.88f, h * 0.64f, w * 0.50f, h * 0.90f)
+      cubicTo(w * 0.12f, h * 0.64f, w * 0.14f, h * 0.18f, w * 0.50f, h * 0.10f)
+      close()
+    }
+  drawPath(
+    path = shield,
+    brush = Brush.verticalGradient(listOf(TealGlow, SageCare, DeepTeal)),
+  )
+  drawPath(
+    path = shield,
+    color = PureWhite.copy(alpha = 0.75f),
+    style = Stroke(width = w * 0.04f),
+  )
+  // Crisp checkmark inside shield
+  val check =
+    Path().apply {
+      moveTo(w * 0.34f, h * 0.52f)
+      lineTo(w * 0.46f, h * 0.64f)
+      lineTo(w * 0.68f, h * 0.38f)
+    }
+  drawPath(
+    path = check,
+    color = PureWhite,
+    style = Stroke(width = w * 0.095f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+  )
+  // Golden caution sparkle on upper right
+  drawCircle(
+    brush = Brush.radialGradient(listOf(GoldSurface, MangoCare)),
+    radius = w * 0.11f,
+    center = Offset(w * 0.78f, h * 0.22f),
+  )
+}
+
+private fun DrawScope.draw3DCompareLab() {
+  val w = size.width
+  val h = size.height
+  // Left comparison card (Sky Blue)
+  drawRoundRect(
+    brush = Brush.verticalGradient(listOf(Color(0xFF8BE0FF), SkyCare)),
+    topLeft = Offset(w * 0.12f, h * 0.22f),
+    size = Size(w * 0.36f, h * 0.56f),
+    cornerRadius = CornerRadius(w * 0.10f),
+  )
+  // Right comparison card (Mint Emerald)
+  drawRoundRect(
+    brush = Brush.verticalGradient(listOf(TealGlow, SageCare)),
+    topLeft = Offset(w * 0.52f, h * 0.22f),
+    size = Size(w * 0.36f, h * 0.56f),
+    cornerRadius = CornerRadius(w * 0.10f),
+  )
+  // Comparison lines inside cards
+  drawLine(
+    color = PureWhite,
+    start = Offset(w * 0.20f, h * 0.38f),
+    end = Offset(w * 0.40f, h * 0.38f),
+    strokeWidth = w * 0.055f,
+    cap = StrokeCap.Round,
+  )
+  drawLine(
+    color = PureWhite,
+    start = Offset(w * 0.60f, h * 0.38f),
+    end = Offset(w * 0.80f, h * 0.38f),
+    strokeWidth = w * 0.055f,
+    cap = StrokeCap.Round,
+  )
+  // Central golden comparison badge
+  drawCircle(
+    brush = Brush.radialGradient(listOf(GoldSurface, AccentGold)),
+    radius = w * 0.15f,
+    center = Offset(w * 0.50f, h * 0.50f),
+  )
+  drawCircle(
+    color = PureWhite,
+    radius = w * 0.05f,
+    center = Offset(w * 0.50f, h * 0.50f),
+  )
+}
+
+private fun DrawScope.draw3DFollowUpTracker() {
+  val w = size.width
+  val h = size.height
+  // Rounded clinical clipboard body
+  drawRoundRect(
+    brush = Brush.verticalGradient(listOf(PureWhite, Color(0xFFDDF5FF))),
+    topLeft = Offset(w * 0.20f, h * 0.18f),
+    size = Size(w * 0.60f, h * 0.68f),
+    cornerRadius = CornerRadius(w * 0.12f),
+  )
+  drawRoundRect(
+    color = SkyCare.copy(alpha = 0.65f),
+    topLeft = Offset(w * 0.20f, h * 0.18f),
+    size = Size(w * 0.60f, h * 0.68f),
+    cornerRadius = CornerRadius(w * 0.12f),
+    style = Stroke(width = w * 0.035f),
+  )
+  // Top clip header
+  drawRoundRect(
+    brush = Brush.horizontalGradient(listOf(PlumCare, SkyCare)),
+    topLeft = Offset(w * 0.35f, h * 0.11f),
+    size = Size(w * 0.30f, h * 0.13f),
+    cornerRadius = CornerRadius(w * 0.06f),
+  )
+  // 3 step progress nodes inside clipboard
+  val stepColors = listOf(SageCare, SkyCare, MangoCare)
+  stepColors.forEachIndexed { idx, col ->
+    val cy = h * (0.38f + idx * 0.16f)
+    drawCircle(color = col, radius = w * 0.055f, center = Offset(w * 0.33f, cy))
+    drawLine(
+      color = col.copy(alpha = 0.75f),
+      start = Offset(w * 0.44f, cy),
+      end = Offset(w * 0.68f, cy),
+      strokeWidth = w * 0.055f,
+      cap = StrokeCap.Round,
+    )
+  }
+}
+

@@ -83,7 +83,7 @@ class ManoSquadCharactersTest {
   }
 
   @Test
-  fun homeScreen_eachManoCharacterRoutesToCorrectSection_andPreservesRedFlagCard() {
+  fun homeScreen_orbitalOnlyStage_routesAllSixSpecializedPillarsAndCoreSections() {
     val navigatedRoutes = mutableListOf<String>()
 
     composeRule.setContent {
@@ -106,30 +106,56 @@ class ManoSquadCharactersTest {
             onNavigateMyChild = {},
             onNavigateInfo = {},
             onNavigateNutrition = { navigatedRoutes.add("nutrition") },
+            onNavigateEcosystemPillar = { pillar -> navigatedRoutes.add("pillar:${pillar.id}") },
           )
         }
       }
     }
 
-    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_urgent_red_flag_card"))
-    composeRule.onNodeWithTag("home_urgent_red_flag_card").assertIsDisplayed()
+    composeRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
+    composeRule.onNodeWithTag("mano_mascot_touch").assertIsDisplayed()
+    composeRule.onNodeWithTag("orbital_toggle_spin").performClick()
+    composeRule.waitForIdle()
 
-    val expectedMappings =
+    // Step through inner orbital ring: fever (0) -> medicines (1) -> mano_safety (2) -> mano_connect (3) -> documented_qa (4) -> product_comparison (5)
+    composeRule.onNodeWithTag("orbital_focus_cta").performClick()
+    val expectedInner =
       listOf(
-        "mano_squad_drug" to "medicines",
-        "mano_squad_growth" to "growth",
-        "mano_squad_skin" to "skin",
-        "mano_squad_nutrition" to "nutrition",
-        "mano_squad_care" to "symptoms:fever",
-        "mano_squad_connect" to "pharmacist",
+        "medicines",
+        "pillar:mano_safety",
+        "pillar:mano_connect",
+        "pillar:documented_qa",
+        "pillar:product_comparison",
       )
-
-    expectedMappings.forEach { (tag, _) ->
-      composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag(tag))
-      composeRule.onNodeWithTag(tag).performClick()
+    expectedInner.forEach { _ ->
+      composeRule.onNodeWithTag("orbital_rotate_next").performClick()
+      composeRule.waitForIdle()
+      composeRule.onNodeWithTag("orbital_focus_cta").performClick()
     }
 
-    assertEquals(expectedMappings.map { it.second }, navigatedRoutes)
+    // Switch to outer orbital ring and verify mano_followup & mano_pharmacy pillars
+    composeRule.onNodeWithTag("orbital_ring_outer").performClick()
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("orbital_rotate_next").performClick()
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("orbital_focus_cta").performClick()
+    composeRule.onNodeWithTag("orbital_rotate_next").performClick()
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("orbital_focus_cta").performClick()
+
+    assertEquals(
+      listOf(
+        "symptoms:fever",
+        "medicines",
+        "pillar:mano_safety",
+        "pillar:mano_connect",
+        "pillar:documented_qa",
+        "pillar:product_comparison",
+        "pillar:mano_followup",
+        "pillar:mano_pharmacy",
+      ),
+      navigatedRoutes,
+    )
   }
 
   @Test

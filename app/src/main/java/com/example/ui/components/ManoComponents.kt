@@ -131,6 +131,9 @@ import com.example.ui.theme.SageCare
 import com.example.ui.theme.ShadowSlate
 import com.example.ui.theme.SkyCare
 import com.example.ui.theme.SkyCareInk
+import com.example.ui.theme.SoftMintCard
+import com.example.ui.theme.SoftMintHalo
+import com.example.ui.theme.SoftSkyHalo
 import com.example.ui.theme.StrawberryCare
 import com.example.ui.theme.SuccessEmerald
 import com.example.ui.theme.SuccessSurface
@@ -189,23 +192,30 @@ fun ManoAtmosphericBackdrop(
         .fillMaxSize()
         .drawWithCache {
           val baseColor = if (isDark) DarkBackground else PureWhite
-          val topHaloCenterColor =
-            if (isDark) TealGlow.copy(alpha = 0.16f) else LightMint.copy(alpha = 0.34f)
-          val topSecondaryHalo =
-            if (isDark) DarkSky.copy(alpha = 0.10f) else AquaSurface.copy(alpha = 0.28f)
+          val topSkyHalo =
+            if (isDark) DarkSky.copy(alpha = 0.14f) else SoftSkyHalo.copy(alpha = 0.68f)
+          val topMintHalo =
+            if (isDark) TealGlow.copy(alpha = 0.16f) else SoftMintHalo.copy(alpha = 0.56f)
+          val midSkyAccentHalo =
+            if (isDark) DarkSky.copy(alpha = 0.08f) else SoftSkyHalo.copy(alpha = 0.36f)
 
           onDrawBehind {
             drawRect(color = baseColor)
-            // Very soft, airy pastel halo strictly at the top edge fading rapidly into pure white
+            // Pure White canvas with airy Light-Blue & Soft-Green medical halos
             drawCircle(
-              brush = Brush.radialGradient(listOf(topHaloCenterColor, Color.Transparent)),
-              center = Offset(size.width * 0.50f, size.height * 0.02f),
-              radius = size.width * 0.85f,
+              brush = Brush.radialGradient(listOf(topSkyHalo, Color.Transparent)),
+              center = Offset(size.width * 0.52f, size.height * 0.03f),
+              radius = size.width * 0.92f,
             )
             drawCircle(
-              brush = Brush.radialGradient(listOf(topSecondaryHalo, Color.Transparent)),
-              center = Offset(size.width * 0.15f, size.height * 0.06f),
-              radius = size.width * 0.55f,
+              brush = Brush.radialGradient(listOf(topMintHalo, Color.Transparent)),
+              center = Offset(size.width * 0.14f, size.height * 0.10f),
+              radius = size.width * 0.65f,
+            )
+            drawCircle(
+              brush = Brush.radialGradient(listOf(midSkyAccentHalo, Color.Transparent)),
+              center = Offset(size.width * 0.88f, size.height * 0.34f),
+              radius = size.width * 0.60f,
             )
           }
         },
@@ -329,19 +339,23 @@ fun ManoPoseAvatar(
 ) {
   val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(18.dp)
+  val orangeAccent = com.example.ui.theme.OrangeCare
   val accentTint =
     when (pose) {
       MascotPose.CAUTION -> manoSemanticAccent(CautionAmber, DarkGold)
       MascotPose.SAVED -> manoSemanticAccent(SuccessEmerald, DarkSage)
-      else -> MaterialTheme.colorScheme.primary
+      else -> orangeAccent
     }
 
   Surface(
-    color = if (isDark) Color(0xFFFAFBFB) else PureWhite,
+    color = if (isDark) Color(0xFF1A242B) else PureWhite,
     shape = shape,
-    border = BorderStroke(1.4.dp, accentTint.copy(alpha = if (isDark) 0.48f else 0.28f)),
-    shadowElevation = 3.dp,
-    modifier = modifier.size(size),
+    border = BorderStroke(1.5.dp, accentTint.copy(alpha = if (isDark) 0.58f else 0.42f)),
+    shadowElevation = 4.dp,
+    modifier =
+      modifier
+        .size(size)
+        .semantics { contentDescription = "شخصیت مانو در حالت ${pose.labelFa}" },
   ) {
     Box(
       contentAlignment = Alignment.Center,
@@ -352,17 +366,15 @@ fun ManoPoseAvatar(
             Brush.radialGradient(
               colors =
                 listOf(
-                  PureWhite,
-                  accentTint.copy(alpha = 0.08f),
+                  if (isDark) Color(0xFF24323C) else PureWhite,
+                  orangeAccent.copy(alpha = if (isDark) 0.18f else 0.12f),
                 )
             )
           )
-          .padding(3.dp),
+          .padding(2.dp),
     ) {
-      Image(
-        painter = painterResource(id = pose.drawableRes),
-        contentDescription = "شخصیت مانو در حالت ${pose.labelFa}",
-        contentScale = ContentScale.Fit,
+      ManoV1OrangeCharacterCanvas(
+        pose = pose,
         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
       )
     }
@@ -640,7 +652,7 @@ fun TopicCard(
   val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(22.dp)
   val borderColor = if (isDark) accentColor.copy(alpha = 0.28f) else HairlineBorder
-  val cardBg = if (isDark) DarkSurface else PureWhite
+  val cardBg = if (isDark) DarkSurface else SoftMintCard
   Card(
     onClick = onClick,
     shape = shape,
@@ -741,7 +753,7 @@ fun ArticleCard(
   val shape = RoundedCornerShape(22.dp)
   val isDark = LocalManoDarkTheme.current
   val glowTint = MaterialTheme.colorScheme.primary
-  val cardBg = if (isDark) DarkSurface else PureWhite
+  val cardBg = if (isDark) DarkSurface else SoftMintCard
   Card(
     onClick = onOpen,
     shape = shape,
@@ -841,7 +853,7 @@ fun MedicineCard(
       MedicationSafetyCategory.TOPICAL_SKIN -> manoSemanticAccent(SageCare, DarkSage)
     }
   val accentTint = if (medication.isHighRiskWarning) manoSemanticAccent(DangerCrimson, DarkCoral) else categoryColor
-  val cardBg = if (isDark) DarkSurface else PureWhite
+  val cardBg = if (isDark) DarkSurface else SoftMintCard
   val warningBg =
     if (medication.isHighRiskWarning) manoTintedSurface(DangerSurface, DarkCoral)
     else manoTintedSurface(CautionSurface, DarkGold)
@@ -1547,11 +1559,11 @@ fun SectionCard(
   val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(24.dp)
   val glowTint = MaterialTheme.colorScheme.primary
-  val cardBg = if (isDark) DarkSurface else PureWhite
+  val cardBg = if (isDark) DarkSurface else SoftMintCard
   Card(
     shape = shape,
     colors = CardDefaults.cardColors(containerColor = cardBg),
-    border = BorderStroke(1.dp, if (isDark) glowTint.copy(alpha = 0.28f) else HairlineBorder),
+    border = BorderStroke(1.1.dp, if (isDark) glowTint.copy(alpha = 0.28f) else HairlineBorder),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     modifier =
       modifier
@@ -1559,8 +1571,8 @@ fun SectionCard(
         .shadow(
           elevation = 9.dp,
           shape = shape,
-          ambientColor = if (isDark) glowTint.copy(alpha = 0.20f) else ShadowSlate.copy(alpha = 0.13f),
-          spotColor = if (isDark) glowTint.copy(alpha = 0.18f) else ShadowSlate.copy(alpha = 0.11f),
+          ambientColor = if (isDark) glowTint.copy(alpha = 0.20f) else ShadowSlate.copy(alpha = 0.11f),
+          spotColor = if (isDark) glowTint.copy(alpha = 0.18f) else ShadowSlate.copy(alpha = 0.09f),
         ),
   ) {
     Column(
@@ -1569,9 +1581,15 @@ fun SectionCard(
           .fillMaxWidth()
           .drawBehind {
             drawCircle(
-              brush = Brush.radialGradient(listOf(glowTint.copy(alpha = if (isDark) 0.11f else 0.06f), Color.Transparent)),
+              brush =
+                Brush.radialGradient(
+                  listOf(
+                    if (isDark) glowTint.copy(alpha = 0.11f) else SoftSkyHalo.copy(alpha = 0.48f),
+                    Color.Transparent,
+                  )
+                ),
               center = Offset(size.width * 0.85f, size.height * 0.12f),
-              radius = size.width * 0.55f,
+              radius = size.width * 0.58f,
             )
           }
           .padding(16.dp),

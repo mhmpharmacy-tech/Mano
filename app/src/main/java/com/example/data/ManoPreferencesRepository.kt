@@ -158,7 +158,7 @@ class ManoPreferencesRepository(private val context: Context) {
   val themeMode: Flow<ManoThemeMode> =
     context.manoDataStore.data.map { prefs ->
       val id = prefs[Keys.THEME_MODE]
-      ManoThemeMode.entries.firstOrNull { it.id == id } ?: ManoThemeMode.SYSTEM
+      ManoThemeMode.entries.firstOrNull { it.id == id } ?: ManoThemeMode.LIGHT
     }
 
   val localChildProfile: Flow<ChildProfileDemo?> =

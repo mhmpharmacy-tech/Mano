@@ -37,7 +37,11 @@ data class Pediatric3DStudioRoute(
 
 @Serializable data class FaqRoute(val query: String = "")
 
-@Serializable data class AskPharmacistRoute(val categoryId: String? = null)
+@Serializable
+data class AskPharmacistRoute(
+  val categoryId: String? = null,
+  val initialMode: String = "parent",
+)
 
 @Serializable data object MyChildRoute
 

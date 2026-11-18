@@ -41,25 +41,28 @@ object SyrupImageHelper {
    * indoor lighting so Persian concentration text stays crisp for Gemini Vision.
    */
   fun enhanceLowLightIfNeeded(bitmap: Bitmap): Bitmap {
-    if (bitmap.width <= 0 || bitmap.height <= 0) return bitmap
+    val w = bitmap.width
+    val h = bitmap.height
+    if (w <= 0 || h <= 0) return bitmap
     val meanLuma = estimateMeanLuma(bitmap)
     if (meanLuma >= LOW_LIGHT_LUMA_THRESHOLD) return bitmap
 
     val gain = if (meanLuma < 52f) 1.38f else 1.24f
     val bias = if (meanLuma < 52f) 34f else 22f
-    val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(output)
-    val cm =
-      ColorMatrix(
-        floatArrayOf(
-          gain, 0f, 0f, 0f, bias,
-          0f, gain, 0f, 0f, bias,
-          0f, 0f, gain, 0f, bias,
-          0f, 0f, 0f, 1f, 0f,
-        )
-      )
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { colorFilter = ColorMatrixColorFilter(cm) }
-    canvas.drawBitmap(bitmap, 0f, 0f, paint)
+    val lut = IntArray(256) { v -> ((v * gain) + bias).roundToInt().coerceIn(0, 255) }
+
+    val pixels = IntArray(w * h)
+    bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+    for (i in pixels.indices) {
+      val px = pixels[i]
+      val a = px and -0x1000000
+      val r = lut[(px shr 16) and 0xFF]
+      val g = lut[(px shr 8) and 0xFF]
+      val b = lut[px and 0xFF]
+      pixels[i] = a or (r shl 16) or (g shl 8) or b
+    }
+    val output = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    output.setPixels(pixels, 0, w, 0, 0, w, h)
     return output
   }
 

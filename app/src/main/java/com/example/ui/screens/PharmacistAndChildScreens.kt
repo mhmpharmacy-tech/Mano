@@ -119,11 +119,315 @@ fun AskPharmacistScreen(
   onRefreshStaffInbox: (forceTokenRefresh: Boolean, statusFilter: ConsultationStatus?) -> Unit = { _, _ -> },
   onAcknowledgeStaffCaseReceived: (pharmacyId: String, caseId: String, internalNote: String?) -> Unit = { _, _, _ -> },
   onSubmitStaffCaseReview: (pharmacyId: String, caseId: String, internalNote: String?, parentReply: String, pharmacistAttestation: Boolean) -> Unit = { _, _, _, _, _ -> },
+  initialMode: String = "parent",
+  onShowFeedback: (String) -> Unit = {},
 ) {
-  var isStaffMode by remember { mutableStateOf(false) }
+  val normalizedInitial =
+    remember(initialMode) {
+      when (initialMode.lowercase()) {
+        "staff", "pharmacy" -> "staff"
+        "followup", "follow_up" -> "followup"
+        else -> "parent"
+      }
+    }
+  var activeViewMode by remember(normalizedInitial) { mutableStateOf(normalizedInitial) }
+  val isStaffMode = activeViewMode == "staff"
+  val isFollowUpFirst = activeViewMode == "followup"
+  val context = LocalContext.current
 
-  BackHandler(enabled = isStaffMode) {
-    isStaffMode = false
+  BackHandler(enabled = activeViewMode != "parent") {
+    activeViewMode = "parent"
+  }
+
+  val renderIntakeSection: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
+    item(key = "mano_connect_intake_card") {
+      SectionCard(modifier = Modifier.testTag("mano_connect_intake_section")) {
+        LtrText(text = "MANO Connect • Secure Family Intake", color = MaterialTheme.colorScheme.primary)
+        Text("ثبت پرسش غیرفوری از داروساز", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("۱. موضوع پرسش", style = MaterialTheme.typography.titleSmall)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          ConsultationCategory.entries.forEach { cat ->
+            SymptomChip(
+              label = cat.labelFa,
+              selected = state.category == cat,
+              onClick = { onSelectCategory(cat) },
+            )
+          }
+        }
+
+        Text("۲. رده سنی کودک", style = MaterialTheme.typography.titleSmall)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          AgeBand.entries.forEach { band ->
+            SymptomChip(
+              label = band.labelFa,
+              selected = state.ageBand == band,
+              onClick = { onSelectAgeBand(band) },
+            )
+          }
+        }
+
+        if (currentUser != null && acceptingPharmacies.isNotEmpty()) {
+          Text("۳. داروخانه پذیرش‌گر تاییدشده", style = MaterialTheme.typography.titleSmall)
+          FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            acceptingPharmacies.forEach { pharm ->
+              SymptomChip(
+                label = pharm.displayNameFa,
+                selected = selectedPharmacyId == pharm.pharmacyId,
+                onClick = { onSelectPharmacy(pharm.pharmacyId) },
+              )
+            }
+          }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Checkbox(checked = state.hasUrgentFlags, onCheckedChange = onUrgentFlagChange)
+          Text(
+            text = "کودک دارای علائم فوری (تب زیر ۳ ماه، تنگی نفس، بی‌حالی یا تشنج) است",
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
+
+        OutlinedTextField(
+          value = state.questionText,
+          onValueChange = onQuestionChange,
+          label = { Text("شرح پرسش غیرتشخیصی (لطفاً اطلاعات هویتی واقعی وارد نکنید)") },
+          minLines = 3,
+          modifier = Modifier.fillMaxWidth().testTag("ask_pharmacist_question_input"),
+        )
+
+        ConsentBox(
+          checked = state.consentAccepted,
+          onCheckedChange = onConsentChange,
+          title = "تأیید شرایط ثبت پرسش",
+          description = "می‌دانم که این بخش جایگزین معاینه حضوری پزشک یا اورژانس نیست و در موارد فوری باید با ۱۱۵ تماس بگیرم.",
+        )
+
+        val activeError = serverErrorFa ?: state.validationErrorFa
+        if (activeError != null) {
+          SeverityAlert(
+            severity = AlertSeverity.DANGER,
+            title = "امکان ثبت درخواست نیست",
+            body = activeError,
+            showCautionMascot = state.hasUrgentFlags || serverErrorFa != null,
+          )
+        }
+
+        Button(
+          onClick = onSubmit,
+          enabled = !isSubmitting,
+          modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("ask_pharmacist_submit"),
+        ) {
+          if (isSubmitting) {
+            CircularProgressIndicator(
+              modifier = Modifier.size(18.dp),
+              strokeWidth = 2.dp,
+              color = MaterialTheme.colorScheme.onPrimary,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("در حال بررسی تریاژ و ثبت...")
+          } else {
+            Text(if (currentUser != null) "ثبت امن در داروخانه" else "ثبت پرسش")
+          }
+        }
+      }
+    }
+  }
+
+  val renderFollowUpSection: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
+    item(key = "mano_followup_summary_card") {
+      val sageAccent = manoSemanticAccent(SageCare, DarkSage)
+      val pendingCount = state.requests.count { it.status == ConsultationStatus.PENDING }
+      val receivedCount = state.requests.count { it.status == ConsultationStatus.RECEIVED }
+      val reviewedCount = state.requests.count { it.status == ConsultationStatus.REVIEWED }
+
+      SectionCard(modifier = Modifier.testTag("mano_followup_section")) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            LtrText(text = "MANO Follow-up • Consultation Tracker", color = sageAccent)
+            Text(
+              text = "پیگیری نتیجه مشاوره (MANO Follow-up)",
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.Bold,
+            )
+          }
+          Surface(
+            color = sageAccent.copy(alpha = 0.14f),
+            shape = RoundedCornerShape(50),
+          ) {
+            Text(
+              text = "${state.requests.size} پرونده",
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              color = sageAccent,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+          }
+        }
+        Text(
+          text = "چرخه پیگیری: ۱. ثبت و غربالگری ایمنی ← ۲. دریافت در پنل اختصاصی داروخانه ← ۳. ثبت پاسخ علمی و برنامه پیگیری داروساز.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (state.requests.isNotEmpty()) {
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+          ) {
+            Surface(
+              color = manoCardSurface(),
+              shape = RoundedCornerShape(10.dp),
+              border = BorderStroke(1.dp, manoBorderColor()),
+            ) {
+              Text(
+                text = "در انتظار: $pendingCount",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+              )
+            }
+            Surface(
+              color = manoCardSurface(),
+              shape = RoundedCornerShape(10.dp),
+              border = BorderStroke(1.dp, manoBorderColor()),
+            ) {
+              Text(
+                text = "دریافت‌شده: $receivedCount",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+              )
+            }
+            Surface(
+              color = sageAccent.copy(alpha = 0.12f),
+              shape = RoundedCornerShape(10.dp),
+              border = BorderStroke(1.dp, sageAccent.copy(alpha = 0.35f)),
+            ) {
+              Text(
+                text = "بررسی‌شده: $reviewedCount",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = sageAccent,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+              )
+            }
+          }
+        }
+      }
+    }
+
+    if (state.requests.isNotEmpty()) {
+      items(state.requests, key = { it.id }) { req ->
+        val stepIdx =
+          when (req.status) {
+            ConsultationStatus.PENDING -> 0
+            ConsultationStatus.RECEIVED -> 1
+            ConsultationStatus.REVIEWED -> 2
+          }
+        val sageAccent = manoSemanticAccent(SageCare, DarkSage)
+        var step1Checked by remember(req.id) { mutableStateOf(false) }
+        var step2Checked by remember(req.id) { mutableStateOf(false) }
+        var step3Checked by remember(req.id) { mutableStateOf(false) }
+
+        SectionCard(modifier = Modifier.testTag("followup_request_card_${req.id}")) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Text("${req.category.labelFa} • ${req.childAgeBand.labelFa}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            SourceBadge(
+              reviewStatus = if (req.status == ConsultationStatus.REVIEWED) ReviewStatus.APPROVED else ReviewStatus.NEEDS_CLINICAL_REVIEW,
+            )
+          }
+          Text(req.questionSummaryFa, style = MaterialTheme.typography.bodyMedium)
+          ProgressTimeline(
+            steps = listOf("در انتظار", "دریافت شد", "بررسی شد"),
+            currentStepIndex = stepIdx,
+          )
+          if (req.followUp != null) {
+            Surface(
+              color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 0.65f, darkAlpha = 0.16f),
+              shape = RoundedCornerShape(12.dp),
+              border = BorderStroke(1.dp, sageAccent.copy(alpha = 0.35f)),
+              modifier = Modifier.fillMaxWidth(),
+            ) {
+              Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                  text = "نتیجه مشاوره و برنامه پیگیری (${req.followUp.scheduleFa}):",
+                  style = MaterialTheme.typography.labelLarge,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                  text = req.followUp.guidanceFa,
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                  text = "مسئول علمی: ${ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA}",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                HorizontalDivider(color = manoBorderColor())
+                Text(
+                  text = "چک‌لیست اقدام والدین پس از مشاوره:",
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.Bold,
+                  color = sageAccent,
+                )
+                listOf(
+                  Triple(step1Checked, { v: Boolean -> step1Checked = v }, "غلظت دارو (mg/mL) و حجم سرنگ مدرج را با پاسخ داروساز تطبیق دادم"),
+                  Triple(step2Checked, { v: Boolean -> step2Checked = v }, "زمان نوبت بعدی و پایش دمای بدن کودک را در لاگ‌بوک ثبت کردم"),
+                  Triple(step3Checked, { v: Boolean -> step3Checked = v }, "علائم هشدار (Red Flags) برای مراجعه حضوری به پزشک را مرور کردم"),
+                ).forEach { (checked, onCheck, labelFa) ->
+                  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Checkbox(checked = checked, onCheckedChange = onCheck)
+                    Text(text = labelFa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+                  }
+                }
+                OutlinedButton(
+                  onClick = {
+                    val summaryText =
+                      buildString {
+                        appendLine("پرونده پیگیری مشاوره دارویی مانو (MANO Follow-up)")
+                        appendLine("موضوع: ${req.category.labelFa} (${req.childAgeBand.labelFa})")
+                        appendLine("پرسش: ${req.questionSummaryFa}")
+                        appendLine("برنامه پیگیری (${req.followUp.scheduleFa}): ${req.followUp.guidanceFa}")
+                      }
+                    ManoLinkShareHelper.copyToClipboard(context, "MANO Follow-up", summaryText)
+                    onShowFeedback("خلاصه مشاوره و برنامه پیگیری در حافظه کپی شد.")
+                  },
+                  modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("followup_copy_btn_${req.id}"),
+                ) {
+                  Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(Modifier.width(6.dp))
+                  Text("کپی خلاصه مشاوره و برنامه پیگیری")
+                }
+              }
+            }
+          }
+          if (currentUser != null) {
+            if (req.status != ConsultationStatus.REVIEWED) {
+              OutlinedButton(
+                onClick = { onAdvanceStatus(req.id, req.status) },
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("ask_pharmacist_refresh_${req.id}"),
+              ) {
+                Text("استعلام آخرین وضعیت از سرور")
+              }
+            }
+          } else if (req.status != ConsultationStatus.REVIEWED) {
+            OutlinedButton(
+              onClick = { onAdvanceStatus(req.id, req.status) },
+              modifier = Modifier.minimumInteractiveComponentSize(),
+            ) {
+              Text("پیش‌نمایش مرحله بعدی (حالت آفلاین)")
+            }
+          }
+        }
+      }
+    }
   }
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
@@ -133,7 +437,7 @@ fun AskPharmacistScreen(
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
       item {
-        SectionCard {
+        SectionCard(modifier = Modifier.testTag("mano_connect_header_card")) {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoPoseAvatar(pose = MascotPose.LISTEN, size = 60.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -142,13 +446,39 @@ fun AskPharmacistScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
               ) {
-                Text("پرسش از داروساز", style = MaterialTheme.typography.headlineSmall)
+                Surface(
+                  color = MaterialTheme.colorScheme.primaryContainer,
+                  shape = RoundedCornerShape(50),
+                ) {
+                  Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                  ) {
+                    Icon(
+                      imageVector = Icons.Rounded.VerifiedUser,
+                      contentDescription = null,
+                      tint = MaterialTheme.colorScheme.primary,
+                      modifier = Modifier.size(14.dp),
+                    )
+                    LtrText(
+                      text =
+                        when (activeViewMode) {
+                          "staff" -> "MANO Pharmacy"
+                          "followup" -> "MANO Follow-up"
+                          else -> "MANO Connect & Follow-up"
+                        },
+                      color = MaterialTheme.colorScheme.primary,
+                    )
+                  }
+                }
                 SourceBadge(reviewStatus = ReviewStatus.APPROVED)
               }
+              Text("ارتباط امن خانواده و داروساز", style = MaterialTheme.typography.headlineSmall)
               Text(
                 text =
                   if (currentUser != null) {
-                    "حساب گوگل شما متصل است؛ پرسش‌های غیرفوری در حساب ابری شما ذخیره می‌شوند."
+                    "حساب گوگل شما متصل است؛ پرسش‌های غیرفوری در کانال امن ابری (MANO Connect) ثبت و پیگیری می‌شوند."
                   } else {
                     "برای ذخیره و پیگیری ابری درخواست‌ها با حساب گوگل وارد شوید؛ بدون ورود نیز درخواست شما در این نشست ثبت می‌شود."
                   },
@@ -163,15 +493,21 @@ fun AskPharmacistScreen(
             modifier = Modifier.fillMaxWidth(),
           ) {
             SymptomChip(
-              label = "بخش والدین (ثبت پرسش)",
-              selected = !isStaffMode,
-              onClick = { isStaffMode = false },
+              label = "بخش والدین (MANO Connect)",
+              selected = activeViewMode == "parent",
+              onClick = { activeViewMode = "parent" },
               modifier = Modifier.testTag("ask_mode_parent"),
             )
             SymptomChip(
-              label = "پنل پاسخ‌گویی داروساز",
-              selected = isStaffMode,
-              onClick = { isStaffMode = true },
+              label = "پیگیری نتیجه مشاوره (MANO Follow-up)",
+              selected = activeViewMode == "followup",
+              onClick = { activeViewMode = "followup" },
+              modifier = Modifier.testTag("ask_mode_followup"),
+            )
+            SymptomChip(
+              label = "پنل اختصاصی داروخانه (MANO Pharmacy)",
+              selected = activeViewMode == "staff",
+              onClick = { activeViewMode = "staff" },
               modifier = Modifier.testTag("ask_mode_staff"),
             )
           }
@@ -205,147 +541,12 @@ fun AskPharmacistScreen(
             onSubmitReview = onSubmitStaffCaseReview,
           )
         }
+      } else if (isFollowUpFirst) {
+        renderFollowUpSection()
+        renderIntakeSection()
       } else {
-        item {
-          SectionCard {
-          Text("۱. موضوع پرسش", style = MaterialTheme.typography.titleSmall)
-          FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ConsultationCategory.entries.forEach { cat ->
-              SymptomChip(
-                label = cat.labelFa,
-                selected = state.category == cat,
-                onClick = { onSelectCategory(cat) },
-              )
-            }
-          }
-
-          Text("۲. رده سنی کودک", style = MaterialTheme.typography.titleSmall)
-          FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AgeBand.entries.forEach { band ->
-              SymptomChip(
-                label = band.labelFa,
-                selected = state.ageBand == band,
-                onClick = { onSelectAgeBand(band) },
-              )
-            }
-          }
-
-          if (currentUser != null && acceptingPharmacies.isNotEmpty()) {
-            Text("۳. داروخانه پذیرش‌گر تاییدشده", style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-              acceptingPharmacies.forEach { pharm ->
-                SymptomChip(
-                  label = pharm.displayNameFa,
-                  selected = selectedPharmacyId == pharm.pharmacyId,
-                  onClick = { onSelectPharmacy(pharm.pharmacyId) },
-                )
-              }
-            }
-          }
-
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = state.hasUrgentFlags, onCheckedChange = onUrgentFlagChange)
-            Text(
-              text = "کودک دارای علائم فوری (تب زیر ۳ ماه، تنگی نفس، بی‌حالی یا تشنج) است",
-              style = MaterialTheme.typography.bodySmall,
-            )
-          }
-
-          OutlinedTextField(
-            value = state.questionText,
-            onValueChange = onQuestionChange,
-            label = { Text("شرح پرسش غیرتشخیصی (لطفاً اطلاعات هویتی واقعی وارد نکنید)") },
-            minLines = 3,
-            modifier = Modifier.fillMaxWidth().testTag("ask_pharmacist_question_input"),
-          )
-
-          ConsentBox(
-            checked = state.consentAccepted,
-            onCheckedChange = onConsentChange,
-            title = "تأیید شرایط ثبت پرسش",
-            description = "می‌دانم که این بخش جایگزین معاینه حضوری پزشک یا اورژانس نیست و در موارد فوری باید با ۱۱۵ تماس بگیرم.",
-          )
-
-          val activeError = serverErrorFa ?: state.validationErrorFa
-          if (activeError != null) {
-            SeverityAlert(
-              severity = AlertSeverity.DANGER,
-              title = "امکان ثبت درخواست نیست",
-              body = activeError,
-              showCautionMascot = state.hasUrgentFlags || serverErrorFa != null,
-            )
-          }
-
-          Button(
-            onClick = onSubmit,
-            enabled = !isSubmitting,
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("ask_pharmacist_submit"),
-          ) {
-            if (isSubmitting) {
-              CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary,
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("در حال بررسی تریاژ و ثبت...")
-            } else {
-              Text(if (currentUser != null) "ثبت امن در داروخانه" else "ثبت پرسش")
-            }
-          }
-        }
-      }
-
-        if (state.requests.isNotEmpty()) {
-          item {
-            Text("درخواست‌های ثبت‌شده", style = MaterialTheme.typography.titleMedium)
-          }
-          items(state.requests, key = { it.id }) { req ->
-            val stepIdx =
-              when (req.status) {
-                ConsultationStatus.PENDING -> 0
-                ConsultationStatus.RECEIVED -> 1
-                ConsultationStatus.REVIEWED -> 2
-              }
-            SectionCard {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-              ) {
-                Text("${req.category.labelFa} • ${req.childAgeBand.labelFa}", style = MaterialTheme.typography.titleSmall)
-                SourceBadge(
-                  reviewStatus = if (req.status == ConsultationStatus.REVIEWED) ReviewStatus.APPROVED else ReviewStatus.NEEDS_CLINICAL_REVIEW,
-                )
-              }
-              Text(req.questionSummaryFa, style = MaterialTheme.typography.bodyMedium)
-              ProgressTimeline(
-                steps = listOf("در انتظار", "دریافت شد", "بررسی شد"),
-                currentStepIndex = stepIdx,
-              )
-              if (req.followUp != null) {
-                Text("${req.followUp.scheduleFa}: ${req.followUp.guidanceFa}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-              if (currentUser != null) {
-                if (req.status != ConsultationStatus.REVIEWED) {
-                  OutlinedButton(
-                    onClick = { onAdvanceStatus(req.id, req.status) },
-                    modifier = Modifier.minimumInteractiveComponentSize().testTag("ask_pharmacist_refresh_${req.id}"),
-                  ) {
-                    Text("استعلام آخرین وضعیت از سرور")
-                  }
-                }
-              } else if (req.status != ConsultationStatus.REVIEWED) {
-                OutlinedButton(
-                  onClick = { onAdvanceStatus(req.id, req.status) },
-                  modifier = Modifier.minimumInteractiveComponentSize(),
-                ) {
-                  Text("پیش‌نمایش مرحله بعدی (حالت آفلاین)")
-                }
-              }
-            }
-          }
-        }
+        renderIntakeSection()
+        renderFollowUpSection()
       }
     }
   }

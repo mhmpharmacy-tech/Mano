@@ -85,7 +85,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
   private val prefs = ManoPreferencesRepository(application.applicationContext)
 
   val themeMode: StateFlow<ManoThemeMode> =
-    prefs.themeMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ManoThemeMode.SYSTEM)
+    prefs.themeMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ManoThemeMode.LIGHT)
 
   val localChildProfile: StateFlow<ChildProfileDemo?> =
     prefs.localChildProfile.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

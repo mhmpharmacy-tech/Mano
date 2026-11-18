@@ -2,33 +2,39 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Canonical MANO Kids Cheerful Pediatric-Health Palette (High-Contrast Safe in Sunlight & Night Mode)
-val DeepTeal = Color(0xFF076168)
-val DeepTealHover = Color(0xFF054B50)
-val SeaGreen = Color(0xFF149388)
-val LightMint = Color(0xFFBDF3E4)
-val AquaSurface = Color(0xFFCEF2FA)
+// Canonical MANO Kids Cheerful Pediatric-Health Palette (White, Light-Blue Halo & Soft-Green Theme)
+val DeepTeal = Color(0xFF0A7D66)
+val DeepTealHover = Color(0xFF076350)
+val SeaGreen = Color(0xFF129A7D)
+val LightMint = Color(0xFFD6F7E8)
+val AquaSurface = Color(0xFFDDF2FF)
 
-// Luminous Frosted Backdrop Base Colors (richly tinted so screens never look washed-out white)
+// White, Light-Blue & Soft-Green Surface Tokens
+val SoftSkyHalo = Color(0xFFD8EFFF)
+val SoftMintHalo = Color(0xFFD4F7E8)
+val SoftMintCard = Color(0xFFF3FBF7)
+val SoftSkyElevated = Color(0xFFEEF8FF)
+
+// Luminous Frosted Backdrop Base Colors
 val AquaBreeze = Color(0xFFC8F1F7)
 val MintFrost = Color(0xFFD0F7E8)
 val SkyLavenderWash = Color(0xFFDCE8FF)
 val PeachMilk = Color(0xFFFFE5D0)
 
-val WarmIvory = Color(0xFFF0FAF9)
+val WarmIvory = Color(0xFFF5FCFA)
 val SilkMint = Color(0xFFD8F7EE)
 val SoftApricot = Color(0xFFFFE7D2)
 val PaleWarmSand = Color(0xFFFFECC9)
 val PureWhite = Color(0xFFFFFFFF)
 
-val DarkInk = Color(0xFF0B252E)
-val MutedSlate = Color(0xFF334E57)
-val HairlineBorder = Color(0xFFDCE7EA)
-val ShadowSlate = Color(0xFF1B3A4B)
+val DarkInk = Color(0xFF09242C)
+val MutedSlate = Color(0xFF2E4C56)
+val HairlineBorder = Color(0xFFC6E7DD)
+val ShadowSlate = Color(0xFF153847)
 
 val AccentGold = Color(0xFFC77C0A)
 val GoldSurface = Color(0xFFFFF1CE)
-val TealGlow = Color(0xFF3CD1C4)
+val TealGlow = Color(0xFF2ED3B7)
 
 // Expanded Joyful Pediatric Spectrum & 6-Character Squad Palette (Graphic Accents + High-Contrast Text Inks)
 val JadeCare = Color(0xFF0E9F76)

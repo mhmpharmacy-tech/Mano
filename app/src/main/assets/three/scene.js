@@ -22,8 +22,8 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf0f7f8);
-scene.fog = new THREE.FogExp2(0xf0f7f8, 0.028);
+scene.background = new THREE.Color(0xf4faff);
+scene.fog = new THREE.FogExp2(0xf4faff, 0.024);
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 const roomEnv = new RoomEnvironment();
@@ -129,21 +129,21 @@ function createContactShadow(rx, rz) {
 
 const floorMesh = new THREE.Mesh(
   new THREE.CircleGeometry(18, 64),
-  new THREE.MeshStandardMaterial({ color: 0xe4f0f2, roughness: 0.92, metalness: 0.0 })
+  new THREE.MeshStandardMaterial({ color: 0xe6f3fe, roughness: 0.90, metalness: 0.0 })
 );
 floorMesh.rotation.x = -Math.PI / 2;
 floorMesh.receiveShadow = true;
 scene.add(floorMesh);
 
-// Ground-flush clearcoated ceramic studio plinth + brushed gold perimeter trim
+// Ground-flush clearcoated ceramic studio plinth + vibrant orange-amber perimeter trim
 const plinthMat = new THREE.MeshPhysicalMaterial({
   color: 0xffffff,
-  roughness: 0.24,
+  roughness: 0.20,
   roughnessMap: microGrainTex,
-  metalness: 0.04,
-  clearcoat: 0.55,
-  clearcoatRoughness: 0.16,
-  envMapIntensity: 0.95,
+  metalness: 0.03,
+  clearcoat: 0.65,
+  clearcoatRoughness: 0.14,
+  envMapIntensity: 1.0,
 });
 const plinth = new THREE.Mesh(
   new THREE.CylinderGeometry(2.8, 2.96, 0.12, 64),
@@ -154,15 +154,15 @@ plinth.receiveShadow = true;
 scene.add(plinth);
 
 const plinthTrimMat = new THREE.MeshPhysicalMaterial({
-  color: 0xd9ab57,
-  emissive: 0x0f8c79,
-  emissiveIntensity: 0.08,
-  roughness: 0.24,
-  metalness: 0.85,
-  clearcoat: 0.4,
+  color: 0xff7a18,
+  emissive: 0xff5500,
+  emissiveIntensity: 0.28,
+  roughness: 0.20,
+  metalness: 0.82,
+  clearcoat: 0.55,
 });
 const plinthTrimRing = new THREE.Mesh(
-  new THREE.TorusGeometry(2.79, 0.018, 12, 72),
+  new THREE.TorusGeometry(2.79, 0.022, 12, 72),
   plinthTrimMat
 );
 plinthTrimRing.rotation.x = Math.PI / 2;
@@ -512,74 +512,115 @@ manoRoot.add(createContactShadow(2.15, 2.15));
 const manoChar = new THREE.Group();
 manoRoot.add(manoChar);
 
-// Signature PBR Materials for Hero MANO
+// Warm Orange-Amber Spotlight Aura to give MANO vibrant contrast against the white/sky-blue stage
+const manoWarmLight = new THREE.PointLight(0xff8c2b, 1.35, 5.5, 1.6);
+manoWarmLight.position.set(0.85, 2.15, 1.85);
+manoRoot.add(manoWarmLight);
+
+// Signature PBR Materials for Hero MANO (Warm Ivory Shell + Energetic Orange-Amber & Mango-Gold Palette)
 const manoPorcelainMat = new THREE.MeshPhysicalMaterial({
-  color: 0xf7fbfc,
-  roughness: 0.15,
+  color: 0xfffaf2,
+  emissive: 0xff9e44,
+  emissiveIntensity: 0.04,
+  roughness: 0.14,
   roughnessMap: microGrainTex,
   metalness: 0.03,
   clearcoat: 1.0,
-  clearcoatRoughness: 0.06,
+  clearcoatRoughness: 0.05,
+  sheen: 0.38,
+  sheenColor: new THREE.Color(0xffe0c2),
+  sheenRoughness: 0.35,
   ior: 1.52,
-  reflectivity: 0.9,
-  envMapIntensity: 1.15,
+  reflectivity: 0.92,
+  envMapIntensity: 1.2,
 });
 
 const manoGoldMat = new THREE.MeshPhysicalMaterial({
-  color: 0xdfb15b,
-  roughness: 0.21,
-  metalness: 0.90,
-  clearcoat: 0.42,
-  clearcoatRoughness: 0.12,
-  envMapIntensity: 1.35,
+  color: 0xff6d00,
+  emissive: 0xff4800,
+  emissiveIntensity: 0.38,
+  roughness: 0.16,
+  metalness: 0.82,
+  clearcoat: 0.78,
+  clearcoatRoughness: 0.08,
+  envMapIntensity: 1.55,
+});
+
+const manoAmberAccentMat = new THREE.MeshPhysicalMaterial({
+  color: 0xffab00,
+  emissive: 0xff7700,
+  emissiveIntensity: 0.46,
+  roughness: 0.15,
+  metalness: 0.76,
+  clearcoat: 0.85,
+  clearcoatRoughness: 0.06,
+  envMapIntensity: 1.5,
 });
 
 const manoVisorMat = new THREE.MeshPhysicalMaterial({
-  color: 0x0a2329,
-  roughness: 0.05,
-  metalness: 0.10,
+  color: 0x071210,
+  roughness: 0.03,
+  metalness: 0.12,
   clearcoat: 1.0,
-  clearcoatRoughness: 0.03,
-  ior: 1.56,
+  clearcoatRoughness: 0.02,
+  ior: 1.58,
   reflectivity: 1.0,
-  envMapIntensity: 1.4,
+  envMapIntensity: 1.45,
 });
 
 const manoFaceGlowMat = new THREE.MeshPhysicalMaterial({
-  color: 0x7efce5,
-  emissive: 0x3ef0ce,
-  emissiveIntensity: 1.30,
-  roughness: 0.18,
-  clearcoat: 0.4,
+  color: 0x45f79f,
+  emissive: 0x26e885,
+  emissiveIntensity: 1.55,
+  roughness: 0.14,
+  clearcoat: 0.45,
+});
+
+const manoCheekBlushMat = new THREE.MeshPhysicalMaterial({
+  color: 0xff7043,
+  emissive: 0xff5722,
+  emissiveIntensity: 0.95,
+  roughness: 0.25,
+  transparent: true,
+  opacity: 0.82,
+});
+
+const manoCatchlightMat = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
 });
 
 const manoCoreEmblemMat = new THREE.MeshPhysicalMaterial({
-  color: 0x139ea6,
-  emissive: 0x15b8a6,
-  emissiveIntensity: 0.85,
-  roughness: 0.20,
-  metalness: 0.22,
-  clearcoat: 0.85,
+  color: 0xff7a18,
+  emissive: 0xff5500,
+  emissiveIntensity: 0.82,
+  roughness: 0.16,
+  metalness: 0.48,
+  clearcoat: 0.90,
 });
 
 const manoSproutMat = new THREE.MeshPhysicalMaterial({
-  color: 0x2ec486,
-  roughness: 0.30,
+  color: 0x68b818,
+  emissive: 0x2f7a08,
+  emissiveIntensity: 0.20,
+  roughness: 0.24,
   metalness: 0.02,
-  clearcoat: 0.58,
-  clearcoatRoughness: 0.18,
-  sheen: 0.55,
-  sheenColor: new THREE.Color(0xbefae0),
-  sheenRoughness: 0.42,
+  clearcoat: 0.62,
+  clearcoatRoughness: 0.16,
+  sheen: 0.60,
+  sheenColor: new THREE.Color(0xd9f99d),
+  sheenRoughness: 0.38,
 });
 
 const manoScarfMat = new THREE.MeshPhysicalMaterial({
-  color: 0x136a76,
-  roughness: 0.62,
-  metalness: 0.0,
-  sheen: 0.88,
-  sheenColor: new THREE.Color(0x88e6ea),
-  sheenRoughness: 0.45,
+  color: 0x16a34a,
+  emissive: 0x0d7a35,
+  emissiveIntensity: 0.18,
+  roughness: 0.32,
+  metalness: 0.18,
+  clearcoat: 0.45,
+  sheen: 0.75,
+  sheenColor: new THREE.Color(0x88f7be),
+  sheenRoughness: 0.42,
 });
 
 const metalMat = new THREE.MeshPhysicalMaterial({
@@ -590,22 +631,46 @@ const metalMat = new THREE.MeshPhysicalMaterial({
   envMapIntensity: 1.35,
 });
 
-// Grounded porcelain feet with golden ankle collars
+// Energetic Orange-Amber Stage Halo Ring under MANO on the White Plinth
+const manoStageHalo = new THREE.Mesh(
+  new THREE.TorusGeometry(0.68, 0.024, 14, 56),
+  manoAmberAccentMat
+);
+manoStageHalo.rotation.x = Math.PI / 2;
+manoStageHalo.position.y = 0.012;
+manoRoot.add(manoStageHalo);
+
+// Grounded warm ivory feet with dual-tone Energetic Orange + Emerald ankle collars
 [-0.25, 0.25].forEach((x) => {
-  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.185, 24, 18), manoPorcelainMat);
-  foot.scale.set(1.0, 0.68, 1.32);
+  const legColumn = new THREE.Mesh(new THREE.CapsuleGeometry(0.115, 0.18, 12, 18), manoPorcelainMat);
+  legColumn.position.set(x, 0.32, 0.02);
+  legColumn.castShadow = true;
+  manoChar.add(legColumn);
+
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.19, 26, 20), manoPorcelainMat);
+  foot.scale.set(1.02, 0.68, 1.34);
   foot.position.set(x, 0.125, 0.06);
   foot.castShadow = true;
   foot.receiveShadow = true;
   manoChar.add(foot);
 
-  const ankleRing = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.022, 10, 24), manoGoldMat);
-  ankleRing.rotation.x = Math.PI / 2;
-  ankleRing.position.set(x, 0.24, 0.04);
-  manoChar.add(ankleRing);
+  const footSole = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.03, 24), manoGoldMat);
+  footSole.scale.set(1.0, 1.0, 1.25);
+  footSole.position.set(x, 0.02, 0.06);
+  manoChar.add(footSole);
+
+  const ankleEmeraldRing = new THREE.Mesh(new THREE.TorusGeometry(0.138, 0.022, 10, 24), manoScarfMat);
+  ankleEmeraldRing.rotation.x = Math.PI / 2;
+  ankleEmeraldRing.position.set(x, 0.225, 0.04);
+  manoChar.add(ankleEmeraldRing);
+
+  const ankleOrangeRing = new THREE.Mesh(new THREE.TorusGeometry(0.142, 0.020, 10, 24), manoGoldMat);
+  ankleOrangeRing.rotation.x = Math.PI / 2;
+  ankleOrangeRing.position.set(x, 0.255, 0.04);
+  manoChar.add(ankleOrangeRing);
 });
 
-// Porcelain torso + luminous chest emblem + M+ gold ring
+// Warm porcelain torso + Sculpted 3D Orange-Gold "M+" Chest Emblem (MANO V1.0 Signature)
 const torso = new THREE.Mesh(new THREE.SphereGeometry(0.56, 36, 28), manoPorcelainMat);
 torso.scale.set(1.0, 1.08, 0.90);
 torso.position.y = 0.78;
@@ -613,114 +678,229 @@ torso.castShadow = true;
 torso.receiveShadow = true;
 manoChar.add(torso);
 
-const chestBezel = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.026, 12, 32), manoGoldMat);
-chestBezel.position.set(0, 0.82, 0.48);
-manoChar.add(chestBezel);
+// Warm orange-amber belt/waist accent line for extra visual pop
+const waistTrim = new THREE.Mesh(new THREE.TorusGeometry(0.49, 0.016, 10, 40), manoAmberAccentMat);
+waistTrim.rotation.x = Math.PI / 2;
+waistTrim.scale.set(1.0, 0.89, 1.0);
+waistTrim.position.set(0, 0.52, 0.0);
+manoChar.add(waistTrim);
 
-const chestCore = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 28), manoCoreEmblemMat);
-chestCore.rotation.x = Math.PI / 2;
-chestCore.position.set(0, 0.82, 0.47);
-manoChar.add(chestCore);
+// Sculpted 3D "M+" Chest Logo Group
+const chestLogoGroup = new THREE.Group();
+chestLogoGroup.position.set(0, 0.83, 0.495);
+chestLogoGroup.rotation.x = -0.08;
+manoChar.add(chestLogoGroup);
 
-// Velvet stethoscope collar + chrome clinical disc
-const stethCollar = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.036, 14, 36), manoScarfMat);
-stethCollar.rotation.x = Math.PI * 0.44;
-stethCollar.position.set(0, 1.30, 0.05);
+// Subtle warm glowing badge plate behind the M+ emblem
+const chestAuraRing = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.014, 12, 36), manoCoreEmblemMat);
+chestAuraRing.position.set(0, 0.0, -0.015);
+chestLogoGroup.add(chestAuraRing);
+
+// Left & Right vertical pillars of "M"
+[-0.105, 0.105].forEach((mx) => {
+  const mPillar = new THREE.Mesh(new THREE.CapsuleGeometry(0.030, 0.15, 10, 16), manoGoldMat);
+  mPillar.position.set(mx, -0.02, 0.01);
+  mPillar.castShadow = true;
+  chestLogoGroup.add(mPillar);
+});
+
+// Left & Right diagonal inner strokes of "M"
+[-1, 1].forEach((dir) => {
+  const mDiag = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.115, 10, 16), manoAmberAccentMat);
+  mDiag.position.set(dir * 0.052, -0.005, 0.016);
+  mDiag.rotation.z = dir * 0.56;
+  mDiag.castShadow = true;
+  chestLogoGroup.add(mDiag);
+});
+
+// Floating Orange-Gold Diamond Droplet above center of "M"
+const mDiamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.052, 0), manoCoreEmblemMat);
+mDiamond.scale.set(0.95, 1.25, 0.55);
+mDiamond.position.set(0, 0.115, 0.02);
+chestLogoGroup.add(mDiamond);
+
+// Emerald "+" Cross at top-right of "M"
+const plusVert = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.076, 0.024), manoScarfMat);
+plusVert.position.set(0.165, 0.105, 0.015);
+const plusHoriz = new THREE.Mesh(new THREE.BoxGeometry(0.076, 0.024, 0.024), manoScarfMat);
+plusHoriz.position.set(0.165, 0.105, 0.015);
+chestLogoGroup.add(plusVert, plusHoriz);
+
+// Dual-Tone Neck Collar Ring (Thick Vibrant Orange-Gold Upper + Emerald Lower Trim)
+const stethCollar = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.042, 16, 40), manoGoldMat);
+stethCollar.rotation.x = Math.PI * 0.5;
+stethCollar.position.set(0, 1.31, 0.02);
 stethCollar.castShadow = true;
 manoChar.add(stethCollar);
 
-const stethDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.034, 24), metalMat);
-stethDisc.rotation.x = Math.PI / 2;
-stethDisc.position.set(0.24, 1.03, 0.44);
-manoChar.add(stethDisc);
+const neckEmeraldCollar = new THREE.Mesh(new THREE.TorusGeometry(0.365, 0.024, 14, 36), manoScarfMat);
+neckEmeraldCollar.rotation.x = Math.PI * 0.5;
+neckEmeraldCollar.position.set(0, 1.265, 0.02);
+manoChar.add(neckEmeraldCollar);
 
-// Head chassis + golden visor bezel + optical smoked visor + glowing mint face
+// Head chassis + Energetic Orange Side Ear Pods + Thick Orange-Amber Visor Bezel + Glowing Ring-Eyes
 const head = new THREE.Mesh(new THREE.SphereGeometry(0.50, 36, 28), manoPorcelainMat);
-head.scale.set(1.08, 0.96, 0.94);
+head.scale.set(1.12, 0.96, 0.95);
 head.position.y = 1.72;
 head.castShadow = true;
 head.receiveShadow = true;
 manoChar.add(head);
 
-const visorBezel = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.035, 16, 40), manoGoldMat);
-visorBezel.scale.set(1.16, 0.86, 1.0);
-visorBezel.position.set(0, 1.72, 0.37);
+[-0.54, 0.54].forEach((ex) => {
+  const sign = ex > 0 ? 1 : -1;
+  const earPod = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.09, 28), manoPorcelainMat);
+  earPod.rotation.z = Math.PI / 2;
+  earPod.position.set(ex, 1.72, 0.02);
+  earPod.castShadow = true;
+  manoChar.add(earPod);
+
+  const earOrangeCap = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.025, 24), manoCoreEmblemMat);
+  earOrangeCap.rotation.z = Math.PI / 2;
+  earOrangeCap.position.set(ex + sign * 0.042, 1.72, 0.02);
+  manoChar.add(earOrangeCap);
+
+  const earRing = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.022, 12, 28), manoGoldMat);
+  earRing.rotation.y = Math.PI / 2;
+  earRing.position.set(ex + sign * 0.036, 1.72, 0.02);
+  manoChar.add(earRing);
+});
+
+const visorBezel = new THREE.Mesh(new THREE.TorusGeometry(0.362, 0.052, 18, 48), manoGoldMat);
+visorBezel.scale.set(1.18, 0.86, 1.05);
+visorBezel.position.set(0, 1.72, 0.365);
+visorBezel.castShadow = true;
 manoChar.add(visorBezel);
 
-const visorScreen = new THREE.Mesh(new THREE.SphereGeometry(0.41, 32, 24), manoVisorMat);
-visorScreen.scale.set(0.95, 0.72, 0.56);
-visorScreen.position.set(0, 1.72, 0.25);
+const visorInnerAmberRim = new THREE.Mesh(new THREE.TorusGeometry(0.335, 0.018, 14, 44), manoAmberAccentMat);
+visorInnerAmberRim.scale.set(1.18, 0.86, 1.0);
+visorInnerAmberRim.position.set(0, 1.72, 0.392);
+manoChar.add(visorInnerAmberRim);
+
+const visorScreen = new THREE.Mesh(new THREE.SphereGeometry(0.415, 32, 24), manoVisorMat);
+visorScreen.scale.set(0.96, 0.73, 0.56);
+visorScreen.position.set(0, 1.72, 0.255);
 manoChar.add(visorScreen);
 
-[-0.14, 0.14].forEach((x) => {
-  const eye = new THREE.Mesh(new THREE.CapsuleGeometry(0.038, 0.046, 8, 14), manoFaceGlowMat);
-  eye.position.set(x, 1.76, 0.47);
-  manoChar.add(eye);
+// Glowing Ring-Eyes with Crisp White Specular Catchlights + Warm Coral-Orange Cheek Blushes
+[-0.145, 0.145].forEach((x) => {
+  const eyeRing = new THREE.Mesh(new THREE.TorusGeometry(0.060, 0.016, 14, 32), manoFaceGlowMat);
+  eyeRing.position.set(x, 1.755, 0.476);
+  manoChar.add(eyeRing);
+
+  const catchlight = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 12), manoCatchlightMat);
+  catchlight.position.set(x - 0.024, 1.778, 0.488);
+  manoChar.add(catchlight);
+
+  const secondaryDot = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 10), manoCatchlightMat);
+  secondaryDot.position.set(x + 0.022, 1.732, 0.486);
+  manoChar.add(secondaryDot);
+});
+
+[-0.225, 0.225].forEach((cx) => {
+  const cheekGlow = new THREE.Mesh(new THREE.SphereGeometry(0.032, 14, 12), manoCheekBlushMat);
+  cheekGlow.scale.set(1.35, 0.72, 0.35);
+  cheekGlow.position.set(cx, 1.668, 0.458);
+  manoChar.add(cheekGlow);
 });
 
 const smileCurve = new THREE.Mesh(
-  new THREE.TorusGeometry(0.095, 0.017, 10, 24, Math.PI * 0.75),
+  new THREE.TorusGeometry(0.088, 0.017, 12, 28, Math.PI * 0.76),
   manoFaceGlowMat
 );
-smileCurve.rotation.z = Math.PI * 1.125;
-smileCurve.position.set(0, 1.68, 0.475);
+smileCurve.rotation.z = Math.PI * 1.12;
+smileCurve.position.set(0, 1.678, 0.482);
 manoChar.add(smileCurve);
 
-// Signature green sprout + golden crown mount on head
-const sproutCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.082, 0.055, 24), manoGoldMat);
+// Signature MANO V1.0 Single Lush Curved Leaf Sprout + Dual Orange-Gold Base Mount on Head
+const sproutCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.076, 0.095, 0.062, 24), manoGoldMat);
 sproutCollar.position.set(0, 2.20, 0);
 manoChar.add(sproutCollar);
 
-const sproutStem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.19, 12), manoSproutMat);
-sproutStem.position.set(0, 2.30, 0);
+const sproutInnerRing = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.016, 10, 24), manoAmberAccentMat);
+sproutInnerRing.rotation.x = Math.PI / 2;
+sproutInnerRing.position.set(0, 2.232, 0);
+manoChar.add(sproutInnerRing);
+
+const sproutStem = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.20, 14), manoSproutMat);
+sproutStem.position.set(0.015, 2.30, 0);
+sproutStem.rotation.z = -0.18;
 sproutStem.castShadow = true;
 manoChar.add(sproutStem);
 
-[-1, 1].forEach((dir) => {
-  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), manoSproutMat);
-  leaf.scale.set(1.25, 0.34, 0.72);
-  leaf.position.set(dir * 0.085, 2.40, 0.01);
-  leaf.rotation.z = dir * 0.45;
-  leaf.castShadow = true;
-  manoChar.add(leaf);
-});
+// Lush main sculpted leaf tilting gracefully to the right (matching MANO V1.0 reference sheet)
+const mainLeaf = new THREE.Mesh(new THREE.SphereGeometry(0.135, 20, 16), manoSproutMat);
+mainLeaf.scale.set(1.48, 0.38, 0.82);
+mainLeaf.position.set(0.135, 2.41, 0.01);
+mainLeaf.rotation.z = 0.38;
+mainLeaf.rotation.y = -0.12;
+mainLeaf.castShadow = true;
+manoChar.add(mainLeaf);
 
-// Articulated waving arms with golden shoulder/wrist trim
+const leafVein = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.19, 8, 12), manoAmberAccentMat);
+leafVein.position.set(0.125, 2.415, 0.032);
+leafVein.rotation.z = -1.18;
+manoChar.add(leafVein);
+
+// Helper to build articulated MANO V1.0 arm with shoulder rings, elbow band, dual wrist cuff, and 3D hand + fingers
+function populateManoArm(armGroup, isRightArm) {
+  const shoulderEmerald = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.022, 12, 24), manoScarfMat);
+  shoulderEmerald.rotation.x = Math.PI / 2;
+  armGroup.add(shoulderEmerald);
+
+  const shoulderOrange = new THREE.Mesh(new THREE.SphereGeometry(0.112, 18, 14), manoGoldMat);
+  armGroup.add(shoulderOrange);
+
+  const armMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.106, 0.32, 14, 22), manoPorcelainMat);
+  armMesh.position.y = -0.19;
+  armMesh.castShadow = true;
+  armGroup.add(armMesh);
+
+  const elbowEmeraldRing = new THREE.Mesh(new THREE.TorusGeometry(0.106, 0.018, 10, 24), manoScarfMat);
+  elbowEmeraldRing.rotation.x = Math.PI / 2;
+  elbowEmeraldRing.position.y = -0.17;
+  armGroup.add(elbowEmeraldRing);
+
+  const wristOrangeCuff = new THREE.Mesh(new THREE.TorusGeometry(0.102, 0.022, 12, 24), manoGoldMat);
+  wristOrangeCuff.rotation.x = Math.PI / 2;
+  wristOrangeCuff.position.y = -0.34;
+  armGroup.add(wristOrangeCuff);
+
+  const wristEmeraldCuff = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.015, 10, 24), manoScarfMat);
+  wristEmeraldCuff.rotation.x = Math.PI / 2;
+  wristEmeraldCuff.position.y = -0.368;
+  armGroup.add(wristEmeraldCuff);
+
+  // Rounded 3D Hand Palm + Thumb + 3 Cute Finger Capsules
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(0.096, 18, 14), manoPorcelainMat);
+  palm.scale.set(1.05, 0.92, 0.78);
+  palm.position.y = -0.435;
+  palm.castShadow = true;
+  armGroup.add(palm);
+
+  const thumbDir = isRightArm ? -1 : 1;
+  const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.055, 8, 12), manoPorcelainMat);
+  thumb.position.set(thumbDir * 0.088, -0.425, 0.025);
+  thumb.rotation.z = thumbDir * 0.65;
+  armGroup.add(thumb);
+
+  [-0.045, 0.0, 0.045].forEach((fx) => {
+    const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.065, 8, 12), manoPorcelainMat);
+    finger.position.set(fx, -0.515, 0.01);
+    armGroup.add(finger);
+  });
+}
+
 const leftArmGroup = new THREE.Group();
-leftArmGroup.position.set(-0.56, 0.96, 0.02);
-leftArmGroup.rotation.z = 0.48;
+leftArmGroup.position.set(-0.57, 0.98, 0.02);
+leftArmGroup.rotation.z = 0.44;
 manoChar.add(leftArmGroup);
-
-const leftShoulderRing = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), manoGoldMat);
-leftArmGroup.add(leftShoulderRing);
-
-const leftArmMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.34, 12, 20), manoPorcelainMat);
-leftArmMesh.position.y = -0.20;
-leftArmMesh.castShadow = true;
-leftArmGroup.add(leftArmMesh);
-
-const leftCuff = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.018, 10, 24), manoGoldMat);
-leftCuff.rotation.x = Math.PI / 2;
-leftCuff.position.y = -0.35;
-leftArmGroup.add(leftCuff);
+populateManoArm(leftArmGroup, false);
 
 const rightArmGroup = new THREE.Group();
-rightArmGroup.position.set(0.56, 1.05, 0.04);
+rightArmGroup.position.set(0.57, 1.05, 0.05);
 rightArmGroup.rotation.z = -2.28;
 manoChar.add(rightArmGroup);
-
-const rightShoulderRing = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), manoGoldMat);
-rightArmGroup.add(rightShoulderRing);
-
-const rightArmMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.34, 12, 20), manoPorcelainMat);
-rightArmMesh.position.y = -0.20;
-rightArmMesh.castShadow = true;
-rightArmGroup.add(rightArmMesh);
-
-const rightCuff = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.018, 10, 24), manoGoldMat);
-rightCuff.rotation.x = Math.PI / 2;
-rightCuff.position.y = -0.35;
-rightArmGroup.add(rightCuff);
+populateManoArm(rightArmGroup, true);
 
 tagInteractive(manoChar, 'mano');
 
@@ -1316,40 +1496,41 @@ window.Mano3D = {
   },
   setThemeMode(isDark) {
     const dark = Boolean(isDark);
-    const bgHex = dark ? 0x08191f : 0xf0f7f8;
-    const floorHex = dark ? 0x0d2128 : 0xe4f0f2;
+    const bgHex = dark ? 0x08191f : 0xf4faff;
+    const floorHex = dark ? 0x0d2128 : 0xe6f3fe;
     const plinthHex = dark ? 0x142e38 : 0xffffff;
     scene.background.setHex(bgHex);
     scene.fog.color.setHex(bgHex);
     floorMesh.material.color.setHex(floorHex);
     plinthMat.color.setHex(plinthHex);
-    plinthMat.roughness = dark ? 0.20 : 0.24;
-    plinthMat.clearcoat = dark ? 0.62 : 0.55;
-    plinthTrimMat.emissiveIntensity = dark ? 0.38 : 0.08;
+    plinthMat.roughness = dark ? 0.20 : 0.20;
+    plinthMat.clearcoat = dark ? 0.65 : 0.65;
+    plinthTrimMat.emissiveIntensity = dark ? 0.45 : 0.28;
 
-    scene.environmentIntensity = dark ? 0.62 : 0.78;
-    renderer.toneMappingExposure = dark ? 1.12 : 1.04;
+    scene.environmentIntensity = dark ? 0.62 : 0.82;
+    renderer.toneMappingExposure = dark ? 1.12 : 1.06;
 
     keyLight.color.setHex(dark ? 0xf4fbff : 0xfff8ef);
-    keyLight.intensity = dark ? 1.75 : 2.05;
+    keyLight.intensity = dark ? 1.75 : 2.10;
     fillLight.color.setHex(dark ? 0x56b2c4 : 0xd9f4f8);
-    fillLight.intensity = dark ? 0.58 : 0.78;
-    rimLight.color.setHex(dark ? 0x67e8de : 0xe9fcff);
-    rimLight.intensity = dark ? 1.38 : 0.76;
+    fillLight.intensity = dark ? 0.58 : 0.80;
+    rimLight.color.setHex(dark ? 0xffb366 : 0xfff0d9);
+    rimLight.intensity = dark ? 1.38 : 0.92;
 
     hemiLight.color.setHex(dark ? 0x3b8696 : 0xe8f9fc);
-    hemiLight.groundColor.setHex(dark ? 0x0b1f26 : 0xc5dbd9);
-    hemiLight.intensity = dark ? 0.50 : 0.74;
+    hemiLight.groundColor.setHex(dark ? 0x0b1f26 : 0xd4eaf7);
+    hemiLight.intensity = dark ? 0.50 : 0.76;
 
-    manoFaceGlowMat.emissiveIntensity = dark ? 1.50 : 1.25;
-    manoCoreEmblemMat.emissiveIntensity = dark ? 1.05 : 0.75;
-    moteMat.emissiveIntensity = dark ? 0.42 : 0.14;
+    manoFaceGlowMat.emissiveIntensity = dark ? 1.60 : 1.45;
+    manoCoreEmblemMat.emissiveIntensity = dark ? 1.10 : 0.85;
+    manoGoldMat.emissiveIntensity = dark ? 0.48 : 0.38;
+    moteMat.emissiveIntensity = dark ? 0.42 : 0.16;
     for (let i = 0; i < contactShadowMats.length; i++) {
-      contactShadowMats[i].opacity = dark ? 0.90 : 0.78;
+      contactShadowMats[i].opacity = dark ? 0.90 : 0.80;
     }
 
-    document.documentElement.style.background = dark ? '#08191f' : '#f0f7f8';
-    document.body.style.background = dark ? '#08191f' : '#f0f7f8';
+    document.documentElement.style.background = dark ? '#08191f' : '#f4faff';
+    document.body.style.background = dark ? '#08191f' : '#f4faff';
     markInteractive(900);
   },
   selectSquadMember(memberId) {
@@ -1364,9 +1545,9 @@ window.Mano3D = {
       manoCoreEmblemMat.emissive.setHex(picked.userData.emissiveColor);
       plinthTrimMat.emissive.setHex(picked.userData.emissiveColor);
     } else {
-      manoCoreEmblemMat.color.setHex(0x139ea6);
-      manoCoreEmblemMat.emissive.setHex(0x15b8a6);
-      plinthTrimMat.emissive.setHex(0x0f8c79);
+      manoCoreEmblemMat.color.setHex(0xff7a18);
+      manoCoreEmblemMat.emissive.setHex(0xff5500);
+      plinthTrimMat.emissive.setHex(0xff5500);
     }
     markInteractive(1600);
   },

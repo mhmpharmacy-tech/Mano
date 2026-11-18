@@ -561,7 +561,7 @@ fun ManoOrbitalHeroStage(
         modifier =
           Modifier
             .fillMaxWidth()
-            .height(if (hasDualRings) 280.dp else 244.dp)
+            .height(if (hasDualRings) 316.dp else 276.dp)
             .pointerInput(innerCount, outerCount, hasDualRings) {
               val dragPxPerStep = 104f
               val velocityTracker = VelocityTracker()
@@ -612,33 +612,38 @@ fun ManoOrbitalHeroStage(
         val maxRadiusY = min(orbitCenterY - safeTopPad, heightPx - orbitCenterY - safeBottomPad)
           .coerceAtLeast(with(density) { 64.dp.toPx() })
 
-        val radiusXOuter = min(maxRadiusX, with(density) { 164.dp.toPx() })
-        val radiusYOuter = min(maxRadiusY, with(density) { 102.dp.toPx() })
+        val radiusXOuter = min(maxRadiusX, with(density) { 172.dp.toPx() })
+        val radiusYOuter = min(maxRadiusY, with(density) { 114.dp.toPx() })
         val radiusXInner =
-          if (hasDualRings) radiusXOuter * 0.67f
-          else min(maxRadiusX, with(density) { 118.dp.toPx() })
+          if (hasDualRings) radiusXOuter * 0.69f
+          else min(maxRadiusX, with(density) { 126.dp.toPx() })
         val radiusYInner =
-          if (hasDualRings) radiusYOuter * 0.67f
-          else min(maxRadiusY, with(density) { 74.dp.toPx() })
+          if (hasDualRings) radiusYOuter * 0.69f
+          else min(maxRadiusY, with(density) { 82.dp.toPx() })
 
         // Galactic Dual-Ring Tracks + Crown Zenith Spotlight Glow + Star Dust
         Canvas(modifier = Modifier.fillMaxSize()) {
           val orbitCenter = Offset(centerX, orbitCenterY)
           val trackAlpha = orbitTrackAlpha.value
           val exp = orbitExpand.value
+          val mascotCenter = Offset(centerX, orbitCenterY + with(density) { (if (hasDualRings) 16.dp else 14.dp).toPx() })
 
-          // Nebula radial aura behind MANO & galactic wheel
+          // Wide Light-Blue & Soft-Green radial aura behind MANO & galactic wheel
           drawCircle(
             brush =
               Brush.radialGradient(
                 colors =
                   listOf(
-                    animatedAccent.copy(alpha = (if (isDark) 0.16f else 0.10f) * mascotAlpha.value),
-                    skyAccent.copy(alpha = (if (isDark) 0.08f else 0.04f) * mascotAlpha.value),
+                    (if (isDark) DarkSky else com.example.ui.theme.SoftSkyHalo).copy(
+                      alpha = (if (isDark) 0.18f else 0.78f) * mascotAlpha.value
+                    ),
+                    (if (isDark) TealGlow else com.example.ui.theme.SoftMintHalo).copy(
+                      alpha = (if (isDark) 0.12f else 0.58f) * mascotAlpha.value
+                    ),
                     Color.Transparent,
                   ),
                 center = orbitCenter,
-                radius = radiusXOuter * 1.12f * exp.coerceAtLeast(0.45f),
+                radius = radiusXOuter * 1.16f * exp.coerceAtLeast(0.45f),
               )
           )
 
@@ -648,7 +653,8 @@ fun ManoOrbitalHeroStage(
               Brush.radialGradient(
                 colors =
                   listOf(
-                    (if (isDark) DarkSurfaceHigh else AquaSurface).copy(alpha = (if (isDark) 0.28f else 0.22f) * trackAlpha),
+                    (if (isDark) DarkSurfaceHigh else PureWhite).copy(alpha = (if (isDark) 0.30f else 0.88f) * trackAlpha),
+                    (if (isDark) DarkSurface else AquaSurface).copy(alpha = (if (isDark) 0.18f else 0.42f) * trackAlpha),
                     Color.Transparent,
                   ),
                 center = orbitCenter,
@@ -658,17 +664,57 @@ fun ManoOrbitalHeroStage(
             size = Size(radiusXOuter * 2f * exp, radiusYOuter * 2f * exp),
           )
 
+          // Luminous outer energy halo ring directly around the 132dp MANO centerpiece
+          val haloRingRadius = with(density) { 75.dp.toPx() }
+          drawCircle(
+            brush =
+              Brush.radialGradient(
+                colors =
+                  listOf(
+                    PureWhite.copy(alpha = (if (isDark) 0.16f else 0.92f) * mascotAlpha.value),
+                    animatedAccent.copy(alpha = (if (isDark) 0.28f else 0.22f) * mascotAlpha.value),
+                    com.example.ui.theme.SkyCare.copy(alpha = (if (isDark) 0.18f else 0.16f) * mascotAlpha.value),
+                    Color.Transparent,
+                  ),
+                center = mascotCenter,
+                radius = haloRingRadius * 1.24f,
+              ),
+            center = mascotCenter,
+            radius = haloRingRadius * 1.24f,
+          )
+          drawCircle(
+            brush =
+              Brush.sweepGradient(
+                colors =
+                  listOf(
+                    animatedAccent.copy(alpha = 0.72f * mascotAlpha.value),
+                    com.example.ui.theme.SkyCare.copy(alpha = 0.75f * mascotAlpha.value),
+                    TealGlow.copy(alpha = 0.80f * mascotAlpha.value),
+                    goldAccent.copy(alpha = 0.68f * mascotAlpha.value),
+                    animatedAccent.copy(alpha = 0.72f * mascotAlpha.value),
+                  ),
+                center = mascotCenter,
+              ),
+            center = mascotCenter,
+            radius = haloRingRadius,
+            style =
+              Stroke(
+                width = with(density) { 2.4.dp.toPx() },
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(22f, 10f), innerContinuous * 18f),
+              ),
+          )
+
           if (hasDualRings) {
             val outerStrokeColor =
-              (if (activeRing == GalacticRing.OUTER) animatedAccent else skyAccent)
-                .copy(alpha = (if (activeRing == GalacticRing.OUTER) 0.45f else if (isDark) 0.24f else 0.16f) * trackAlpha)
+              (if (activeRing == GalacticRing.OUTER) animatedAccent else com.example.ui.theme.SkyCare)
+                .copy(alpha = (if (activeRing == GalacticRing.OUTER) 0.50f else if (isDark) 0.26f else 0.28f) * trackAlpha)
             drawOval(
               color = outerStrokeColor,
               topLeft = Offset(centerX - radiusXOuter * exp, orbitCenterY - radiusYOuter * exp),
               size = Size(radiusXOuter * 2f * exp, radiusYOuter * 2f * exp),
               style =
                 Stroke(
-                  width = if (activeRing == GalacticRing.OUTER) 4f else 2.5f,
+                  width = if (activeRing == GalacticRing.OUTER) 4f else 2.6f,
                   pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
                 ),
             )
@@ -680,8 +726,8 @@ fun ManoOrbitalHeroStage(
               val sx = centerX + (radiusXOuter * exp) * cos(rad).toFloat()
               val sy = orbitCenterY + (radiusYOuter * exp) * sin(rad).toFloat()
               drawCircle(
-                color = (if (i % 2 == 0) goldAccent else primaryGlow).copy(alpha = 0.55f * trackAlpha),
-                radius = if (i % 2 == 0) 4.2f else 3f,
+                color = (if (i % 2 == 0) com.example.ui.theme.SkyCare else primaryGlow).copy(alpha = 0.62f * trackAlpha),
+                radius = if (i % 2 == 0) 4.4f else 3.2f,
                 center = Offset(sx, sy),
               )
             }
@@ -689,14 +735,14 @@ fun ManoOrbitalHeroStage(
 
           val innerStrokeColor =
             (if (activeRing == GalacticRing.INNER || !hasDualRings) animatedAccent else primaryGlow)
-              .copy(alpha = (if (activeRing == GalacticRing.INNER || !hasDualRings) 0.48f else if (isDark) 0.24f else 0.18f) * trackAlpha)
+              .copy(alpha = (if (activeRing == GalacticRing.INNER || !hasDualRings) 0.54f else if (isDark) 0.26f else 0.30f) * trackAlpha)
           drawOval(
             color = innerStrokeColor,
             topLeft = Offset(centerX - radiusXInner * exp, orbitCenterY - radiusYInner * exp),
             size = Size(radiusXInner * 2f * exp, radiusYInner * 2f * exp),
             style =
               Stroke(
-                width = if (activeRing == GalacticRing.INNER || !hasDualRings) 4f else 2.5f,
+                width = if (activeRing == GalacticRing.INNER || !hasDualRings) 4f else 2.6f,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f),
               ),
           )
@@ -710,30 +756,30 @@ fun ManoOrbitalHeroStage(
               Brush.radialGradient(
                 colors =
                   listOf(
-                    goldAccent.copy(alpha = (if (isDark) 0.34f else 0.24f) * trackAlpha),
-                    animatedAccent.copy(alpha = (if (isDark) 0.18f else 0.10f) * trackAlpha),
+                    com.example.ui.theme.SkyCare.copy(alpha = (if (isDark) 0.34f else 0.26f) * trackAlpha),
+                    animatedAccent.copy(alpha = (if (isDark) 0.20f else 0.14f) * trackAlpha),
                     Color.Transparent,
                   ),
                 center = crownCenter,
-                radius = with(density) { 46.dp.toPx() },
+                radius = with(density) { 48.dp.toPx() },
               ),
-            radius = with(density) { 46.dp.toPx() },
+            radius = with(density) { 48.dp.toPx() },
             center = crownCenter,
           )
 
           if (tapHaloPulse.value > 0.01f) {
             val pulseProgress = 1f - tapHaloPulse.value
             drawCircle(
-              color = animatedAccent.copy(alpha = 0.32f * tapHaloPulse.value),
-              radius = with(density) { (56.dp + 38.dp * pulseProgress).toPx() },
-              center = Offset(centerX, orbitCenterY + with(density) { 10.dp.toPx() }),
-              style = Stroke(width = 4.5f),
+              color = animatedAccent.copy(alpha = 0.36f * tapHaloPulse.value),
+              radius = with(density) { (68.dp + 42.dp * pulseProgress).toPx() },
+              center = mascotCenter,
+              style = Stroke(width = 4.8f),
             )
           }
         }
 
-        // Prominent Centerpiece MANO Mascot (Spring Entrance + Idle Breathing + Interactive Tap Bounce)
-        val mascotSize = if (hasDualRings) 98.dp else 108.dp
+        // Prominent 132dp 3D Studio Centerpiece MANO Mascot with Luminous Ring
+        val mascotSize = if (maxWidth < 280.dp) 116.dp else 132.dp
         val activeBreatheScale = if (animatorsEnabled) 1f + (breatheScale - 1f) * mascotAlpha.value else 1f
         val activeBreatheFloatDp = if (animatorsEnabled) breatheFloatDp * mascotAlpha.value else 0f
         val combinedScale = mascotScale.value * activeBreatheScale * tapBounceScale.value
@@ -745,8 +791,8 @@ fun ManoOrbitalHeroStage(
           modifier =
             Modifier
               .align(Alignment.Center)
-              .offset(y = if (hasDualRings) 18.dp else 16.dp)
-              .size(mascotSize + 10.dp)
+              .offset(y = if (hasDualRings) 16.dp else 14.dp)
+              .size(mascotSize + 14.dp)
               .zIndex(10f)
               .graphicsLayer {
                 alpha = mascotAlpha.value
@@ -780,55 +826,114 @@ fun ManoOrbitalHeroStage(
               .semantics { contentDescription = "شخصیت مانو، برای پرش شاد ضربه بزنید" }
               .testTag("mano_mascot_touch"),
         ) {
+          // Outer luminous glass halo ring with warm Orange-Amber & Sky-Mint glow
           Box(
             contentAlignment = Alignment.Center,
             modifier =
               Modifier
-                .size(mascotSize + 10.dp)
-                .shadow(
-                  elevation = 12.dp,
+                .fillMaxSize()
+                .background(
+                  Brush.radialGradient(
+                    colors =
+                      listOf(
+                        PureWhite.copy(alpha = if (isDark) 0.26f else 0.98f),
+                        com.example.ui.theme.OrangeSurface.copy(alpha = if (isDark) 0.24f else 0.78f),
+                        com.example.ui.theme.SoftSkyHalo.copy(alpha = if (isDark) 0.22f else 0.72f),
+                      )
+                  ),
                   shape = CircleShape,
-                  ambientColor = animatedAccent.copy(alpha = 0.28f),
-                  spotColor = goldAccent.copy(alpha = 0.28f),
                 )
-                .clip(CircleShape)
-                .background(Color(0xFFF0F8F7)),
+                .border(
+                  width = 2.0.dp,
+                  brush =
+                    Brush.linearGradient(
+                      colors =
+                        listOf(
+                          com.example.ui.theme.OrangeCare.copy(alpha = 0.85f),
+                          com.example.ui.theme.MangoCare.copy(alpha = 0.82f),
+                          com.example.ui.theme.SkyCare.copy(alpha = 0.70f),
+                          TealGlow.copy(alpha = 0.75f),
+                        )
+                    ),
+                  shape = CircleShape,
+                )
+                .padding(5.dp),
           ) {
-            Image(
-              painter = painterResource(id = R.drawable.img_mano_hero_clean),
-              contentDescription = "شخصیت رسمی مانو، ربات سفید با چهره سبز و برگ سبز روی سر",
-              contentScale = ContentScale.Crop,
-              alignment = Alignment.Center,
-              modifier = Modifier.fillMaxSize().clip(CircleShape),
-            )
-            // Soft perimeter glow + glowing metallic ring on top so MANO fits edge-to-edge inside the circle
             Box(
+              contentAlignment = Alignment.Center,
               modifier =
                 Modifier
-                  .fillMaxSize()
+                  .size(mascotSize)
+                  .shadow(
+                    elevation = 18.dp,
+                    shape = CircleShape,
+                    ambientColor = com.example.ui.theme.OrangeCare.copy(alpha = 0.42f),
+                    spotColor = com.example.ui.theme.MangoCare.copy(alpha = 0.36f),
+                  )
+                  .clip(CircleShape)
                   .background(
+                    Brush.radialGradient(
+                      colors =
+                        listOf(
+                          PureWhite,
+                          Color(0xFFFFF5EB),
+                          Color(0xFFEAF7FF),
+                        )
+                    )
+                  ),
+            ) {
+              Image(
+                painter = painterResource(id = R.drawable.img_mano_v1_orange_hero),
+                contentDescription = "شخصیت رسمی مانو (نسخه مرجع V1.0)، ربات سه‌بعدی سفید و نارنجی با چشمان درخشان، نشان M+ و برگ سبز روی سر",
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+              )
+              // 3D studio rim lighting + luminous multi-stop ring
+              Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCircle(
+                  brush =
                     Brush.radialGradient(
                       colors =
                         listOf(
                           Color.Transparent,
                           Color.Transparent,
-                          animatedAccent.copy(alpha = if (isDark) 0.26f else 0.14f),
+                          com.example.ui.theme.OrangeCare.copy(alpha = if (isDark) 0.22f else 0.14f),
+                          com.example.ui.theme.MangoCare.copy(alpha = if (isDark) 0.28f else 0.20f),
                         )
                     )
-                  )
-                  .border(
-                    width = 2.6.dp,
-                    brush =
-                      Brush.linearGradient(
-                        listOf(
-                          animatedAccent.copy(alpha = 0.88f),
-                          goldAccent.copy(alpha = 0.88f),
-                          TealGlow.copy(alpha = 0.82f),
-                        )
-                      ),
-                    shape = CircleShape,
-                  )
-            )
+                )
+                // Top-left 3D glass specular highlight arc
+                drawArc(
+                  color = PureWhite.copy(alpha = 0.90f),
+                  startAngle = 200f,
+                  sweepAngle = 105f,
+                  useCenter = false,
+                  topLeft = Offset(size.width * 0.07f, size.height * 0.06f),
+                  size = Size(size.width * 0.86f, size.height * 0.52f),
+                  style = Stroke(width = 3.2.dp.toPx()),
+                )
+              }
+              Box(
+                modifier =
+                  Modifier
+                    .fillMaxSize()
+                    .border(
+                      width = 3.4.dp,
+                      brush =
+                        Brush.sweepGradient(
+                          listOf(
+                            com.example.ui.theme.OrangeCare.copy(alpha = 0.96f),
+                            com.example.ui.theme.MangoCare.copy(alpha = 0.94f),
+                            TealGlow.copy(alpha = 0.92f),
+                            com.example.ui.theme.SkyCare.copy(alpha = 0.90f),
+                            com.example.ui.theme.OrangeCare.copy(alpha = 0.96f),
+                          )
+                        ),
+                      shape = CircleShape,
+                    )
+              )
+            }
           }
         }
 

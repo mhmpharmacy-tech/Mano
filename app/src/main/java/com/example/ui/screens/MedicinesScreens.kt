@@ -101,6 +101,7 @@ import com.example.ui.components.MedicationChecklistHeaderCard
 import com.example.ui.components.MedicationChecklistStepCard
 import com.example.ui.components.MedicineCard
 import com.example.ui.components.PharmacistCtaCard
+import com.example.ui.components.ScientificHealthProductComparisonSection
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
@@ -123,7 +124,8 @@ import com.google.firebase.auth.FirebaseUser
 private enum class MedicinesSubTab(val labelFa: String, val tag: String) {
   KNOWLEDGE_BASE("پایگاه دانش", "med_tab_kb"),
   SYRINGE_DOSE_LAB("سرنگ دوز وزن/سن", "med_tab_syringe"),
-  OVERLAP_CHECKER("تداخل‌سنج دو دارو", "med_tab_overlap"),
+  OVERLAP_CHECKER("بررسی هشدارهای دارویی", "med_tab_overlap"),
+  PRODUCT_COMPARISON("مقایسه علمی محصولات", "med_tab_comparison"),
   DOSE_LOGBOOK("خط زمانی تب و دارو (۲۴س)", "med_tab_logbook"),
   SAFETY_CHECKLIST("چک‌لیست ایمنی دارو", "med_tab_checklist"),
 }
@@ -178,6 +180,7 @@ fun MedicinesScreen(
         requestedSubTabKey == "timeline" -> MedicinesSubTab.DOSE_LOGBOOK
         requestedSubTabKey == "syringe" -> MedicinesSubTab.SYRINGE_DOSE_LAB
         requestedSubTabKey == "overlap" -> MedicinesSubTab.OVERLAP_CHECKER
+        requestedSubTabKey == "comparison" -> MedicinesSubTab.PRODUCT_COMPARISON
         else -> MedicinesSubTab.KNOWLEDGE_BASE
       }
     )
@@ -205,6 +208,7 @@ fun MedicinesScreen(
           "checklist" -> MedicinesSubTab.SAFETY_CHECKLIST
           "syringe" -> MedicinesSubTab.SYRINGE_DOSE_LAB
           "overlap" -> MedicinesSubTab.OVERLAP_CHECKER
+          "comparison" -> MedicinesSubTab.PRODUCT_COMPARISON
           else -> MedicinesSubTab.KNOWLEDGE_BASE
         }
       onSubTabKeyConsumed()
@@ -245,71 +249,94 @@ fun MedicinesScreen(
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
       item {
-        SectionCard {
-          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ManoFramedIllustration(
-              resId = R.drawable.mascot_medicine,
-              contentDescription = "مانو در کنار بطری دارو و دفترچه ثبت مصرف",
-              width = 96.dp,
-              aspectRatio = 0.90f,
-              accentColor = MaterialTheme.colorScheme.primary,
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text("داروهای کودک و ایمنی مصرف", style = MaterialTheme.typography.headlineSmall)
-              Text(
-                text = "پایگاه دانش ایمنی داروها، سرنگ مدرج تعاملی (سن و وزن)، چک‌لیست ایمنی پیش از مصرف و دفترچه ثبت حجم mL.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          SectionCard {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+              ManoFramedIllustration(
+                resId = R.drawable.mascot_medicine,
+                contentDescription = "مانو در کنار بطری دارو و دفترچه ثبت مصرف",
+                width = 88.dp,
+                aspectRatio = 0.90f,
+                accentColor = MaterialTheme.colorScheme.primary,
               )
+              Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                LtrText(text = "MANO Safety", color = MaterialTheme.colorScheme.primary)
+                Text("داروهای کودک و ایمنی مصرف", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                  text = "پایگاه دانش داروها، بررسی هشدارهای دارویی، مقایسه علمی محصولات سلامت و سرنگ mL.",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+              OutlinedButton(
+                onClick = { activeSubTab = MedicinesSubTab.SAFETY_CHECKLIST },
+                modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("medicines_open_checklist_btn"),
+              ) {
+                Icon(
+                  imageVector = if (checklistProgress.isAllCriticalReady) Icons.Rounded.CheckCircle else Icons.Rounded.Checklist,
+                  contentDescription = null,
+                  tint = if (checklistProgress.isAllCriticalReady) successAccent else MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                  text = "چک‌لیست ایمنی (${checklistProgress.checkedCount}/${checklistProgress.totalCount})",
+                  fontWeight = FontWeight.SemiBold,
+                  maxLines = 1,
+                )
+              }
+              OutlinedButton(
+                onClick = { activeSubTab = MedicinesSubTab.PRODUCT_COMPARISON },
+                modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("medicines_open_comparison_btn"),
+              ) {
+                Icon(
+                  imageVector = Icons.AutoMirrored.Rounded.CompareArrows,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                  text = "مقایسه علمی محصولات",
+                  fontWeight = FontWeight.SemiBold,
+                  maxLines = 1,
+                )
+              }
             }
           }
-          OutlinedButton(
-            onClick = { activeSubTab = MedicinesSubTab.SAFETY_CHECKLIST },
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("medicines_open_checklist_btn"),
-          ) {
-            Icon(
-              imageVector = if (checklistProgress.isAllCriticalReady) Icons.Rounded.CheckCircle else Icons.Rounded.Checklist,
-              contentDescription = null,
-              tint = if (checklistProgress.isAllCriticalReady) successAccent else MaterialTheme.colorScheme.primary,
-              modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-              text = "چک‌لیست تعاملی ایمنی پیش از دارو (${checklistProgress.checkedCount}/${checklistProgress.totalCount} بررسی‌شده)",
-              fontWeight = FontWeight.SemiBold,
-            )
-          }
-        }
-      }
 
-      // Mode Switcher Row (Knowledge Base | Syringe Dose Lab | Overlap Checker | Dose Logbook | Safety Checklist)
-      item {
-        LazyRow(
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          modifier = Modifier.fillMaxWidth().testTag("medicines_mode_tabs"),
-        ) {
-          items(MedicinesSubTab.entries) { tab ->
-            val icon =
-              when (tab) {
-                MedicinesSubTab.KNOWLEDGE_BASE -> Icons.AutoMirrored.Rounded.MenuBook
-                MedicinesSubTab.SYRINGE_DOSE_LAB -> Icons.Rounded.Vaccines
-                MedicinesSubTab.OVERLAP_CHECKER -> Icons.AutoMirrored.Rounded.CompareArrows
-                MedicinesSubTab.DOSE_LOGBOOK -> Icons.Rounded.EditNote
-                MedicinesSubTab.SAFETY_CHECKLIST -> Icons.Rounded.Checklist
-              }
-            FilterChip(
-              selected = activeSubTab == tab,
-              onClick = { activeSubTab = tab },
-              leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-              label = { Text(tab.labelFa, fontWeight = if (activeSubTab == tab) FontWeight.Bold else FontWeight.Normal) },
-              colors =
-                FilterChipDefaults.filterChipColors(
-                  containerColor = cardSurface,
-                  selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                  selectedLabelColor = MaterialTheme.colorScheme.primary,
-                ),
-              modifier = Modifier.minimumInteractiveComponentSize().testTag(tab.tag),
-            )
+          // Mode Switcher FlowRow (all tabs always composed & accessible without horizontal clipping)
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().testTag("medicines_mode_tabs"),
+          ) {
+            MedicinesSubTab.entries.forEach { tab ->
+              val icon =
+                when (tab) {
+                  MedicinesSubTab.KNOWLEDGE_BASE -> Icons.AutoMirrored.Rounded.MenuBook
+                  MedicinesSubTab.SYRINGE_DOSE_LAB -> Icons.Rounded.Vaccines
+                  MedicinesSubTab.OVERLAP_CHECKER -> Icons.Rounded.Shield
+                  MedicinesSubTab.PRODUCT_COMPARISON -> Icons.AutoMirrored.Rounded.CompareArrows
+                  MedicinesSubTab.DOSE_LOGBOOK -> Icons.Rounded.EditNote
+                  MedicinesSubTab.SAFETY_CHECKLIST -> Icons.Rounded.Checklist
+                }
+              FilterChip(
+                selected = activeSubTab == tab,
+                onClick = { activeSubTab = tab },
+                leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                label = { Text(tab.labelFa, style = MaterialTheme.typography.labelMedium, fontWeight = if (activeSubTab == tab) FontWeight.Bold else FontWeight.Normal) },
+                colors =
+                  FilterChipDefaults.filterChipColors(
+                    containerColor = cardSurface,
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.primary,
+                  ),
+                modifier = Modifier.minimumInteractiveComponentSize().testTag(tab.tag),
+              )
+            }
           }
         }
       }
@@ -542,6 +569,12 @@ fun MedicinesScreen(
                 modifier = Modifier.testTag("overlap_result_alert"),
               )
             }
+          }
+        }
+
+        MedicinesSubTab.PRODUCT_COMPARISON -> {
+          item {
+            ScientificHealthProductComparisonSection()
           }
         }
 

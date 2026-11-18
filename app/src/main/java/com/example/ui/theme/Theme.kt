@@ -21,13 +21,13 @@ private val ManoLightColorScheme =
     onPrimary = PureWhite,
     primaryContainer = LightMint,
     onPrimaryContainer = DarkInk,
-    secondary = SeaGreen,
+    secondary = SkyCare,
     onSecondary = PureWhite,
     secondaryContainer = AquaSurface,
     onSecondaryContainer = DarkInk,
-    tertiary = AccentGold,
+    tertiary = SeaGreen,
     onTertiary = PureWhite,
-    tertiaryContainer = GoldSurface,
+    tertiaryContainer = SilkMint,
     onTertiaryContainer = DarkInk,
     background = PureWhite,
     onBackground = DarkInk,
@@ -36,9 +36,9 @@ private val ManoLightColorScheme =
     surfaceVariant = AquaSurface,
     onSurfaceVariant = MutedSlate,
     surfaceContainerLowest = PureWhite,
-    surfaceContainerLow = PureWhite,
-    surfaceContainer = Color(0xFFF7FAFB),
-    surfaceContainerHigh = Color(0xFFF0F6F7),
+    surfaceContainerLow = SoftMintCard,
+    surfaceContainer = SoftMintCard,
+    surfaceContainerHigh = SoftSkyElevated,
     surfaceTint = SeaGreen,
     outline = HairlineBorder,
     outlineVariant = HairlineBorder,
@@ -110,10 +110,10 @@ fun ManoKidsTheme(
 }
 
 @Composable
-fun manoCardSurface(): Color = if (LocalManoDarkTheme.current) DarkSurface else PureWhite
+fun manoCardSurface(): Color = if (LocalManoDarkTheme.current) DarkSurface else SoftMintCard
 
 @Composable
-fun manoElevatedSurface(): Color = if (LocalManoDarkTheme.current) DarkSurfaceHigh else Color(0xFFF7FBFC)
+fun manoElevatedSurface(): Color = if (LocalManoDarkTheme.current) DarkSurfaceHigh else SoftSkyElevated
 
 @Composable
 fun manoBorderColor(): Color = if (LocalManoDarkTheme.current) DarkBorder else HairlineBorder
@@ -132,13 +132,13 @@ fun manoTintedSurface(
 
 @Composable
 fun manoChartGridColor(): Color =
-  if (LocalManoDarkTheme.current) DarkBorder else Color(0xFFD5E4E7)
+  if (LocalManoDarkTheme.current) DarkBorder else Color(0xFFCCE4EC)
 
 @Composable
 fun manoChartAxisHex(): Int =
-  if (LocalManoDarkTheme.current) 0xFFBBD7D2.toInt() else 0xFF334E57.toInt()
+  if (LocalManoDarkTheme.current) 0xFFBBD7D2.toInt() else 0xFF2E4C56.toInt()
 
 @Composable
 fun manoChartRailColor(): Color =
-  if (LocalManoDarkTheme.current) DarkSurfaceVariant else Color(0xFFF1F7F8)
+  if (LocalManoDarkTheme.current) DarkSurfaceVariant else SoftSkyElevated
 

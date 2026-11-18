@@ -103,13 +103,19 @@ fun PharmacistStaffPanelContent(
             contentDescription = null,
             tint = if (staffAccess.isVerifiedPharmacist) sageAccent else connectAccent,
           )
-          Text(
-            text =
-              if (staffAccess.isVerifiedPharmacist) "پنل اختصاصی داروساز تاییدشده"
-              else "احراز صلاحیت سروری داروساز",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-          )
+          Column {
+            LtrText(
+              text = "MANO Pharmacy • Clinical Review Desk",
+              color = if (staffAccess.isVerifiedPharmacist) sageAccent else connectAccent,
+            )
+            Text(
+              text =
+                if (staffAccess.isVerifiedPharmacist) "پنل اختصاصی داروخانه (داروساز تاییدشده)"
+                else "پنل اختصاصی داروخانه — احراز صلاحیت سروری",
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.Bold,
+            )
+          }
         }
         SourceBadge(
           reviewStatus = if (staffAccess.isVerifiedPharmacist) ReviewStatus.APPROVED else ReviewStatus.NEEDS_CLINICAL_REVIEW,
@@ -159,6 +165,55 @@ fun PharmacistStaffPanelContent(
               color = sageAccent,
             )
             LtrText(text = "Pharmacy ID: ${staffAccess.pharmacyId} | UID: ${currentUser.uid.take(12)}...")
+          }
+        }
+
+        val pendingCount = inboxCases.count { it.status == ConsultationStatus.PENDING }
+        val receivedCount = inboxCases.count { it.status == ConsultationStatus.RECEIVED }
+        val reviewedCount = inboxCases.count { it.status == ConsultationStatus.REVIEWED }
+        FlowRow(
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp),
+          modifier = Modifier.fillMaxWidth().testTag("staff_desk_summary_row"),
+        ) {
+          Surface(
+            color = connectAccent.copy(alpha = 0.10f),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, connectAccent.copy(alpha = 0.30f)),
+          ) {
+            Text(
+              text = "در انتظار پذیرش: $pendingCount",
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.SemiBold,
+              color = connectAccent,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            )
+          }
+          Surface(
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)),
+          ) {
+            Text(
+              text = "در حال بررسی: $receivedCount",
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.SemiBold,
+              color = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            )
+          }
+          Surface(
+            color = sageAccent.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, sageAccent.copy(alpha = 0.35f)),
+          ) {
+            Text(
+              text = "پاسخ نهایی ثبت‌شده: $reviewedCount",
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              color = sageAccent,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            )
           }
         }
 
@@ -244,6 +299,7 @@ fun PharmacistStaffPanelContent(
   }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StaffInboxCaseCard(
   item: StaffConsultationCase,
@@ -346,6 +402,33 @@ private fun StaffInboxCaseCard(
           minLines = 2,
           modifier = Modifier.fillMaxWidth().testTag("staff_internal_note_${item.caseId}"),
         )
+        Text(
+          text = "الگوهای آماده پاسخ علمی داروساز:",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.SemiBold,
+          color = MaterialTheme.colorScheme.primary,
+        )
+        FlowRow(
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp),
+          modifier = Modifier.fillMaxWidth(),
+        ) {
+          listOf(
+            "سرنگ مدرج mL و غلظت" to "لطفاً غلظت دقیق دارو روی جعبه (mg/mL) را بررسی کرده و دوز را صرفاً با سرنگ مدرج دهانی بر حسب میلی‌لیتر (mL) اندازه‌گیری نمایید.",
+            "عدم همپوشانی تب‌برها" to "از مصرف هم‌زمان دو فرآورده حاوی ماده مؤثره یکسان (مانند استامینوفن با شربت سرماخوردگی ترکیبی) خودداری فرمایید و حداقل فاصله زمانی مجاز را رعایت کنید.",
+            "پایش کم‌آبی و علائم هشدار" to "دفعات ادرار، هوشیاری و تنفس کودک را پایش کنید و در صورت بروز علائم هشدار (بی‌حالی شدید، تنگی نفس یا تداوم تب) فوراً به پزشک مراجعه نمایید.",
+          ).forEach { (chipLabel, snippetFa) ->
+            SymptomChip(
+              label = chipLabel,
+              selected = parentReplyInput.contains(snippetFa),
+              onClick = {
+                parentReplyInput =
+                  if (parentReplyInput.isBlank()) snippetFa
+                  else "${parentReplyInput.trim()} $snippetFa"
+              },
+            )
+          }
+        }
         OutlinedTextField(
           value = parentReplyInput,
           onValueChange = { parentReplyInput = it },
