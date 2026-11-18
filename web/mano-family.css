@@ -93,3 +93,11 @@
  .module-page .module-hero-grid{grid-template-columns:minmax(0,1fr)}
  .module-page .module-hero-grid>img{width:88px;justify-self:center}
 }
+
+/* Accessible navigation emphasis using established MANO tokens only. */
+.site-header .desktop-nav a[href="#modules"],.site-header .mobile-nav a[href="#modules"]{font-weight:850;color:#075d59}
+.site-header .desktop-nav a{display:inline-flex;align-items:center;min-height:44px}
+.site-header .mobile-nav a{min-height:44px}
+.mano-family .home-module-card:focus-visible{outline-offset:-3px}
+.mano-family .home-module-copy small{line-height:1.95}
+@media(min-width:1001px){.site-header .desktop-nav{gap:clamp(8px,1.25vw,20px)}}
