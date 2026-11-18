@@ -5,8 +5,8 @@ const path=require("node:path");
 const crypto=require("node:crypto");
 const root=path.resolve(__dirname,"..");
 const {buildReviewQueue}=require("./review-queue.cjs");
-const ASSETS=["img_nutrition_banner.jpg","img_symptom_care_banner.jpg","mano_icon_fg.png","mano_pose_listen.png","mano_pose_welcome.png","mascot_medicine.png","mascot_skin.png","vazirmatn.ttf"];
-const BASE=["index.html","staff-demo.html","styles.css","articles.css","modules.css","staff-demo.css","logic.js","app.js","modules.js","staff-demo.js","clinical-content-status.json","clinical-review.html","review.css","review.js","iran-product-template.json"];
+const ASSETS=["mano-module-icons.svg","img_nutrition_banner.jpg","img_symptom_care_banner.jpg","mano_icon_fg.png","mano_pose_listen.png","mano_pose_welcome.png","mascot_medicine.png","mascot_skin.png","vazirmatn.ttf"];
+const BASE=["mano-family.css","index.html","staff-demo.html","styles.css","articles.css","modules.css","staff-demo.css","logic.js","app.js","modules.js","staff-demo.js","clinical-content-status.json","clinical-review.html","review.css","review.js","iran-product-template.json"];
 function buildPreview(dest, source=root){
  const m=JSON.parse(fs.readFileSync(path.join(source,"clinical-content-status.json"),"utf8"));
  if(m.status!=="NOT_APPROVED_FOR_PUBLIC_CLINICAL_RELEASE"||m.reviewedAt!==null)throw Error("Internal preview state required");
