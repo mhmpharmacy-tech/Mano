@@ -38,3 +38,17 @@
 .module-page[data-module="connect"]{--mano-world-tint:#e8e7fa}
 .module-page .module-hero{background:linear-gradient(120deg,#fff,var(--mano-world-tint,#edf8f5))}
 @media(max-width:760px){.mano-world-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.mano-world-grid a{font-size:11px;min-height:74px}.mano-world-grid a svg{width:38px;height:38px}}
+
+/* Interaction states use an explicit focus ring and do not rely on color alone. */
+.mano-world-grid a:focus-visible,.mano-family .home-module-card:focus-visible {outline:3px solid #075d59;outline-offset:3px}
+.mano-world-grid a[aria-current="page"] span::after {content:"";display:block;width:24px;height:3px;border-radius:2px;background:#075d59;margin:5px auto 0}
+.module-page .module-card{min-width:0;overflow-wrap:anywhere;border-radius:20px}
+.module-page .module-panel{min-width:0;border-radius:20px}
+.module-page .module-card summary{min-height:44px;cursor:pointer}
+.module-page .module-card summary:focus-visible,.module-page .module-panel :is(button,select,input,a):focus-visible{outline:3px solid #075d59;outline-offset:3px}
+.module-page .module-hero-grid>img{object-fit:contain;max-width:100%}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+.mano-world-grid a,.mano-family .home-module-card{transition:box-shadow .18s ease,transform .18s ease,border-color .18s ease}
+.mano-world-grid a:hover,.mano-family .home-module-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px #124e581a}
+}
+@media(prefers-reduced-motion:reduce){.mano-world-grid a,.mano-family .home-module-card{transition:none;transform:none}}
