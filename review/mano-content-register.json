@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "releaseAuthorized": false,
+  "articles": [
+    {
+      "id": "fever-in-children",
+      "module": "care",
+      "path": "web/fever-in-children.html",
+      "blob": "b5d5cbc6856ed4e167148bf86aacbeb06fa144ff",
+      "title": "تب کودک؛ عدد دما تنها بخشی از ماجراست",
+      "sources": [
+        "https://www.nice.org.uk/guidance/ng143/chapter/Recommendations",
+        "https://www.nice.org.uk/guidance/qs64/chapter/quality-statement-4-safety-net-advice",
+        "https://www.healthychildren.org/English/health-issues/conditions/fever/Pages/When-to-Call-the-Pediatrician.aspx"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    },
+    {
+      "id": "liquid-medicine-safety",
+      "module": "drug",
+      "path": "web/liquid-medicine-safety.html",
+      "blob": "4d528e920a9a0be5a2d4acc0e2b2d5848d1c5689",
+      "title": "شربت و قطره؛ غلظت را قبل از مصرف بررسی کنید",
+      "sources": [
+        "https://www.healthychildren.org/English/safety-prevention/at-home/medication-safety/Pages/Using-Liquid-Medicines.aspx",
+        "https://www.fda.gov/drugs/safe-use-over-counter-pain-relievers-and-fever-reducers/acetaminophen"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    },
+    {
+      "id": "persistent-cough-in-children",
+      "module": "care",
+      "path": "web/persistent-cough-in-children.html",
+      "blob": "1d4b055a921539b1e0d9946755eaabaa381b3446",
+      "title": "سرفه طولانی کودک",
+      "sources": [
+        "https://www.rch.org.au/clinicalguide/guideline_index/cough/"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    },
+    {
+      "id": "childhood-constipation",
+      "module": "care",
+      "path": "web/childhood-constipation.html",
+      "blob": "b8de8afe1da8064a9b3b0febf0e237b841f213c4",
+      "title": "یبوست کودک",
+      "sources": [
+        "https://www.rch.org.au/clinicalguide/guideline_index/Constipation/"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    },
+    {
+      "id": "diaper-rash",
+      "module": "skin",
+      "path": "web/diaper-rash.html",
+      "blob": "1210dc8f23f1891956c5300aa22f1c1a20a3a132",
+      "title": "سوختگی پوشک و راش نوزاد",
+      "sources": [
+        "https://www.nhs.uk/baby/caring-for-a-newborn/nappy-rash/",
+        "https://www.nhs.uk/symptoms/rashes-babies-and-children/"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    },
+    {
+      "id": "child-appetite-growth",
+      "module": "growth",
+      "path": "web/child-appetite-growth.html",
+      "blob": "afe3c752561e177a26527fe9b28d8ff6d09c0490",
+      "title": "کم‌اشتهایی و رشد کودک",
+      "sources": [
+        "https://www.aap.org/en/patient-care/healthy-active-living-for-families/toddler-food-and-feeding/",
+        "https://pubmed.ncbi.nlm.nih.gov/41833317/",
+        "https://www.nice.org.uk/guidance/ng75/chapter/recommendations"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    },
+    {
+      "id": "child-supplements",
+      "module": "nutrition",
+      "path": "web/child-supplements.html",
+      "blob": "afaccd854dddfe079f0fa4320fd49ac828c7cb7e",
+      "title": "مکمل‌های کودک؛ آهن و ویتامین‌ها",
+      "sources": [
+        "https://www.nhs.uk/baby/weaning-and-feeding/vitamins-for-children/",
+        "https://www.cdc.gov/infant-toddler-nutrition/vitamins-minerals/index.html",
+        "https://www.rch.org.au/clinicalguide/guideline_index/iron_poisoning/"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    },
+    {
+      "id": "infant-formula",
+      "module": "nutrition",
+      "path": "web/infant-formula.html",
+      "blob": "bf2e281b47a9ccee7b91fca3ed1b38887167f331",
+      "title": "شیرخشک نوزاد؛ انتخاب و آماده‌سازی ایمن",
+      "sources": [
+        "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/preparation-and-storage.html",
+        "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/choosing-a-formula.html",
+        "https://www.who.int/publications/i/item/9789241595414"
+      ],
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "sourceVerification": "pending",
+        "iranApplicability": "pending"
+      }
+    }
+  ]
+}
