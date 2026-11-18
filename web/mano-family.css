@@ -101,3 +101,11 @@
 .mano-family .home-module-card:focus-visible{outline-offset:-3px}
 .mano-family .home-module-copy small{line-height:1.95}
 @media(min-width:1001px){.site-header .desktop-nav{gap:clamp(8px,1.25vw,20px)}}
+
+/* Library discovery; existing tokens, no clinical meaning assigned to color. */
+.library-filter{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-block:12px}
+.library-filter label{font-weight:800;font-size:13px}
+.library-filter select{font:inherit;color:#183746;background:white;border:1px solid #adc9c5;border-radius:10px;padding:8px;min-height:44px;min-width:0;max-width:100%}
+.library-filter .btn{min-height:44px}
+.library-filter :is(select,button):focus-visible{outline:3px solid #075d59;outline-offset:3px}
+@media(max-width:480px){.library-filter{display:grid;grid-template-columns:minmax(0,1fr)}.library-filter select{width:100%}}
