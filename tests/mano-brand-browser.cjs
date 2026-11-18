@@ -79,6 +79,21 @@ const server=http.createServer(async(req,res)=>{
     console.log('PASS library discovery',width);passed++;
    }catch(e){console.error('FAIL library discovery',width,e.message);failures++;}
    finally{await library.close();}
+   const journey=await context.newPage();
+   try{
+    await journey.goto(origin+'/index.html');
+    const topic=journey.locator('#journey-topic');
+    for(const key of ['drug','growth','skin','nutrition','care','connect']){
+     await topic.selectOption(key);
+     assert.equal(await journey.locator('#journey-open').getAttribute('href'),'./mano-'+key+'.html');
+    }
+    await journey.locator('#journey-age').selectOption({label:'نوزاد'});
+    assert.equal(await journey.locator('#journey-open').getAttribute('href'),'./mano-connect.html');
+    await journey.locator('#journey-open').click();
+    await journey.waitForURL('**/mano-connect.html');
+    console.log('PASS family journey',width);passed++;
+   }catch(e){console.error('FAIL family journey',width,e.message);failures++;}
+   finally{await journey.close();}
    const safety=await context.newPage();
    try{
     await safety.goto(origin+'/index.html');
