@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "baseline": "d7cafd27f15d905ee5f1cf37ce1d68e84ffbbe7a",
+  "assets": {
+    "mano_icon_fg.png": "e818aac1ee57a5fb13ceafcc86e7cbd337d2f9e2",
+    "mano_pose_welcome.png": "22c0f0fa786c8edd9d62f8610ee4596193ce7194",
+    "mano_pose_listen.png": "6a1973492f8cd646387016ec0731e3e4bff49626",
+    "mascot_medicine.png": "03b2cdaaa9cad863a3aac02f8635ff2e3a09635f",
+    "mascot_skin.png": "3f43cb62bebe9e40ae72ff064b0a09b8f1b638ca",
+    "mano-module-icons.svg": "2fdbbaff2e48d7cc74ffdb00e1197c2ea7910ff7",
+    "vazirmatn.ttf": "5398a399c8e141176e889d07fb22f29d13c5aead"
+  }
+}
