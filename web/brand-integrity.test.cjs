@@ -24,3 +24,15 @@ test('unknown states cannot mutate image',()=>{
  for(const state of ['__proto__','constructor','https://example.com','unknown']) assert.equal(engine.apply({setAttribute:()=>assert.fail('unexpected mutation')},state),false);
 });
 test('missing image fails safely',()=>assert.equal(engine.apply(null,'welcome'),false));
+
+for(const [page,state] of Object.entries({'index':'welcome','mano-drug':'medicine','mano-growth':'listen','mano-skin':'skin','mano-nutrition':'welcome','mano-care':'welcome','mano-connect':'listen'})){
+ test('page integration '+page,()=>{
+  const html=fs.readFileSync(path.join(__dirname,page+'.html'),'utf8');
+  assert.ok(html.includes('src="./mano-character.js" defer'));
+  assert.ok(html.includes('href="./mano-character.css"'));
+  const img=html.match(new RegExp('<img[^>]*data-mano-state="'+state+'"[^>]*>'));
+  assert.ok(img);
+  assert.ok(img[0].includes('src="./assets/'+engine.states[state]+'"'));
+  assert.ok(html.includes('noindex'));
+ });
+}
