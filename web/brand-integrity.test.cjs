@@ -36,3 +36,14 @@ for(const [page,state] of Object.entries({'index':'welcome','mano-drug':'medicin
   assert.ok(html.includes('noindex'));
  });
 }
+
+for(const [hidden,classes,expected] of [[false,['alert'],true],[false,['prompt'],true],[false,[],false],[true,['alert'],false]]){
+ test('quiet motion '+JSON.stringify([hidden,classes]),()=>{
+  assert.equal(engine.needsQuiet(hidden,{contains:k=>classes.includes(k)}),expected);
+ });
+}
+test('motion stylesheet supports reduced motion and quiet state',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'mano-character.css'),'utf8');
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.match(css,/data-mano-quiet/);
+});
