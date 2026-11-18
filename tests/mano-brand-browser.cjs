@@ -44,6 +44,19 @@ const server=http.createServer(async(req,res)=>{
     }catch(e){console.error('FAIL',name,width,e.message);failures++;}
     finally{await page.close();}
    }
+   const safety=await context.newPage();
+   try{
+    await safety.goto(origin+'/index.html');
+    await safety.locator('#child-age').selectOption('older');
+    await safety.locator('input[value=breath]').check();
+    await safety.locator('#warning-submit').click();
+    await safety.locator('html[data-mano-quiet]').waitFor();
+    assert.equal(await safety.locator('#screening-result').getAttribute('role'),'alert');
+    assert.ok(await safety.locator('#screening-result a[href="tel:115"]').isVisible());
+    await safety.screenshot({path:'brand-screenshots/safety-'+width+'.png',fullPage:true,animations:'disabled'});
+    console.log('PASS safety quiet mode',width);passed++;
+   }catch(e){console.error('FAIL safety quiet mode',width,e.message);failures++;}
+   finally{await safety.close();}
    await context.close();
   }
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
