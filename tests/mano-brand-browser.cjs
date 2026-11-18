@@ -1,0 +1,51 @@
+// Internal preview only. No deployment, patient data, or external requests.
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const http=require('node:http');
+const fs=require('node:fs/promises');
+const path=require('node:path');
+const root=path.resolve(__dirname,'../web');
+const pages=['index','mano-drug','mano-growth','mano-skin','mano-nutrition','mano-care','mano-connect'];
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.ttf':'font/ttf'};
+const server=http.createServer(async(req,res)=>{
+ try{
+  const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);
+  if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
+  const bytes=await fs.readFile(file);
+  res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'}).end(bytes);
+ }catch{res.writeHead(404).end();}
+});
+(async()=>{
+ let browser;let failures=0;let passed=0;
+ try{
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const origin='http://127.0.0.1:'+server.address().port;
+  browser=await chromium.launch({headless:true});
+  await fs.mkdir('brand-screenshots',{recursive:true});
+  for(const width of [320,390,768,1440]){
+   const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});
+   await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
+   for(const name of pages){
+    const page=await context.newPage();const errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    try{
+     await page.goto(origin+'/'+name+'.html',{waitUntil:'load'});
+     await page.evaluate(()=>document.fonts.ready);
+     const img=page.locator('img[data-mano-state]').first();
+     await img.evaluate(el=>el.decode());
+     await page.screenshot({path:'brand-screenshots/'+name+'-'+width+'.png',fullPage:true,animations:'disabled'});
+     assert.equal(await page.locator('html').getAttribute('dir'),'rtl');
+     assert.match(await page.locator('meta[name=robots]').getAttribute('content'),/noindex/);
+     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'horizontal document overflow');
+     assert.ok(await img.isVisible(),'mascot not visible');
+     assert.ok(await page.evaluate(()=>Boolean(window.ManoCharacter)),'character engine unavailable');
+     assert.deepEqual(errors,[]);
+     console.log('PASS',name,width);passed++;
+    }catch(e){console.error('FAIL',name,width,e.message);failures++;}
+    finally{await page.close();}
+   }
+   await context.close();
+  }
+ }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+ console.log({passed,failures});if(failures)process.exitCode=1;
+})().catch(e=>{console.error(e);process.exitCode=1;});
