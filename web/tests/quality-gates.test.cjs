@@ -70,3 +70,39 @@ test("Publishable written content has a non-fictional editorial template and rev
   assert.ok(fs.existsSync(path.join(root,"seo/SEARCH_READINESS.md")));
   assert.ok(fs.existsSync(path.join(root,"TEAM_REVIEW_2026-11-17.md")));
 });
+
+
+test("Mascot identity: all six modules have matching local icons and Persian navigation",()=>{
+ const ids=["drug","growth","skin","nutrition","care","connect"];
+ const icons=get("assets/mano-module-icons.svg");
+ assert.ok(Buffer.byteLength(icons)<20000,"SVG icon budget");
+ for(const id of ids){
+  assert.equal([...icons.matchAll(new RegExp('<symbol id="'+id+'"',"g"))].length,1);
+  const html=get("mano-"+id+".html");
+  assert.match(html,/<html lang="fa" dir="rtl">/);
+  assert.match(html,/href="\.\/mano-family\.css"/);
+  const nav=html.match(/<nav class="mano-world-nav"[\s\S]*?<\/nav>/)?.[0];
+  assert.ok(nav,id);
+  assert.equal((nav.match(/aria-current="page"/g)||[]).length,1);
+  assert.ok(nav.includes('href="./mano-'+id+'.html" aria-current="page"'));
+  for(const target of ids){
+   assert.ok(nav.includes('href="./mano-'+target+'.html"'),target);
+   assert.ok(nav.includes('href="./assets/mano-module-icons.svg#'+target+'"'),target);
+  }
+ }
+});
+
+test("Internal preview includes mascot assets with integrity manifest",()=>{
+ const os=require("node:os"),crypto=require("node:crypto");
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"mano-family-package-"));
+ try{
+  const dest=path.join(tmp,"preview");
+  require("../tools/build-preview.cjs").buildPreview(dest);
+  const manifest=JSON.parse(fs.readFileSync(path.join(dest,"PREVIEW_MANIFEST.json"),"utf8"));
+  assert.equal(manifest.clinicalServiceEnabled,false);
+  for(const name of ["mano-family.css","assets/mano-module-icons.svg"]){
+   const data=fs.readFileSync(path.join(dest,name));
+   assert.equal(manifest.sha256[name],crypto.createHash("sha256").update(data).digest("hex"));
+  }
+ }finally{fs.rmSync(tmp,{recursive:true,force:true})}
+});
