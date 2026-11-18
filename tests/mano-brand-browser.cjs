@@ -44,6 +44,24 @@ const server=http.createServer(async(req,res)=>{
     }catch(e){console.error('FAIL',name,width,e.message);failures++;}
     finally{await page.close();}
    }
+   const nav=await context.newPage();
+   try{
+    await nav.goto(origin+'/index.html');
+    const menu=nav.locator('#menu-button');
+    if(await menu.isVisible()) await menu.click();
+    const link=nav.locator('.site-header nav a[href="#modules"]:visible');
+    assert.equal(await link.count(),1);
+    await link.click();
+    assert.equal(new URL(nav.url()).hash,'#modules');
+    if(await menu.isVisible()) assert.equal(await menu.getAttribute('aria-expanded'),'false');
+    const cards=nav.locator('.home-module-card');
+    assert.equal(await cards.count(),6);
+    await cards.first().click();
+    await nav.waitForURL('**/mano-drug.html');
+    assert.equal(await nav.locator('.mano-world-grid a[aria-current="page"]').count(),1);
+    console.log('PASS module navigation',width);passed++;
+   }catch(e){console.error('FAIL module navigation',width,e.message);failures++;}
+   finally{await nav.close();}
    const safety=await context.newPage();
    try{
     await safety.goto(origin+'/index.html');
