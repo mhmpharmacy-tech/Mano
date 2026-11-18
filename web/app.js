@@ -80,6 +80,19 @@
     filterLibrary();
   }
 
+  const journeyTopic=byId("journey-topic"), journeyAge=byId("journey-age"), journeyOpen=byId("journey-open"), journeySummary=byId("journey-summary");
+  if(journeyTopic&&journeyAge&&journeyOpen&&journeySummary){
+    const routes=Object.freeze({drug:"mano-drug.html",growth:"mano-growth.html",skin:"mano-skin.html",nutrition:"mano-nutrition.html",care:"mano-care.html",connect:"mano-connect.html"});
+    const syncJourney=()=>{
+      const key=journeyTopic.value;
+      if(!Object.hasOwn(routes,key))return;
+      journeyOpen.setAttribute("href","./"+routes[key]);
+      journeySummary.textContent="موضوع: "+journeyTopic.selectedOptions[0].textContent+"؛ گروه سنی: "+(journeyAge.value||"انتخاب نشده")+"؛ مسیر آموزشی بر اساس موضوع، نه ارزیابی پزشکی.";
+    };
+    journeyAge.disabled=false;journeyTopic.disabled=false;
+    journeyAge.addEventListener("change",syncJourney);journeyTopic.addEventListener("change",syncJourney);syncJourney();
+  }
+
   const form = byId("redflags-form");
   const result = byId("screening-result");
   if (form && result && window.ManoWarning && typeof window.ManoWarning.evaluate === "function") {
