@@ -62,6 +62,23 @@ const server=http.createServer(async(req,res)=>{
     console.log('PASS module navigation',width);passed++;
    }catch(e){console.error('FAIL module navigation',width,e.message);failures++;}
    finally{await nav.close();}
+   const library=await context.newPage();
+   try{
+    await library.goto(origin+'/index.html');
+    const visible=library.locator('.library-card:visible');
+    await library.locator('#library-category').selectOption('nutrition');
+    assert.equal(await visible.count(),2);
+    await library.locator('#library-search').fill('شير خشک');
+    assert.equal(await visible.count(),1);
+    assert.match(await visible.first().getAttribute('href'),/infant-formula/);
+    await library.locator('#library-search').fill('abcdef');
+    assert.equal(await visible.count(),0);
+    assert.ok(await library.locator('#library-empty').isVisible());
+    await library.locator('#library-reset').click();
+    assert.equal(await visible.count(),8);
+    console.log('PASS library discovery',width);passed++;
+   }catch(e){console.error('FAIL library discovery',width,e.message);failures++;}
+   finally{await library.close();}
    const safety=await context.newPage();
    try{
     await safety.goto(origin+'/index.html');
