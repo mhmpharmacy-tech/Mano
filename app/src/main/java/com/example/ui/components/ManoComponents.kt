@@ -193,15 +193,14 @@ fun ManoAtmosphericBackdrop(
         .drawWithCache {
           val baseColor = if (isDark) DarkBackground else PureWhite
           val topSkyHalo =
-            if (isDark) DarkSky.copy(alpha = 0.14f) else SoftSkyHalo.copy(alpha = 0.68f)
+            if (isDark) TealGlow.copy(alpha = 0.14f) else SoftSkyHalo.copy(alpha = 0.64f)
           val topMintHalo =
-            if (isDark) TealGlow.copy(alpha = 0.16f) else SoftMintHalo.copy(alpha = 0.56f)
+            if (isDark) DarkSky.copy(alpha = 0.12f) else SoftMintHalo.copy(alpha = 0.52f)
           val midSkyAccentHalo =
-            if (isDark) DarkSky.copy(alpha = 0.08f) else SoftSkyHalo.copy(alpha = 0.36f)
+            if (isDark) TealGlow.copy(alpha = 0.08f) else SoftSkyHalo.copy(alpha = 0.34f)
 
           onDrawBehind {
             drawRect(color = baseColor)
-            // Pure White canvas with airy Light-Blue & Soft-Green medical halos
             drawCircle(
               brush = Brush.radialGradient(listOf(topSkyHalo, Color.Transparent)),
               center = Offset(size.width * 0.52f, size.height * 0.03f),
@@ -235,14 +234,14 @@ fun ManoIconMedallion(
 ) {
   val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(cornerRadius)
-  val surfaceHighlight = if (isDark) accentColor.copy(alpha = 0.34f) else PureWhite.copy(alpha = 0.94f)
   val borderBrush =
     Brush.linearGradient(
       colors =
-        listOf(
-          if (isDark) accentColor.copy(alpha = 0.52f) else PureWhite.copy(alpha = 0.96f),
-          accentColor.copy(alpha = 0.42f),
-        )
+        if (isDark) {
+          listOf(PureWhite.copy(alpha = 0.36f), TealGlow.copy(alpha = 0.60f), accentColor.copy(alpha = 0.42f))
+        } else {
+          listOf(PureWhite.copy(alpha = 0.98f), TealGlow.copy(alpha = 0.38f), accentColor.copy(alpha = 0.32f))
+        }
     )
 
   Box(
@@ -251,60 +250,46 @@ fun ManoIconMedallion(
       modifier
         .size(containerSize)
         .shadow(
-          elevation = if (isDark) 12.dp else 10.dp,
+          elevation = if (isDark) 10.dp else 8.dp,
           shape = shape,
-          ambientColor = accentColor.copy(alpha = 0.48f),
-          spotColor = accentColor.copy(alpha = 0.44f),
+          ambientColor = if (isDark) TealGlow.copy(alpha = 0.38f) else ShadowSlate.copy(alpha = 0.16f),
+          spotColor = accentColor.copy(alpha = if (isDark) 0.38f else 0.22f),
         )
         .clip(shape)
         .background(
           Brush.linearGradient(
             colors =
-              listOf(
-                surfaceHighlight,
-                accentColor.copy(alpha = if (isDark) 0.34f else 0.28f),
-                accentColor.copy(alpha = if (isDark) 0.18f else 0.14f),
-              )
+              if (isDark) {
+                listOf(Color(0xFF1A2D46), DarkSurfaceHigh, Color(0xFF101D30))
+              } else {
+                listOf(PureWhite, Color(0xFFEAF5F7), Color(0xFFDDEFF3))
+              }
           )
         )
-        .border(1.3.dp, borderBrush, shape)
+        .border(1.25.dp, borderBrush, shape)
         .drawBehind {
-          // Soft inner radial spotlight for stronger icon separation
-          drawCircle(
-            brush =
-              Brush.radialGradient(
-                colors =
-                  listOf(
-                    PureWhite.copy(alpha = if (isDark) 0.22f else 0.78f),
-                    Color.Transparent,
-                  )
-              ),
-            center = center,
-            radius = size.minDimension * 0.44f,
-          )
-          // Soft specular gloss arc at top-left for 3D tactile glass polish
+          // Subtle top-left metallic glass specular reflection arc
           drawArc(
-            color = PureWhite.copy(alpha = if (isDark) 0.28f else 0.90f),
+            color = PureWhite.copy(alpha = if (isDark) 0.26f else 0.92f),
             startAngle = 200f,
             sweepAngle = 110f,
             useCenter = false,
             topLeft = Offset(size.width * 0.12f, size.height * 0.08f),
-            size = androidx.compose.ui.geometry.Size(size.width * 0.74f, size.height * 0.40f),
-            style = Stroke(width = 2.8f, cap = StrokeCap.Round),
+            size = androidx.compose.ui.geometry.Size(size.width * 0.74f, size.height * 0.38f),
+            style = Stroke(width = 2.4f, cap = StrokeCap.Round),
           )
         },
   ) {
     if (iconKind != null) {
-      Mano3DIconArtwork(kind = iconKind, size = iconSize)
+      val artworkSize = (containerSize - 6.dp).coerceAtLeast(iconSize)
+      Mano3DIconArtwork(kind = iconKind, size = artworkSize)
     } else {
-      // Subtle ambient depth shadow-glyph
       Icon(
         imageVector = icon,
         contentDescription = null,
-        tint = accentColor.copy(alpha = 0.34f),
-        modifier = Modifier.size(iconSize).offset(x = 1.2.dp, y = 1.8.dp),
+        tint = accentColor.copy(alpha = 0.30f),
+        modifier = Modifier.size(iconSize).offset(x = 1.2.dp, y = 1.6.dp),
       )
-      // Crisp primary foreground icon
       Icon(
         imageVector = icon,
         contentDescription = null,
@@ -339,18 +324,24 @@ fun ManoPoseAvatar(
 ) {
   val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(18.dp)
-  val orangeAccent = com.example.ui.theme.OrangeCare
   val accentTint =
     when (pose) {
       MascotPose.CAUTION -> manoSemanticAccent(CautionAmber, DarkGold)
       MascotPose.SAVED -> manoSemanticAccent(SuccessEmerald, DarkSage)
-      else -> orangeAccent
+      else -> TealGlow
+    }
+  val poseRes =
+    when (pose) {
+      MascotPose.EXPLAIN, MascotPose.LISTEN -> R.drawable.mano_pose_explain
+      MascotPose.CAUTION, MascotPose.SAVED -> R.drawable.mano_pose_caution
+      MascotPose.WELCOME -> R.drawable.mano_pose_pharmacist
+      MascotPose.WAIT -> R.drawable.mano_pose_wait
     }
 
   Surface(
-    color = if (isDark) Color(0xFF1A242B) else PureWhite,
+    color = if (isDark) DarkSurfaceHigh else Color(0xFFEAF5F7),
     shape = shape,
-    border = BorderStroke(1.5.dp, accentTint.copy(alpha = if (isDark) 0.58f else 0.42f)),
+    border = BorderStroke(1.5.dp, accentTint.copy(alpha = if (isDark) 0.65f else 0.50f)),
     shadowElevation = 4.dp,
     modifier =
       modifier
@@ -366,15 +357,18 @@ fun ManoPoseAvatar(
             Brush.radialGradient(
               colors =
                 listOf(
-                  if (isDark) Color(0xFF24323C) else PureWhite,
-                  orangeAccent.copy(alpha = if (isDark) 0.18f else 0.12f),
+                  if (isDark) Color(0xFF1D334D) else PureWhite,
+                  accentTint.copy(alpha = if (isDark) 0.20f else 0.14f),
                 )
             )
           )
           .padding(2.dp),
     ) {
-      ManoV1OrangeCharacterCanvas(
-        pose = pose,
+      Image(
+        painter = painterResource(id = poseRes),
+        contentDescription = "شخصیت مانو کید در حالت ${pose.labelFa}",
+        contentScale = ContentScale.Crop,
+        alignment = Alignment.Center,
         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
       )
     }
@@ -1157,9 +1151,10 @@ fun PharmacistCtaCard(
               },
         ) {
           Image(
-            painter = painterResource(id = R.drawable.ic_mano_connect),
-            contentDescription = "شخصیت Mano Connect برای ارتباط با داروساز",
-            modifier = Modifier.size(56.dp),
+            painter = painterResource(id = R.drawable.mano_pose_pharmacist),
+            contentDescription = "شخصیت داروساز مانو کید برای ارتباط با داروساز",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().padding(3.dp).clip(CircleShape),
           )
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

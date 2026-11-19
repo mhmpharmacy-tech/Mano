@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.ui.components.ManoSquadMember
@@ -83,7 +84,7 @@ class ManoSquadCharactersTest {
   }
 
   @Test
-  fun homeScreen_orbitalOnlyStage_routesAllSixSpecializedPillarsAndCoreSections() {
+  fun homeScreen_selectiveMenu_routesPharmacistCoreNeedsAndEcosystemPillars() {
     val navigatedRoutes = mutableListOf<String>()
 
     composeRule.setContent {
@@ -106,6 +107,7 @@ class ManoSquadCharactersTest {
             onNavigateMyChild = {},
             onNavigateInfo = {},
             onNavigateNutrition = { navigatedRoutes.add("nutrition") },
+            onNavigateSyrupScanner = { navigatedRoutes.add("scanner") },
             onNavigateEcosystemPillar = { pillar -> navigatedRoutes.add("pillar:${pillar.id}") },
           )
         }
@@ -113,49 +115,178 @@ class ManoSquadCharactersTest {
     }
 
     composeRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
+    composeRule.onNodeWithTag("home_brand_crest").assertIsDisplayed()
     composeRule.onNodeWithTag("mano_mascot_touch").assertIsDisplayed()
-    composeRule.onNodeWithTag("orbital_toggle_spin").performClick()
+
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_pharmacist_hero_card"))
+    composeRule.onNodeWithTag("home_pharmacist_hero_card").assertIsDisplayed()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_pharmacist_cta"))
+    composeRule.onNodeWithTag("home_pharmacist_cta").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_followup_chip"))
+    composeRule.onNodeWithTag("home_followup_chip").performClick()
+
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_fever"))
+    composeRule.onNodeWithTag("home_menu_fever").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_medicines"))
+    composeRule.onNodeWithTag("home_menu_medicines").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_scanner"))
+    composeRule.onNodeWithTag("home_menu_scanner").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_growth"))
+    composeRule.onNodeWithTag("home_menu_growth").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_skin"))
+    composeRule.onNodeWithTag("home_menu_skin").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_qa"))
+    composeRule.onNodeWithTag("home_menu_qa").performClick()
+
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_safety"))
+    composeRule.onNodeWithTag("home_tool_safety").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_comparison"))
+    composeRule.onNodeWithTag("home_tool_comparison").performClick()
+    composeRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_pharmacy"))
+    composeRule.onNodeWithTag("home_tool_pharmacy").performClick()
     composeRule.waitForIdle()
 
-    // Step through inner orbital ring: fever (0) -> medicines (1) -> mano_safety (2) -> mano_connect (3) -> documented_qa (4) -> product_comparison (5)
-    composeRule.onNodeWithTag("orbital_focus_cta").performClick()
-    val expectedInner =
-      listOf(
-        "medicines",
-        "pillar:mano_safety",
-        "pillar:mano_connect",
-        "pillar:documented_qa",
-        "pillar:product_comparison",
-      )
-    expectedInner.forEach { _ ->
-      composeRule.onNodeWithTag("orbital_rotate_next").performClick()
-      composeRule.waitForIdle()
-      composeRule.onNodeWithTag("orbital_focus_cta").performClick()
-    }
-
-    // Switch to outer orbital ring and verify mano_followup & mano_pharmacy pillars
-    composeRule.onNodeWithTag("orbital_ring_outer").performClick()
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("orbital_rotate_next").performClick()
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("orbital_focus_cta").performClick()
-    composeRule.onNodeWithTag("orbital_rotate_next").performClick()
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("orbital_focus_cta").performClick()
-
+    assertEquals("فیروزه‌ای", ManoSquadMember.CARE.colorNameFa)
     assertEquals(
       listOf(
+        "pharmacist",
+        "pillar:mano_followup",
         "symptoms:fever",
         "medicines",
-        "pillar:mano_safety",
-        "pillar:mano_connect",
+        "scanner",
+        "growth",
+        "skin",
         "pillar:documented_qa",
+        "pillar:mano_safety",
         "pillar:product_comparison",
-        "pillar:mano_followup",
         "pillar:mano_pharmacy",
       ),
       navigatedRoutes,
     )
+  }
+
+  @Test
+  @Config(sdk = [36], qualifiers = "w360dp-h780dp-xhdpi")
+  fun orbitalMenu_narrowPhone_guaranteesZeroOverlapAndDirectTapRouting() {
+    val tapped = mutableListOf<String>()
+    composeRule.setContent {
+      ManoKidsTheme(darkTheme = true) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+          HomeScreen(
+            selectedAgeBand = null,
+            bookmarkedSlugs = emptySet(),
+            articles = emptyList(),
+            onSelectAgeBand = {},
+            onToggleBookmark = {},
+            onNavigateSymptoms = { tapped.add("fever:$it") },
+            onNavigateTopics = { _, _ -> },
+            onNavigateTopicDetail = {},
+            onNavigateMedicines = { tapped.add("medicines") },
+            onNavigateGrowth = { tapped.add("growth") },
+            onNavigateSkin = { tapped.add("skin") },
+            onNavigateDevices = {},
+            onNavigateAskPharmacist = {},
+            onNavigateMyChild = {},
+            onNavigateInfo = {},
+            onNavigateSyrupScanner = { tapped.add("scanner") },
+            onNavigateEcosystemPillar = { tapped.add("pillar:${it.id}") },
+          )
+        }
+      }
+    }
+
+    composeRule.waitForIdle()
+    composeRule.mainClock.advanceTimeBy(600L)
+    composeRule.waitForIdle()
+    val stage = composeRule.onNodeWithTag("orbital_menu_stage").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+    val mascot = composeRule.onNodeWithTag("mano_mascot_touch").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+    val tags =
+      listOf(
+        "home_menu_fever",
+        "home_menu_medicines",
+        "home_menu_scanner",
+        "home_menu_growth",
+        "home_menu_skin",
+        "home_menu_qa",
+      )
+    val rects = tags.map { tag ->
+      val node = composeRule.onNodeWithTag(tag).assertIsDisplayed()
+      node.assertHeightIsAtLeast(48.dp)
+      node.performClick()
+      tag to node.fetchSemanticsNode().boundsInRoot
+    }
+
+    rects.forEach { (tag, rect) ->
+      assertTrue("$tag clipped stage on 360dp", rect.left >= stage.left - 1f && rect.right <= stage.right + 1f)
+      assertTrue("$tag clipped vertically on 360dp", rect.top >= stage.top - 1f && rect.bottom <= stage.bottom + 1f)
+      assertTrue("$tag overlapped MANO on 360dp", !rect.overlaps(mascot))
+    }
+    for (i in rects.indices) {
+      for (j in i + 1 until rects.size) {
+        assertTrue(
+          "${rects[i].first} overlapped ${rects[j].first} on 360dp",
+          !rects[i].second.overlaps(rects[j].second),
+        )
+      }
+    }
+
+    assertEquals(
+      listOf("fever:fever", "medicines", "scanner", "growth", "skin", "pillar:documented_qa"),
+      tapped,
+    )
+
+    // Verify interactive circular drag rotates the orbital menu smoothly while keeping zero overlap
+    // and zero edge clipping mid-rotation on 360dp phones
+    val initialFeverPos = rects.first { it.first == "home_menu_fever" }.second
+    composeRule.onNodeWithTag("orbital_menu_stage").performTouchInput {
+      val topStart = androidx.compose.ui.geometry.Offset(center.x, top + 24f)
+      val midArc = androidx.compose.ui.geometry.Offset(center.x + width * 0.28f, top + height * 0.22f)
+      val rightArc = androidx.compose.ui.geometry.Offset(right - 24f, center.y)
+      down(topStart)
+      moveTo(midArc)
+      moveTo(rightArc)
+    }
+    composeRule.waitForIdle()
+    val breathingMascot = composeRule.onNodeWithTag("mano_mascot_touch").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+    val rotatedRects = tags.map { tag ->
+      tag to composeRule.onNodeWithTag(tag).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+    }
+    val rotatedFeverPos = rotatedRects.first { it.first == "home_menu_fever" }.second
+    assertTrue(
+      "Expected orbital menu to rotate smoothly on circular drag (initial=$initialFeverPos, rotated=$rotatedFeverPos)",
+      kotlin.math.abs(rotatedFeverPos.left - initialFeverPos.left) > 8f ||
+        kotlin.math.abs(rotatedFeverPos.top - initialFeverPos.top) > 8f,
+    )
+    rotatedRects.forEach { (tag, nodeBounds) ->
+      assertTrue("$tag clipped horizontally mid-rotation on 360dp", nodeBounds.left >= stage.left - 1f && nodeBounds.right <= stage.right + 1f)
+      assertTrue("$tag clipped vertically mid-rotation on 360dp", nodeBounds.top >= stage.top - 1f && nodeBounds.bottom <= stage.bottom + 1f)
+      assertTrue("$tag overlapped MANO mid-rotation during spring breathing", !nodeBounds.overlaps(breathingMascot))
+    }
+    for (i in rotatedRects.indices) {
+      for (j in i + 1 until rotatedRects.size) {
+        assertTrue(
+          "${rotatedRects[i].first} overlapped ${rotatedRects[j].first} mid-rotation",
+          !rotatedRects[i].second.overlaps(rotatedRects[j].second),
+        )
+      }
+    }
+    // Release drag and verify Spring 60° harmonic snap settles cleanly
+    composeRule.onNodeWithTag("orbital_menu_stage").performTouchInput { up() }
+    composeRule.waitForIdle()
+  }
+
+  @Test
+  fun goldenRatioOrbitalGeometry_maintainsExactPhiRadialProportions() {
+    val phi = com.example.ui.components.GoldenOrbitalGeometry.GOLDEN_RATIO
+    listOf(360f, 411f, 456f).forEach { widthDp ->
+      val m = com.example.ui.components.GoldenOrbitalGeometry.calculate(widthDp)
+      val wholeToMajor = m.orbitRadiusDp / m.radialClearanceToOrbitDp
+      val majorToMinor = m.radialClearanceToOrbitDp / m.mascotRadiusDp
+      val orbitToInnerGoldenRing = m.orbitRadiusDp / m.goldenInnerRingRadiusDp
+      assertEquals("Whole/Major radial ratio must match φ on ${widthDp}dp", phi, wholeToMajor, 0.01f)
+      assertEquals("Major/Minor radial ratio must match φ on ${widthDp}dp", phi, majorToMinor, 0.01f)
+      assertEquals("Orbit/InnerGoldenRing ratio must match φ on ${widthDp}dp", phi, orbitToInnerGoldenRing, 0.01f)
+    }
   }
 
   @Test

@@ -170,7 +170,7 @@ object ManoDeepLinkParser {
       else ->
         DeepLinkResolution(
           route = HomeRoute,
-          fallbackNoticeFa = "مسیر لینک در صفحه اصلی مانو کیدز باز شد.",
+          fallbackNoticeFa = "مسیر لینک در صفحه اصلی مانو کید باز شد.",
         )
     }
   }

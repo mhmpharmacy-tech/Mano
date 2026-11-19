@@ -1000,16 +1000,16 @@ fun InfoScreen(
               Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 60.dp)
                 Column(modifier = Modifier.weight(1f)) {
-                  Text("هویت مانو کیدز (MANO Kids)", style = MaterialTheme.typography.titleMedium)
-                  Text("همراه علمی، آرام و قابل‌اعتماد برای والدین فارسی‌زبان", style = MaterialTheme.typography.bodySmall)
+                  Text("هویت مانو کید (MANO Kid)", style = MaterialTheme.typography.titleMedium)
+                  Text("همراه علمی، آرام و قابل‌اعتماد برای مادران و کودکان فارسی‌زبان", style = MaterialTheme.typography.bodySmall)
                 }
               }
               Text(
-                text = "مانو جایگزین پزشک یا داروساز نیست و تشخیص صادر نمی‌کند. هدف مانو کمک به والدین برای درک نشانه‌های شایع، شناخت به‌موقع علائم خطر، استفاده ایمن‌تر از داروها با سرنگ mL و ارتباط شفاف با داروساز است.",
+                text = "مانو کید جایگزین پزشک یا داروساز نیست و تشخیص صادر نمی‌کند. هدف مانو کید کمک به مادران و والدین برای درک نشانه‌های شایع، شناخت به‌موقع علائم خطر، استفاده ایمن‌تر از داروها با سرنگ mL و ارتباط شفاف با داروساز است.",
                 style = MaterialTheme.typography.bodyMedium,
               )
               Text(
-                text = "محتوای علمی و هشدارهای بالینی مانو کیدز کاملاً مستقل و بدون تبلیغات طراحی شده است و دسترسی به راهنماهای ایمنی هرگز وابسته به پرداخت یا اسپانسر نیست.",
+                text = "تمام توضیحات روش ارزیابی علمی، منابع مرجع و دیدگاه خانواده‌ها برای حفظ آرامش صفحه اول در این بخش قرار داده شده است. محتوای علمی مانو کید بدون تبلیغات است و دسترسی به راهنماهای ایمنی هرگز وابسته به پرداخت نیست.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
@@ -1026,6 +1026,14 @@ fun InfoScreen(
                   Text("مدیریت اتصال دامنه")
                 }
               }
+            }
+          }
+          item {
+            SectionCard {
+              Text("اصول طراحی مراقبت‌محور برای آرامش مادر", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+              Text("• نمایش خطرات فوری پیش از هر توصیه مراقبت خانگی", style = MaterialTheme.typography.bodySmall)
+              Text("• دسترسی تک‌ضرب به مشاوره داروساز تاییدشده و پیگیری پاسخ", style = MaterialTheme.typography.bodySmall)
+              Text("• تفکیک غلظت قطره و شربت کودک با خط‌کش دقیق سرنگ mL", style = MaterialTheme.typography.bodySmall)
             }
           }
         }

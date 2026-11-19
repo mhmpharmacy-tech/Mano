@@ -135,15 +135,15 @@ floorMesh.rotation.x = -Math.PI / 2;
 floorMesh.receiveShadow = true;
 scene.add(floorMesh);
 
-// Ground-flush clearcoated ceramic studio plinth + vibrant orange-amber perimeter trim
+// Ground-flush matte ceramic studio plinth + calming seafoam perimeter trim
 const plinthMat = new THREE.MeshPhysicalMaterial({
   color: 0xffffff,
-  roughness: 0.20,
+  roughness: 0.24,
   roughnessMap: microGrainTex,
-  metalness: 0.03,
-  clearcoat: 0.65,
-  clearcoatRoughness: 0.14,
-  envMapIntensity: 1.0,
+  metalness: 0.02,
+  clearcoat: 0.45,
+  clearcoatRoughness: 0.18,
+  envMapIntensity: 0.95,
 });
 const plinth = new THREE.Mesh(
   new THREE.CylinderGeometry(2.8, 2.96, 0.12, 64),
@@ -154,12 +154,12 @@ plinth.receiveShadow = true;
 scene.add(plinth);
 
 const plinthTrimMat = new THREE.MeshPhysicalMaterial({
-  color: 0xff7a18,
-  emissive: 0xff5500,
-  emissiveIntensity: 0.28,
-  roughness: 0.20,
-  metalness: 0.82,
-  clearcoat: 0.55,
+  color: 0x149a8e,
+  emissive: 0x0e7d70,
+  emissiveIntensity: 0.24,
+  roughness: 0.28,
+  metalness: 0.42,
+  clearcoat: 0.35,
 });
 const plinthTrimRing = new THREE.Mesh(
   new THREE.TorusGeometry(2.79, 0.022, 12, 72),
@@ -512,77 +512,79 @@ manoRoot.add(createContactShadow(2.15, 2.15));
 const manoChar = new THREE.Group();
 manoRoot.add(manoChar);
 
-// Warm Orange-Amber Spotlight Aura to give MANO vibrant contrast against the white/sky-blue stage
-const manoWarmLight = new THREE.PointLight(0xff8c2b, 1.35, 5.5, 1.6);
+// Soft Sky-Mint Spotlight Aura for soothing maternal/pediatric comfort
+const manoWarmLight = new THREE.PointLight(0x9eece0, 1.15, 5.5, 1.6);
 manoWarmLight.position.set(0.85, 2.15, 1.85);
 manoRoot.add(manoWarmLight);
 
-// Signature PBR Materials for Hero MANO (Warm Ivory Shell + Energetic Orange-Amber & Mango-Gold Palette)
+// Soft Matte-Velvet Porcelain PBR Materials (Zero Harsh Plastic Glare or Orange)
 const manoPorcelainMat = new THREE.MeshPhysicalMaterial({
-  color: 0xfffaf2,
-  emissive: 0xff9e44,
-  emissiveIntensity: 0.04,
-  roughness: 0.14,
+  color: 0xfbf8f3,
+  emissive: 0x143840,
+  emissiveIntensity: 0.02,
+  roughness: 0.36,
   roughnessMap: microGrainTex,
-  metalness: 0.03,
-  clearcoat: 1.0,
-  clearcoatRoughness: 0.05,
-  sheen: 0.38,
-  sheenColor: new THREE.Color(0xffe0c2),
-  sheenRoughness: 0.35,
-  ior: 1.52,
-  reflectivity: 0.92,
-  envMapIntensity: 1.2,
+  metalness: 0.01,
+  clearcoat: 0.24,
+  clearcoatRoughness: 0.28,
+  sheen: 0.72,
+  sheenColor: new THREE.Color(0xeef9f7),
+  sheenRoughness: 0.45,
+  ior: 1.44,
+  reflectivity: 0.45,
+  envMapIntensity: 0.88,
 });
 
 const manoGoldMat = new THREE.MeshPhysicalMaterial({
-  color: 0xff6d00,
-  emissive: 0xff4800,
-  emissiveIntensity: 0.38,
-  roughness: 0.16,
-  metalness: 0.82,
-  clearcoat: 0.78,
-  clearcoatRoughness: 0.08,
-  envMapIntensity: 1.55,
+  color: 0x26b5a5,
+  emissive: 0x0e7d70,
+  emissiveIntensity: 0.22,
+  roughness: 0.32,
+  metalness: 0.24,
+  clearcoat: 0.36,
+  clearcoatRoughness: 0.24,
+  sheen: 0.55,
+  sheenColor: new THREE.Color(0xbef7ec),
+  envMapIntensity: 1.0,
 });
 
 const manoAmberAccentMat = new THREE.MeshPhysicalMaterial({
-  color: 0xffab00,
-  emissive: 0xff7700,
-  emissiveIntensity: 0.46,
-  roughness: 0.15,
-  metalness: 0.76,
-  clearcoat: 0.85,
-  clearcoatRoughness: 0.06,
-  envMapIntensity: 1.5,
+  color: 0xd9c18a,
+  emissive: 0x9b824e,
+  emissiveIntensity: 0.18,
+  roughness: 0.28,
+  metalness: 0.45,
+  clearcoat: 0.42,
+  clearcoatRoughness: 0.20,
+  envMapIntensity: 1.15,
 });
 
 const manoVisorMat = new THREE.MeshPhysicalMaterial({
-  color: 0x071210,
-  roughness: 0.03,
-  metalness: 0.12,
-  clearcoat: 1.0,
-  clearcoatRoughness: 0.02,
-  ior: 1.58,
-  reflectivity: 1.0,
-  envMapIntensity: 1.45,
+  color: 0x0e282f,
+  roughness: 0.14,
+  metalness: 0.06,
+  clearcoat: 0.65,
+  clearcoatRoughness: 0.12,
+  ior: 1.48,
+  reflectivity: 0.65,
+  envMapIntensity: 1.05,
 });
 
 const manoFaceGlowMat = new THREE.MeshPhysicalMaterial({
-  color: 0x45f79f,
-  emissive: 0x26e885,
-  emissiveIntensity: 1.55,
-  roughness: 0.14,
-  clearcoat: 0.45,
+  color: 0x8efce8,
+  emissive: 0x56ecd0,
+  emissiveIntensity: 1.28,
+  roughness: 0.22,
+  clearcoat: 0.25,
 });
 
 const manoCheekBlushMat = new THREE.MeshPhysicalMaterial({
-  color: 0xff7043,
-  emissive: 0xff5722,
-  emissiveIntensity: 0.95,
-  roughness: 0.25,
+  color: 0xff9db2,
+  emissive: 0xf47d99,
+  emissiveIntensity: 0.72,
+  roughness: 0.38,
   transparent: true,
-  opacity: 0.82,
+  opacity: 0.78,
 });
 
 const manoCatchlightMat = new THREE.MeshBasicMaterial({
@@ -590,48 +592,48 @@ const manoCatchlightMat = new THREE.MeshBasicMaterial({
 });
 
 const manoCoreEmblemMat = new THREE.MeshPhysicalMaterial({
-  color: 0xff7a18,
-  emissive: 0xff5500,
-  emissiveIntensity: 0.82,
-  roughness: 0.16,
-  metalness: 0.48,
-  clearcoat: 0.90,
+  color: 0xd9c18a,
+  emissive: 0x8f7239,
+  emissiveIntensity: 0.40,
+  roughness: 0.26,
+  metalness: 0.35,
+  clearcoat: 0.45,
 });
 
 const manoSproutMat = new THREE.MeshPhysicalMaterial({
-  color: 0x68b818,
-  emissive: 0x2f7a08,
-  emissiveIntensity: 0.20,
-  roughness: 0.24,
-  metalness: 0.02,
-  clearcoat: 0.62,
-  clearcoatRoughness: 0.16,
-  sheen: 0.60,
+  color: 0x6bbf4e,
+  emissive: 0x2c7f4d,
+  emissiveIntensity: 0.16,
+  roughness: 0.34,
+  metalness: 0.01,
+  clearcoat: 0.35,
+  clearcoatRoughness: 0.24,
+  sheen: 0.68,
   sheenColor: new THREE.Color(0xd9f99d),
-  sheenRoughness: 0.38,
+  sheenRoughness: 0.42,
 });
 
 const manoScarfMat = new THREE.MeshPhysicalMaterial({
-  color: 0x16a34a,
-  emissive: 0x0d7a35,
-  emissiveIntensity: 0.18,
-  roughness: 0.32,
-  metalness: 0.18,
-  clearcoat: 0.45,
-  sheen: 0.75,
-  sheenColor: new THREE.Color(0x88f7be),
-  sheenRoughness: 0.42,
+  color: 0x28b5a0,
+  emissive: 0x0e7d70,
+  emissiveIntensity: 0.14,
+  roughness: 0.48,
+  metalness: 0.05,
+  clearcoat: 0.18,
+  sheen: 0.85,
+  sheenColor: new THREE.Color(0xb8f7ea),
+  sheenRoughness: 0.55,
 });
 
 const metalMat = new THREE.MeshPhysicalMaterial({
   color: 0xe3ecee,
-  roughness: 0.12,
-  metalness: 0.95,
-  clearcoat: 0.38,
-  envMapIntensity: 1.35,
+  roughness: 0.16,
+  metalness: 0.88,
+  clearcoat: 0.30,
+  envMapIntensity: 1.25,
 });
 
-// Energetic Orange-Amber Stage Halo Ring under MANO on the White Plinth
+// Calm Seafoam Stage Halo Ring under MANO on the Pearl Plinth
 const manoStageHalo = new THREE.Mesh(
   new THREE.TorusGeometry(0.68, 0.024, 14, 56),
   manoAmberAccentMat
@@ -914,7 +916,7 @@ const squadConfigs = [
   { id: 'mano_growth', color: 0x1d78c1, emissive: 0x3898e8, kind: 'growth', angle: Math.PI / 3 },
   { id: 'mano_skin', color: 0xe06356, emissive: 0xf48477, kind: 'skin', angle: (2 * Math.PI) / 3 },
   { id: 'mano_nutrition', color: 0x6b8e23, emissive: 0x8fb834, kind: 'nutrition', angle: Math.PI },
-  { id: 'mano_care', color: 0xe67e22, emissive: 0xf59d47, kind: 'care', angle: (4 * Math.PI) / 3 },
+  { id: 'mano_care', color: 0x0e96a8, emissive: 0x2ec4d6, kind: 'care', angle: (4 * Math.PI) / 3 },
   { id: 'mano_connect', color: 0x7c5cbf, emissive: 0x9b7be0, kind: 'connect', angle: (5 * Math.PI) / 3 },
 ];
 
@@ -1514,21 +1516,22 @@ window.Mano3D = {
     keyLight.intensity = dark ? 1.75 : 2.10;
     fillLight.color.setHex(dark ? 0x56b2c4 : 0xd9f4f8);
     fillLight.intensity = dark ? 0.58 : 0.80;
-    rimLight.color.setHex(dark ? 0xffb366 : 0xfff0d9);
-    rimLight.intensity = dark ? 1.38 : 0.92;
+    rimLight.color.setHex(dark ? 0x6fe3d8 : 0xe5f8fa);
+    rimLight.intensity = dark ? 1.18 : 0.85;
 
     hemiLight.color.setHex(dark ? 0x3b8696 : 0xe8f9fc);
     hemiLight.groundColor.setHex(dark ? 0x0b1f26 : 0xd4eaf7);
     hemiLight.intensity = dark ? 0.50 : 0.76;
 
-    manoFaceGlowMat.emissiveIntensity = dark ? 1.60 : 1.45;
-    manoCoreEmblemMat.emissiveIntensity = dark ? 1.10 : 0.85;
-    manoGoldMat.emissiveIntensity = dark ? 0.48 : 0.38;
+    manoFaceGlowMat.emissiveIntensity = dark ? 1.35 : 1.22;
+    manoCoreEmblemMat.emissiveIntensity = dark ? 0.55 : 0.40;
+    manoGoldMat.emissiveIntensity = dark ? 0.28 : 0.22;
     moteMat.emissiveIntensity = dark ? 0.42 : 0.16;
     for (let i = 0; i < contactShadowMats.length; i++) {
       contactShadowMats[i].opacity = dark ? 0.90 : 0.80;
     }
 
+    document.documentElement.classList.toggle('dark-theme', dark);
     document.documentElement.style.background = dark ? '#08191f' : '#f4faff';
     document.body.style.background = dark ? '#08191f' : '#f4faff';
     markInteractive(900);
@@ -1545,9 +1548,9 @@ window.Mano3D = {
       manoCoreEmblemMat.emissive.setHex(picked.userData.emissiveColor);
       plinthTrimMat.emissive.setHex(picked.userData.emissiveColor);
     } else {
-      manoCoreEmblemMat.color.setHex(0xff7a18);
-      manoCoreEmblemMat.emissive.setHex(0xff5500);
-      plinthTrimMat.emissive.setHex(0xff5500);
+      manoCoreEmblemMat.color.setHex(0xd9c18a);
+      manoCoreEmblemMat.emissive.setHex(0x8f7239);
+      plinthTrimMat.emissive.setHex(0x0e7d70);
     }
     markInteractive(1600);
   },
@@ -1916,6 +1919,10 @@ function animate(nowMs) {
 
   controls.update();
   renderer.render(scene, camera);
+  const loaderEl = document.getElementById('stage-loader');
+  if (loaderEl && !loaderEl.classList.contains('hidden')) {
+    loaderEl.classList.add('hidden');
+  }
 }
 
 rafId = requestAnimationFrame(animate);

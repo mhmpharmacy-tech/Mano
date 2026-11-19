@@ -93,23 +93,23 @@ object ManoDomainLinks {
 
   fun buildTopicShareText(article: Article, host: String = CANONICAL_HOST): String =
     buildString {
-      appendLine("راهنمای سلامت کودک مانو کیدز:")
+      appendLine("راهنمای سلامت کودک مانو کید:")
       appendLine(article.titleFa)
       appendLine()
       appendLine(article.shortAnswerFa.trim())
       appendLine()
-      appendLine("باز کردن مستقیم در مانو کیدز:")
+      appendLine("باز کردن مستقیم در مانو کید:")
       append(topicUrl(article.slug, host))
     }.trim()
 
   fun buildMedicineShareText(medication: MedicationMonograph, host: String = CANONICAL_HOST): String =
     buildString {
-      appendLine("کارت ایمنی داروی کودک مانو کیدز:")
+      appendLine("کارت ایمنی داروی کودک مانو کید:")
       appendLine("${medication.nameFa} (${medication.genericNameEn})")
       appendLine("• کاربرد: ${medication.treatsFa}")
       appendLine("• هشدار غلظت و شکل دارو: ${medication.dosageFormAlertFa}")
       appendLine()
-      appendLine("مشاهده کارت کامل در مانو کیدز:")
+      appendLine("مشاهده کارت کامل در مانو کید:")
       append(medicineUrl(medication.slug, host))
     }.trim()
 
@@ -120,7 +120,7 @@ object ManoDomainLinks {
   ): String =
     buildString {
       val childLabel = childAliasFa?.trim()?.takeIf { it.isNotEmpty() }?.let { "برای «$it»" } ?: "کودک"
-      appendLine("برنامه واکسیناسیون $childLabel — مانو کیدز")
+      appendLine("برنامه واکسیناسیون $childLabel — مانو کید")
       appendLine(
         "پیشرفت واکسن‌های اصلی: ${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())} از ${VaccinationScheduleEngine.toPersianDigits(summary.totalCoreCount.toString())} نوبت"
       )
@@ -136,7 +136,7 @@ object ManoDomainLinks {
       }
       appendLine()
       appendLine("یادآور غیرتشخیصی؛ برای تطبیق نهایی به خانه بهداشت یا پزشک کودک مراجعه کنید.")
-      appendLine("باز کردن برنامه واکسیناسیون در مانو کیدز:")
+      appendLine("باز کردن برنامه واکسیناسیون در مانو کید:")
       append(vaccinesUrl(host))
     }.trim()
 

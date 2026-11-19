@@ -826,7 +826,7 @@ fun ManoOrbitalHeroStage(
               .semantics { contentDescription = "شخصیت مانو، برای پرش شاد ضربه بزنید" }
               .testTag("mano_mascot_touch"),
         ) {
-          // Outer luminous glass halo ring with warm Orange-Amber & Sky-Mint glow
+          // Outer luminous glass halo ring with calm Seafoam-Aqua & Sky-Mint glow
           Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -837,7 +837,7 @@ fun ManoOrbitalHeroStage(
                     colors =
                       listOf(
                         PureWhite.copy(alpha = if (isDark) 0.26f else 0.98f),
-                        com.example.ui.theme.OrangeSurface.copy(alpha = if (isDark) 0.24f else 0.78f),
+                        com.example.ui.theme.CalmAquaSurface.copy(alpha = if (isDark) 0.24f else 0.78f),
                         com.example.ui.theme.SoftSkyHalo.copy(alpha = if (isDark) 0.22f else 0.72f),
                       )
                   ),
@@ -849,8 +849,8 @@ fun ManoOrbitalHeroStage(
                     Brush.linearGradient(
                       colors =
                         listOf(
-                          com.example.ui.theme.OrangeCare.copy(alpha = 0.85f),
-                          com.example.ui.theme.MangoCare.copy(alpha = 0.82f),
+                          com.example.ui.theme.SeaGreen.copy(alpha = 0.85f),
+                          com.example.ui.theme.CalmAquaCare.copy(alpha = 0.82f),
                           com.example.ui.theme.SkyCare.copy(alpha = 0.70f),
                           TealGlow.copy(alpha = 0.75f),
                         )
@@ -867,8 +867,8 @@ fun ManoOrbitalHeroStage(
                   .shadow(
                     elevation = 18.dp,
                     shape = CircleShape,
-                    ambientColor = com.example.ui.theme.OrangeCare.copy(alpha = 0.42f),
-                    spotColor = com.example.ui.theme.MangoCare.copy(alpha = 0.36f),
+                    ambientColor = com.example.ui.theme.SeaGreen.copy(alpha = 0.36f),
+                    spotColor = com.example.ui.theme.SkyCare.copy(alpha = 0.32f),
                   )
                   .clip(CircleShape)
                   .background(
@@ -876,20 +876,20 @@ fun ManoOrbitalHeroStage(
                       colors =
                         listOf(
                           PureWhite,
-                          Color(0xFFFFF5EB),
+                          Color(0xFFF3FBFA),
                           Color(0xFFEAF7FF),
                         )
                     )
                   ),
             ) {
               Image(
-                painter = painterResource(id = R.drawable.img_mano_v1_orange_hero),
-                contentDescription = "شخصیت رسمی مانو (نسخه مرجع V1.0)، ربات سه‌بعدی سفید و نارنجی با چشمان درخشان، نشان M+ و برگ سبز روی سر",
+                painter = painterResource(id = R.drawable.img_mano_calm_hero),
+                contentDescription = "شخصیت آرام و مهربان مانو کید با شال نعنایی و برگ سبز",
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.Center,
                 modifier = Modifier.fillMaxSize().clip(CircleShape),
               )
-              // 3D studio rim lighting + luminous multi-stop ring
+              // Subtle studio rim lighting + calm seafoam-sky ring
               Canvas(modifier = Modifier.fillMaxSize()) {
                 drawCircle(
                   brush =
@@ -898,12 +898,11 @@ fun ManoOrbitalHeroStage(
                         listOf(
                           Color.Transparent,
                           Color.Transparent,
-                          com.example.ui.theme.OrangeCare.copy(alpha = if (isDark) 0.22f else 0.14f),
-                          com.example.ui.theme.MangoCare.copy(alpha = if (isDark) 0.28f else 0.20f),
+                          com.example.ui.theme.SeaGreen.copy(alpha = if (isDark) 0.20f else 0.12f),
+                          com.example.ui.theme.SkyCare.copy(alpha = if (isDark) 0.24f else 0.16f),
                         )
                     )
                 )
-                // Top-left 3D glass specular highlight arc
                 drawArc(
                   color = PureWhite.copy(alpha = 0.90f),
                   startAngle = 200f,
@@ -923,11 +922,11 @@ fun ManoOrbitalHeroStage(
                       brush =
                         Brush.sweepGradient(
                           listOf(
-                            com.example.ui.theme.OrangeCare.copy(alpha = 0.96f),
-                            com.example.ui.theme.MangoCare.copy(alpha = 0.94f),
+                            com.example.ui.theme.SeaGreen.copy(alpha = 0.94f),
                             TealGlow.copy(alpha = 0.92f),
                             com.example.ui.theme.SkyCare.copy(alpha = 0.90f),
-                            com.example.ui.theme.OrangeCare.copy(alpha = 0.96f),
+                            com.example.ui.theme.CalmAquaCare.copy(alpha = 0.92f),
+                            com.example.ui.theme.SeaGreen.copy(alpha = 0.94f),
                           )
                         ),
                       shape = CircleShape,

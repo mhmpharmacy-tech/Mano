@@ -253,10 +253,10 @@ fun MedicinesScreen(
           SectionCard {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
               ManoFramedIllustration(
-                resId = R.drawable.mascot_medicine,
-                contentDescription = "مانو در کنار بطری دارو و دفترچه ثبت مصرف",
-                width = 88.dp,
-                aspectRatio = 0.90f,
+                resId = R.drawable.mano_pose_explain,
+                contentDescription = "ربات مانو کید با تبلت سلامت برای ایمنی داروهای کودک",
+                width = 90.dp,
+                aspectRatio = 1.0f,
                 accentColor = MaterialTheme.colorScheme.primary,
               )
               Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {

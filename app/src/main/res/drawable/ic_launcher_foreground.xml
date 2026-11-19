@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/img_mano_launcher"
+        android:drawable="@drawable/img_mano_launcher_robot"
         android:gravity="center" />
 </layer-list>

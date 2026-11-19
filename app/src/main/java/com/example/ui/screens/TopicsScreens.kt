@@ -141,7 +141,7 @@ fun TopicsScreen(
           SectionCard {
             ManoBannerFrame(
               resId = R.drawable.img_topics_library_banner,
-              contentDescription = "کتابخانه سلامت کودک مانو کیدز",
+              contentDescription = "کتابخانه سلامت کودک مانو کید",
               aspectRatio = 16f / 9f,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

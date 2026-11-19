@@ -73,7 +73,7 @@ import com.example.ui.theme.DarkSky
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.JadeCareInk
 import com.example.ui.theme.LocalManoDarkTheme
-import com.example.ui.theme.OrangeCareInk
+import com.example.ui.theme.CautionAmber
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SkyCareInk
 import com.example.ui.theme.SuccessEmerald
@@ -152,7 +152,7 @@ fun WhoGrowthChartCard(
   val chartCardBg = if (isDark) DarkSurface else PureWhite
   val skyAccent = if (isDark) DarkSky else SkyCareInk
   val sageAccent = manoSemanticAccent(SuccessEmerald, DarkSage)
-  val amberAccent = if (isDark) DarkGold else OrangeCareInk
+  val amberAccent = if (isDark) DarkGold else CautionAmber
   val dangerAccent = if (isDark) DarkCoral else DangerCrimson
   val gridLineColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isDark) 0.32f else 0.45f)
   val axisTextColor = MaterialTheme.colorScheme.onSurfaceVariant

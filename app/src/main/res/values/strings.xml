@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">مانو کیدز</string>
-    <string name="welcome_badge">همراه علمی والدین • غیرتشخیصی</string>
+    <string name="app_name">مانو کید</string>
+    <string name="welcome_badge">همراه علمی مادر و کودک • غیرتشخیصی</string>
     <string name="welcome_title">مراقبت از کودک، با خیال آسوده‌تر</string>
-    <string name="welcome_body">خوش آمدید! مانو کیدز راهنمای قدم‌به‌گام علائم فوری، مصرف ایمن داروهای کودک و پایش رشد را به زبان ساده در اختیارتان می‌گذارد.</string>
-    <string name="core_sections_title">بخش‌های اصلی مراقبت از کودک</string>
+    <string name="welcome_body">خوش آمدید! مانو کید راهنمای قدم‌به‌گام علائم فوری، مصرف ایمن داروهای کودک، پایش رشد و ارتباط مستقیم با داروساز را در اختیارتان می‌گذارد.</string>
+    <string name="core_sections_title">انتخاب سریع نیاز شما</string>
     <string name="nav_emergency_triage_title">تریاژ و علائم فوری</string>
     <string name="nav_emergency_triage_subtitle">بررسی گام‌به‌گام تب، تنفس و علائم هشدار؛ تشخیص نیاز به اورژانس ۱۱۵</string>
     <string name="nav_emergency_triage_badge">اولویت ایمنی</string>
@@ -21,7 +21,7 @@
     <string name="vaccines_reminder_channel_name">یادآوری واکسیناسیون کودک</string>
     <string name="vaccines_reminder_channel_desc">اعلان یادآوری پیش از موعد نوبت واکسن کودک</string>
     <string name="domain_links_title">اتصال دامنه و لینک‌های مستقیم (App Links)</string>
-    <string name="domain_links_subtitle">دامنه‌های manokid.ir و manokid.com برای باز شدن مستقیم راهنماها، داروها و برنامه واکسن در مانو کیدز پیکربندی شده‌اند.</string>
+    <string name="domain_links_subtitle">دامنه‌های manokid.ir و manokid.com برای باز شدن مستقیم راهنماها، داروها و برنامه واکسن در مانو کید پیکربندی شده‌اند.</string>
     <string name="syrup_scanner_title">اسکنر هوشمند شربت و قطره</string>
     <string name="syrup_scanner_subtitle">تشخیص غلظت بطری (mg/mL) با تصویرخوان هوشمند و تنظیم خودکار سرنگ سه‌بعدی پس از تایید والد</string>
     <string name="syrup_scanner_badge">جدید • اسکن دوربین</string>

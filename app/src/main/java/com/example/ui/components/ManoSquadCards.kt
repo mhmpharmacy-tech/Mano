@@ -64,13 +64,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.R
+import com.example.ui.theme.CalmAquaCare
+import com.example.ui.theme.CalmAquaInk
+import com.example.ui.theme.CalmAquaSurface
 import com.example.ui.theme.CoralCare
 import com.example.ui.theme.CoralCareInk
 import com.example.ui.theme.CoralSurface
+import com.example.ui.theme.DarkAqua
 import com.example.ui.theme.DarkCoral
 import com.example.ui.theme.DarkJade
 import com.example.ui.theme.DarkOlive
-import com.example.ui.theme.DarkOrange
 import com.example.ui.theme.DarkPlum
 import com.example.ui.theme.DarkSky
 import com.example.ui.theme.DarkSurface
@@ -82,9 +85,6 @@ import com.example.ui.theme.LocalManoDarkTheme
 import com.example.ui.theme.OliveCare
 import com.example.ui.theme.OliveCareInk
 import com.example.ui.theme.OliveSurface
-import com.example.ui.theme.OrangeCare
-import com.example.ui.theme.OrangeCareInk
-import com.example.ui.theme.OrangeSurface
 import com.example.ui.theme.PlumCare
 import com.example.ui.theme.PlumCareInk
 import com.example.ui.theme.PlumSurface
@@ -108,7 +108,7 @@ enum class ManoSquadMember(
     responsibilityFa = "ایمنی دارویی",
     summaryFa = "غلظت دارو، سرنگ mL و تداخل‌ها",
     colorNameFa = "سبز یشمی",
-    characterResId = R.drawable.ic_mano_drug,
+    characterResId = R.drawable.mano_pose_explain,
   ),
   GROWTH(
     id = "growth",
@@ -116,7 +116,7 @@ enum class ManoSquadMember(
     responsibilityFa = "رشد و تکامل",
     summaryFa = "نقاط عطف سنی، قد، وزن و خواب",
     colorNameFa = "آبی",
-    characterResId = R.drawable.ic_mano_growth,
+    characterResId = R.drawable.img_mano_orbital_mascot,
   ),
   SKIN(
     id = "skin",
@@ -124,7 +124,7 @@ enum class ManoSquadMember(
     responsibilityFa = "مراقبت پوست",
     summaryFa = "سوختگی پوشک، خشکی و اگزما",
     colorNameFa = "مرجانی",
-    characterResId = R.drawable.ic_mano_skin,
+    characterResId = R.drawable.mano_pose_caution,
   ),
   NUTRITION(
     id = "nutrition",
@@ -132,15 +132,15 @@ enum class ManoSquadMember(
     responsibilityFa = "تغذیه",
     summaryFa = "غذای کمکی، شیرخشک و اشتها",
     colorNameFa = "سبز زیتونی",
-    characterResId = R.drawable.ic_mano_nutrition,
+    characterResId = R.drawable.mano_pose_wait,
   ),
   CARE(
     id = "care",
     englishName = "Mano Care",
     responsibilityFa = "تب و علائم",
     summaryFa = "تب‌سنجی، سرفه و راهنمای مراقبت",
-    colorNameFa = "نارنجی",
-    characterResId = R.drawable.ic_mano_care,
+    colorNameFa = "فیروزه‌ای",
+    characterResId = R.drawable.mano_pose_explain,
   ),
   CONNECT(
     id = "connect",
@@ -148,7 +148,7 @@ enum class ManoSquadMember(
     responsibilityFa = "ارتباط با داروساز",
     summaryFa = "پرسش علمی مستقیم از داروساز",
     colorNameFa = "بنفش",
-    characterResId = R.drawable.ic_mano_connect,
+    characterResId = R.drawable.mano_pose_pharmacist,
   );
 
   fun accentColor(isDark: Boolean): Color =
@@ -157,7 +157,7 @@ enum class ManoSquadMember(
       GROWTH -> if (isDark) DarkSky else SkyCare
       SKIN -> if (isDark) DarkCoral else CoralCare
       NUTRITION -> if (isDark) DarkOlive else OliveCare
-      CARE -> if (isDark) DarkOrange else OrangeCare
+      CARE -> if (isDark) DarkAqua else CalmAquaCare
       CONNECT -> if (isDark) DarkPlum else PlumCare
     }
 
@@ -167,7 +167,7 @@ enum class ManoSquadMember(
       GROWTH -> if (isDark) DarkSky.copy(alpha = 0.17f) else SkySurface
       SKIN -> if (isDark) DarkCoral.copy(alpha = 0.17f) else CoralSurface
       NUTRITION -> if (isDark) DarkOlive.copy(alpha = 0.17f) else OliveSurface
-      CARE -> if (isDark) DarkOrange.copy(alpha = 0.17f) else OrangeSurface
+      CARE -> if (isDark) DarkAqua.copy(alpha = 0.17f) else CalmAquaSurface
       CONNECT -> if (isDark) DarkPlum.copy(alpha = 0.17f) else PlumSurface
     }
 
@@ -177,7 +177,7 @@ enum class ManoSquadMember(
       GROWTH -> if (isDark) DarkSky else SkyCareInk
       SKIN -> if (isDark) DarkCoral else CoralCareInk
       NUTRITION -> if (isDark) DarkOlive else OliveCareInk
-      CARE -> if (isDark) DarkOrange else OrangeCareInk
+      CARE -> if (isDark) DarkAqua else CalmAquaInk
       CONNECT -> if (isDark) DarkPlum else PlumCareInk
     }
 }
@@ -439,17 +439,24 @@ fun ManoSquadCharacterCard(
                 )
               },
         ) {
-          ManoV1SquadCharacterCanvas(
-            member = member,
-            isDark = isDark,
+          val squadPoseRes =
+            when (member) {
+              ManoSquadMember.DRUG -> R.drawable.mano_pose_explain
+              ManoSquadMember.GROWTH -> R.drawable.img_mano_orbital_mascot
+              ManoSquadMember.SKIN -> R.drawable.mano_pose_caution
+              ManoSquadMember.NUTRITION -> R.drawable.mano_pose_wait
+              ManoSquadMember.CARE -> R.drawable.mano_pose_explain
+              ManoSquadMember.CONNECT -> R.drawable.mano_pose_pharmacist
+            }
+          Image(
+            painter = painterResource(id = squadPoseRes),
+            contentDescription = "کاراکتر ${member.englishName} برای بخش ${member.responsibilityFa}",
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             modifier =
               Modifier
                 .fillMaxSize()
                 .padding(3.dp)
-                .clip(CircleShape)
-                .semantics {
-                  contentDescription = "کاراکتر ${member.englishName} برای بخش ${member.responsibilityFa}"
-                },
+                .clip(CircleShape),
           )
         }
 

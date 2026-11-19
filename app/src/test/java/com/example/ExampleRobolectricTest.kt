@@ -37,80 +37,113 @@ class ExampleRobolectricTest {
   }
 
   @Test
-  fun appName_matchesManoKids() {
+  fun appName_matchesManoKid() {
     val context = ApplicationProvider.getApplicationContext<Context>()
-    assertEquals("مانو کیدز", context.getString(R.string.app_name))
+    assertEquals("مانو کید", context.getString(R.string.app_name))
   }
 
   @Test
-  fun homeScreen_displaysWelcomingCardOrbitalStageAndRtlDirection() {
+  @Config(sdk = [36], qualifiers = "w411dp-h915dp-xxhdpi")
+  fun homeScreen_displaysOrbitalMenuWithoutOverlapAndPharmacistHeroBelow() {
+    composeTestRule.waitForIdle()
+    composeTestRule.mainClock.advanceTimeBy(600L)
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
-    composeTestRule.onNodeWithText("مراقبت از کودک، با خیال آسوده‌تر").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("home_orbital_stage").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("mano_mascot_touch").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_brand_crest").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("orbital_menu_stage").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("mano_mascot_touch").assertIsDisplayed().performClick()
+    composeTestRule.onNodeWithText("دستیار هوشمند سلامت کودک و خانواده").assertIsDisplayed()
 
-    // Verify RTL layout order on the orbital ring switcher: inner ring sits to the right of outer ring
-    composeTestRule.onNodeWithTag("orbital_ring_switcher").performScrollTo().assertIsDisplayed()
-    val innerBounds = composeTestRule.onNodeWithTag("orbital_ring_inner").fetchSemanticsNode().boundsInRoot
-    val outerBounds = composeTestRule.onNodeWithTag("orbital_ring_outer").fetchSemanticsNode().boundsInRoot
-    org.junit.Assert.assertTrue("Expected RTL ordering with inner ring on the right of outer ring", innerBounds.left > outerBounds.right)
+    val stageBounds = composeTestRule.onNodeWithTag("orbital_menu_stage").fetchSemanticsNode().boundsInRoot
+    val mascotBounds = composeTestRule.onNodeWithTag("mano_mascot_touch").fetchSemanticsNode().boundsInRoot
+    val orbitalTags =
+      listOf(
+        "home_menu_fever",
+        "home_menu_medicines",
+        "home_menu_scanner",
+        "home_menu_growth",
+        "home_menu_skin",
+        "home_menu_qa",
+      )
+    val nodeBounds =
+      orbitalTags.associateWith { tag ->
+        composeTestRule.onNodeWithTag(tag).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+      }
+
+    // Every orbital node must sit strictly inside stage bounds and never overlap central MANO
+    nodeBounds.forEach { (tag, bounds) ->
+      org.junit.Assert.assertTrue("$tag clipped left of stage", bounds.left >= stageBounds.left - 1f)
+      org.junit.Assert.assertTrue("$tag clipped right of stage", bounds.right <= stageBounds.right + 1f)
+      org.junit.Assert.assertTrue("$tag clipped top of stage", bounds.top >= stageBounds.top - 1f)
+      org.junit.Assert.assertTrue("$tag clipped bottom of stage", bounds.bottom <= stageBounds.bottom + 1f)
+      org.junit.Assert.assertFalse(
+        "$tag overlapped central MANO mascot ($bounds vs $mascotBounds)",
+        bounds.overlaps(mascotBounds),
+      )
+    }
+
+    // No pair of orbital nodes may overlap each other
+    for (i in orbitalTags.indices) {
+      for (j in i + 1 until orbitalTags.size) {
+        val tagA = orbitalTags[i]
+        val tagB = orbitalTags[j]
+        org.junit.Assert.assertFalse(
+          "Orbital nodes $tagA and $tagB overlapped",
+          nodeBounds.getValue(tagA).overlaps(nodeBounds.getValue(tagB)),
+        )
+      }
+    }
+
+    // Verify circular hexagonal symmetry around MANO
+    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_fever").bottom <= mascotBounds.top)
+    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_growth").top >= mascotBounds.bottom)
+    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_medicines").left >= mascotBounds.right)
+    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_qa").right <= mascotBounds.left)
+
+    // Verify zero separation gap between MANO orbital stage and Pharmacist card directly beneath it
+    val pharmacistBounds =
+      composeTestRule.onNodeWithTag("home_pharmacist_hero_card").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+    org.junit.Assert.assertTrue(
+      "Expected pharmacist card docked flush beneath orbital stage with zero gap, got gap=${pharmacistBounds.top - stageBounds.bottom}",
+      pharmacistBounds.top - stageBounds.bottom <= 2f,
+    )
+    composeTestRule.onNodeWithTag("home_pharmacist_cta").assertIsDisplayed()
   }
 
   @Test
-  fun homeScreen_orbitalMenuAroundManoRotatesAndNavigates() {
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("home_orbital_stage").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("mano_mascot_touch").performScrollTo().assertIsDisplayed().performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_active_topic").performScrollTo().assertIsDisplayed()
-
-    // Toggle continuous auto-rotation pause/play pill
-    composeTestRule.onNodeWithTag("orbital_toggle_spin").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithText("توقف").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("orbital_toggle_spin").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("چرخش").assertIsDisplayed()
-
-    // Clicking rotate next steps cleanly and opens target section
-    composeTestRule.onNodeWithTag("orbital_rotate_next").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("داروهای کودک و ایمنی مصرف").assertIsDisplayed()
-  }
-
-  @Test
-  fun homeScreen_orbitalNodesOpenTargetSectionsAndSpecializedPillars() {
+  fun homeScreen_bottomBarHomeButtonReturnsToHomeFromEverySectionAndDeepRoute() {
     composeTestRule.waitForIdle()
 
-    // 1. Pause spin and open initial crown item (fever -> Symptoms)
-    composeTestRule.onNodeWithTag("orbital_toggle_spin").performScrollTo().performClick()
+    // 1. Navigate via competitive-advantage Pharmacist Hero CTA -> AskPharmacistRoute, then return via bottom nav Home
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_pharmacist_cta"))
+    composeTestRule.onNodeWithTag("home_pharmacist_cta").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("home_hero_card").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("nav_home").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
+
+    // 2. Navigate into Medicines tab -> nested MedicineDetailRoute, then return via nav_home without using Back
+    composeTestRule.onNodeWithTag("nav_medicines").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("medicine_card_acetaminophen-pediatric"))
+    composeTestRule.onNodeWithTag("medicine_card_acetaminophen-pediatric").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("medicine_detail_list").performScrollToNode(hasTestTag("medicine_detail_warnings"))
+    composeTestRule.onNodeWithTag("medicine_detail_warnings").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag("nav_home").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
+
+    // 3. Navigate via Selective Menu card into Symptoms wizard, then return cleanly via nav_home
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_fever"))
+    composeTestRule.onNodeWithTag("home_menu_fever").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("wizard_next_btn").assertIsDisplayed()
-
-    composeTestRule.onNodeWithTag("topbar_back").performClick()
+    composeTestRule.onNodeWithTag("nav_home").performClick()
     composeTestRule.waitForIdle()
-
-    // 2. Step to Medicines on inner orbit and open
-    composeTestRule.onNodeWithTag("orbital_rotate_next").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithText("داروهای کودک و ایمنی مصرف").assertIsDisplayed()
-
-    composeTestRule.onNodeWithTag("topbar_back").performClick()
-    composeTestRule.waitForIdle()
-
-    // 3. Step to MANO Safety pillar on inner orbit and open
-    composeTestRule.onNodeWithTag("orbital_rotate_next").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("overlap_checker_card"))
-    composeTestRule.onNodeWithTag("overlap_checker_card").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
   }
 
   @Test
@@ -254,28 +287,23 @@ class ExampleRobolectricTest {
 
   @Test
   @Config(sdk = [36], qualifiers = "w411dp-h915dp-xxhdpi")
-  fun homeScreen_galacticDualRingsSwitchAndNavigateToOuterSections() {
+  fun homeScreen_specializedStripOpens3DStudioAndReturnsHomeViaBottomNav() {
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_ring_switcher").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("orbital_ring_inner").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("orbital_ring_outer").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("orbital_item_vaccines").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("orbital_item_studio3d").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_specialized_strip"))
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_safety"))
+    composeTestRule.onNodeWithTag("home_tool_safety").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_comparison"))
+    composeTestRule.onNodeWithTag("home_tool_comparison").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_pharmacy"))
+    composeTestRule.onNodeWithTag("home_tool_pharmacy").assertIsDisplayed()
 
-    // Pause continuous motion cleanly and switch to outer galactic ring
-    composeTestRule.onNodeWithTag("orbital_toggle_spin").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_ring_outer").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule
-      .onNode(hasText("سرفه و خس‌خس", substring = true) and hasAnyAncestor(hasTestTag("orbital_active_topic")))
-      .assertIsDisplayed()
-
-    // Step backwards (wraps cleanly to 3D Studio) and open via focus CTA
-    composeTestRule.onNodeWithTag("orbital_rotate_prev").performClick()
-    composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("orbital_focus_cta").performClick()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_3d"))
+    composeTestRule.onNodeWithTag("home_tool_3d").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
+
+    composeTestRule.onNodeWithTag("nav_home").performClick()
+    composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
   }
 }

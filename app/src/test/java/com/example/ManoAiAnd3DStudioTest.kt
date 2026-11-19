@@ -216,8 +216,8 @@ class ManoAiAnd3DStudioTest {
     }
 
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_3d_workbench_btn"))
-    composeTestRule.onNodeWithTag("home_3d_workbench_btn").performClick()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_3d"))
+    composeTestRule.onNodeWithTag("home_tool_3d").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
     composeTestRule.onNodeWithTag("topbar_back").performClick()
@@ -424,7 +424,7 @@ class ManoAiAnd3DStudioTest {
   }
 
   @Test
-  fun galacticOrbitalHero_persistsSelectionAcrossNavigationAndBackInManoApp() {
+  fun homeScreen_studio3dToolOpensInManoAppAndReturnsViaNavHome() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     kotlinx.coroutines.runBlocking {
       ManoPreferencesRepository(context).setGalacticOrbitSelection("", "")
@@ -437,24 +437,17 @@ class ManoAiAnd3DStudioTest {
       }
 
       composeTestRule.waitForIdle()
-      composeTestRule.onNodeWithTag("orbital_ring_outer").performScrollTo().performClick()
-      composeTestRule.waitForIdle()
-      // Step backwards once in outer orbit from cough (index 0) -> studio3d (index 5)
-      composeTestRule.onNodeWithTag("orbital_rotate_prev").performScrollTo().performClick()
-      composeTestRule.waitForIdle()
-      composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
+      composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_3d"))
+      composeTestRule.onNodeWithTag("home_tool_3d").performClick()
       composeTestRule.waitForIdle()
 
       // Confirm we entered Pediatric 3D Studio
       composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
 
-      // Navigate back to Home -> last active outer ring section ("استودیو سه‌بعدی") must remain active!
-      composeTestRule.onNodeWithTag("topbar_back").performClick()
+      // Tap bottom-bar Home tab directly -> returns to Home without needing Back button
+      composeTestRule.onNodeWithTag("nav_home").performClick()
       composeTestRule.waitForIdle()
-      composeTestRule.onNodeWithTag("orbital_active_topic").performScrollTo().assertIsDisplayed()
-      composeTestRule.onNodeWithTag("orbital_focus_cta").performScrollTo().performClick()
-      composeTestRule.waitForIdle()
-      composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
+      composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
     } finally {
       kotlinx.coroutines.runBlocking {
         ManoPreferencesRepository(context).setGalacticOrbitSelection("", "")

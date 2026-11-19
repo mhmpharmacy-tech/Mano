@@ -236,7 +236,7 @@ object VisitDraftPdfHelper {
   fun printCachedPdf(
     context: Context,
     pdf: CachedVisitPdf,
-    jobName: String = "گزارش ویزیت مانو کیدز",
+    jobName: String = "گزارش ویزیت مانو کید",
   ): Result<Unit> =
     runCatching {
       require(pdf.file.exists()) { "فایل PDF در حافظه موقت یافت نشد." }
@@ -270,8 +270,8 @@ object VisitDraftPdfHelper {
         Intent(Intent.ACTION_SEND).apply {
           type = "application/pdf"
           putExtra(Intent.EXTRA_STREAM, uri)
-          putExtra(Intent.EXTRA_SUBJECT, titleFa.ifBlank { "گزارش پیش از ویزیت پزشک — مانو کیدز" })
-          putExtra(Intent.EXTRA_TEXT, "گزارش آماده ویزیت پزشک (تنظیم‌شده در مانو کیدز)")
+          putExtra(Intent.EXTRA_SUBJECT, titleFa.ifBlank { "گزارش پیش از ویزیت پزشک — مانو کید" })
+          putExtra(Intent.EXTRA_TEXT, "گزارش آماده ویزیت پزشک (تنظیم‌شده در مانو کید)")
           clipData = ClipData.newRawUri("visit_draft_pdf", uri)
           addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -620,7 +620,7 @@ object VisitDraftPdfHelper {
       val bannerHeight = 52f
       drawRoundedBox(canvas, MARGIN_H.toFloat(), bannerTop, CONTENT_WIDTH.toFloat(), bannerHeight, tealColor, null)
 
-      val brandLayout = buildRtlLayout("مانو کیدز • برگه خلاصه ویزیت پزشک", headerBrandPaint, CONTENT_WIDTH - 24)
+      val brandLayout = buildRtlLayout("مانو کید • برگه خلاصه ویزیت پزشک", headerBrandPaint, CONTENT_WIDTH - 24)
       drawLayout(canvas, brandLayout, MARGIN_H + 12f, bannerTop + 8f)
 
       val metaSub = "زمان تهیه: ${data.createdAtLabelFa}  •  مدل: ${data.generatedByModel}"
@@ -635,7 +635,7 @@ object VisitDraftPdfHelper {
     }
 
     private fun drawContinuationHeader(canvas: Canvas, data: VisitPdfDocumentData, pageNumber: Int): Float {
-      val headerText = "مانو کیدز — ادامه گزارش ویزیت (صفحه $pageNumber) • ${data.titleFa}"
+      val headerText = "مانو کید — ادامه گزارش ویزیت (صفحه $pageNumber) • ${data.titleFa}"
       val layout = buildRtlLayout(headerText, metaPaint, CONTENT_WIDTH)
       drawLayout(canvas, layout, MARGIN_H.toFloat(), MARGIN_TOP.toFloat())
       val lineY = MARGIN_TOP + layout.height + 6f

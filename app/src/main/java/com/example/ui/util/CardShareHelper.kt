@@ -71,7 +71,7 @@ object CardShareHelper {
         Intent(Intent.ACTION_SEND).apply {
           type = "image/png"
           putExtra(Intent.EXTRA_STREAM, uri)
-          putExtra(Intent.EXTRA_SUBJECT, "کارت آموزشی کودک مانو کیدز")
+          putExtra(Intent.EXTRA_SUBJECT, "کارت آموزشی کودک مانو کید")
           putExtra(Intent.EXTRA_TEXT, title)
           addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }

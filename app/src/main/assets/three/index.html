@@ -3,43 +3,189 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>MANO Kids 3D Studio</title>
+  <title>مانو کید • استودیو سه‌بعدی</title>
   <style>
+    :root {
+      --bg-top: #f1faff;
+      --bg-bottom: #f7fcfa;
+      --halo-a: rgba(52, 215, 190, 0.18);
+      --halo-b: rgba(26, 140, 227, 0.14);
+      --hud-bg: rgba(255, 255, 255, 0.78);
+      --hud-border: rgba(18, 154, 142, 0.24);
+      --hud-ink: #0c353d;
+      --card-bg: #ffffff;
+      --card-muted: #385e68;
+      --accent: #0a7d72;
+    }
+
+    html.dark-theme {
+      --bg-top: #08191f;
+      --bg-bottom: #0d242d;
+      --halo-a: rgba(99, 234, 224, 0.15);
+      --halo-b: rgba(76, 168, 255, 0.14);
+      --hud-bg: rgba(16, 39, 47, 0.80);
+      --hud-border: rgba(99, 234, 224, 0.28);
+      --hud-ink: #ebfaf7;
+      --card-bg: #10272f;
+      --card-muted: #b8d6d1;
+      --accent: #63eae0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #f4faff;
+      background: linear-gradient(165deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
       touch-action: none;
-      font-family: sans-serif;
+      font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+      transition: background 0.35s ease;
     }
+
+    .stage-backdrop-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 18% 18%, var(--halo-a) 0%, transparent 48%),
+        radial-gradient(circle at 82% 76%, var(--halo-b) 0%, transparent 50%);
+      z-index: 0;
+    }
+
     #mano-stage {
+      position: relative;
+      z-index: 1;
       display: block;
       width: 100%;
       height: 100%;
       outline: none;
     }
+
+    .stage-hud-pill {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      pointer-events: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--hud-ink);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0;
+      white-space: nowrap;
+      box-shadow: 0 8px 22px rgba(10, 48, 56, 0.10);
+    }
+
+    .hud-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      flex-shrink: 0;
+    }
+
+    #stage-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(165deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+      color: var(--hud-ink);
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+
+    #stage-loader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loader-orb {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid var(--hud-border);
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     #webgl-fallback {
       position: fixed;
       inset: 0;
+      z-index: 5;
       display: none;
       align-items: center;
       justify-content: center;
-      text-align: center;
       padding: 24px;
-      color: #163038;
-      background: #f4faff;
+      background: linear-gradient(165deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+    }
+
+    .fallback-card {
+      max-width: 340px;
+      width: 100%;
+      padding: 22px 20px;
+      border-radius: 22px;
+      background: var(--card-bg);
+      border: 1px solid var(--hud-border);
+      box-shadow: 0 12px 30px rgba(10, 48, 56, 0.12);
+      text-align: center;
+      color: var(--hud-ink);
+    }
+
+    .fallback-card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .fallback-card p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--card-muted);
     }
   </style>
 </head>
 <body>
-  <canvas id="mano-stage"></canvas>
-  <div id="webgl-fallback">
-    <div>
+  <div class="stage-backdrop-glow" aria-hidden="true"></div>
+  <canvas id="mano-stage" aria-label="صحنه تعاملی سه‌بعدی مانو کید"></canvas>
+
+  <div class="stage-hud-pill" aria-hidden="true">
+    <span class="hud-dot"></span>
+    <span>چرخش با لمس • بزرگ‌نمایی • ضربه روی مانو</span>
+  </div>
+
+  <div id="stage-loader" aria-label="در حال آماده‌سازی صحنه سه‌بعدی">
+    <div class="loader-orb"></div>
+    <span style="font-size: 13px; font-weight: 600;">در حال آماده‌سازی استودیو مانو کید...</span>
+  </div>
+
+  <div id="webgl-fallback" role="alert">
+    <div class="fallback-card">
       <h3>نمایشگر سه‌بعدی در این دستگاه فعال نیست</h3>
-      <p>پشتیبانی WebGL در مرورگر داخلی غیرفعال است.</p>
+      <p>پشتیبانی WebGL در مرورگر داخلی غیرفعال است؛ راهنماها و نمودارهای دوبعدی برنامه همچنان کاملاً در دسترس هستند.</p>
     </div>
   </div>
   <script type="module" src="./scene.js"></script>

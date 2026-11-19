@@ -33,13 +33,13 @@ private val ManoLightColorScheme =
     onBackground = DarkInk,
     surface = PureWhite,
     onSurface = DarkInk,
-    surfaceVariant = AquaSurface,
+    surfaceVariant = CleanWhite,
     onSurfaceVariant = MutedSlate,
     surfaceContainerLowest = PureWhite,
     surfaceContainerLow = SoftMintCard,
     surfaceContainer = SoftMintCard,
-    surfaceContainerHigh = SoftSkyElevated,
-    surfaceTint = SeaGreen,
+    surfaceContainerHigh = CleanWhite,
+    surfaceTint = TealGlow,
     outline = HairlineBorder,
     outlineVariant = HairlineBorder,
     error = DangerCrimson,
@@ -58,8 +58,8 @@ private val ManoDarkColorScheme =
     onSecondary = DarkOnPrimary,
     secondaryContainer = DarkSurfaceHigh,
     onSecondaryContainer = DarkTextPrimary,
-    tertiary = DarkGold,
-    onTertiary = DarkInk,
+    tertiary = KidLime,
+    onTertiary = DeepScreen,
     tertiaryContainer = DarkSurfaceVariant,
     onTertiaryContainer = DarkTextPrimary,
     background = DarkBackground,
@@ -113,7 +113,7 @@ fun ManoKidsTheme(
 fun manoCardSurface(): Color = if (LocalManoDarkTheme.current) DarkSurface else SoftMintCard
 
 @Composable
-fun manoElevatedSurface(): Color = if (LocalManoDarkTheme.current) DarkSurfaceHigh else SoftSkyElevated
+fun manoElevatedSurface(): Color = if (LocalManoDarkTheme.current) DarkSurfaceHigh else CleanWhite
 
 @Composable
 fun manoBorderColor(): Color = if (LocalManoDarkTheme.current) DarkBorder else HairlineBorder
@@ -132,13 +132,13 @@ fun manoTintedSurface(
 
 @Composable
 fun manoChartGridColor(): Color =
-  if (LocalManoDarkTheme.current) DarkBorder else Color(0xFFCCE4EC)
+  if (LocalManoDarkTheme.current) DarkBorder else Color(0xFFC5E1E8)
 
 @Composable
 fun manoChartAxisHex(): Int =
-  if (LocalManoDarkTheme.current) 0xFFBBD7D2.toInt() else 0xFF2E4C56.toInt()
+  if (LocalManoDarkTheme.current) 0xFFBAD5DC.toInt() else 0xFF294354.toInt()
 
 @Composable
 fun manoChartRailColor(): Color =
-  if (LocalManoDarkTheme.current) DarkSurfaceVariant else SoftSkyElevated
+  if (LocalManoDarkTheme.current) DarkSurfaceVariant else CleanWhite
 

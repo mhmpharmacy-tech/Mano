@@ -84,6 +84,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -103,6 +104,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -140,8 +142,11 @@ import com.example.ui.auth.authStateFlow
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.EmptyState
 import com.example.ui.components.HighFeverUrgentAlertDialog
+import com.example.ui.components.ManoAlgorithmicNavIcon
 import com.example.ui.components.ManoAtmosphericBackdrop
+import com.example.ui.components.ManoBrandCrest
 import com.example.ui.components.ManoIconMedallion
+import com.example.ui.components.ManoKidWordmark
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.TopicAccentRole
@@ -630,11 +635,36 @@ fun ManoApp(
       )
     }
 
+  var homeScrollToTopTrigger by remember { mutableIntStateOf(0) }
+
   fun navigateTopLevel(route: Any) {
-    navController.navigate(route) {
-      popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-      launchSingleTop = true
-      restoreState = true
+    if (route is HomeRoute) {
+      homeScrollToTopTrigger++
+      val poppedToHome = navController.popBackStack<HomeRoute>(inclusive = false)
+      if (!poppedToHome) {
+        navController.navigate(HomeRoute) {
+          popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+          launchSingleTop = true
+        }
+      }
+      return
+    }
+    val poppedWithinTab =
+      when {
+        route is MedicinesRoute &&
+          (currentDest?.hasRoute<MedicineDetailRoute>() == true || currentDest?.hasRoute<SyrupScannerRoute>() == true) ->
+          navController.popBackStack<MedicinesRoute>(inclusive = false)
+        route is GrowthRoute &&
+          (currentDest?.hasRoute<NutritionRoute>() == true || currentDest?.hasRoute<VaccinesRoute>() == true) ->
+          navController.popBackStack<GrowthRoute>(inclusive = false)
+        else -> false
+      }
+    if (!poppedWithinTab) {
+      navController.navigate(route) {
+        popUpTo<HomeRoute> { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+      }
     }
   }
 
@@ -643,24 +673,22 @@ fun ManoApp(
     drawerContent = {
       ModalDrawerSheet {
         Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+          val isDrawerDark = LocalManoDarkTheme.current
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Surface(
-              color = Color(0xFF0D8794),
+              color = if (isDrawerDark) Color(0xFF132238) else Color(0xFFEAF5F7),
               shape = RoundedCornerShape(14.dp),
-              border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+              border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.40f)),
               shadowElevation = 3.dp,
-              modifier = Modifier.size(46.dp),
+              modifier = Modifier.size(48.dp),
             ) {
-              Image(
-                painter = painterResource(id = R.drawable.img_mano_launcher),
-                contentDescription = "نشان مانو کیدز",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
-              )
+              Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                ManoBrandCrest(size = 38.dp, isDark = isDrawerDark)
+              }
             }
-            Column {
-              Text("مانو کیدز", style = MaterialTheme.typography.titleMedium)
-              Text("همراه علمی مراقبت از کودک", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+              ManoKidWordmark(isDark = isDrawerDark, fontSize = 17.sp)
+              Text("همراه مطمئن سلامت کودک و خانواده", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
           }
           Spacer(Modifier.height(12.dp))
@@ -671,18 +699,18 @@ fun ManoApp(
             listOf(
               DrawerNavItem("موضوعات سلامت", Icons.Rounded.HealthAndSafety, TopicsRoute(), TopicAccentRole.CORAL, PediatricIconKind.URGENT),
               DrawerNavItem("داروهای کودک", Icons.Rounded.MedicalServices, MedicinesRoute, TopicAccentRole.TEAL, PediatricIconKind.MEDICINE),
-              DrawerNavItem("اسکنر برچسب شربت و قطره", Icons.Rounded.QrCodeScanner, SyrupScannerRoute, TopicAccentRole.TEAL, PediatricIconKind.MEDICINE),
+              DrawerNavItem("اسکنر برچسب شربت و قطره", Icons.Rounded.QrCodeScanner, SyrupScannerRoute, TopicAccentRole.TEAL, PediatricIconKind.SCANNER),
               DrawerNavItem("پوست و پوشک", Icons.Rounded.Spa, SkinRoute, TopicAccentRole.PLUM, PediatricIconKind.DIAPER),
               DrawerNavItem("وسایل مراقبتی (نبولایزر/بخور)", Icons.Rounded.MedicalServices, DevicesRoute, TopicAccentRole.SKY, PediatricIconKind.DEVICE),
-              DrawerNavItem("آزمایشگاه سه‌بعدی مانو (3D)", Icons.Rounded.ViewInAr, Pediatric3DStudioRoute(), TopicAccentRole.AQUA, PediatricIconKind.DEVICE),
+              DrawerNavItem("آزمایشگاه سه‌بعدی مانو (3D)", Icons.Rounded.ViewInAr, Pediatric3DStudioRoute(), TopicAccentRole.AQUA, PediatricIconKind.COMPARE_LAB),
               DrawerNavItem("رشد و تکامل", Icons.Rounded.ChildCare, GrowthRoute, TopicAccentRole.SAGE, PediatricIconKind.GROWTH),
-              DrawerNavItem("برنامه واکسیناسیون و یادآور", Icons.Rounded.Vaccines, VaccinesRoute, TopicAccentRole.SAGE, PediatricIconKind.DEVICE),
-              DrawerNavItem("غذای سالم و مقوی کودک", Icons.Rounded.Restaurant, NutritionRoute, TopicAccentRole.MANGO, PediatricIconKind.FORMULA),
+              DrawerNavItem("برنامه واکسیناسیون و یادآور", Icons.Rounded.Vaccines, VaccinesRoute, TopicAccentRole.SAGE, PediatricIconKind.VACCINE),
+              DrawerNavItem("غذای سالم و مقوی کودک", Icons.Rounded.Restaurant, NutritionRoute, TopicAccentRole.MANGO, PediatricIconKind.SUPPLEMENTS),
               DrawerNavItem("پرسش‌های پرتکرار (FAQ)", Icons.AutoMirrored.Rounded.Help, FaqRoute(), TopicAccentRole.PLUM, PediatricIconKind.FAQ),
               DrawerNavItem("ارتباط با داروساز", Icons.Rounded.LocalPharmacy, AskPharmacistRoute(), TopicAccentRole.SAGE, PediatricIconKind.PHARMACY),
-              DrawerNavItem("فرزند من", Icons.Rounded.PersonOutline, MyChildRoute, TopicAccentRole.MANGO),
-              DrawerNavItem("منابع علمی و حریم خصوصی", Icons.Rounded.HealthAndSafety, InfoRoute("sources"), TopicAccentRole.GOLD),
-              DrawerNavItem("اتصال دامنه (manokid.ir)", Icons.Rounded.Language, InfoRoute("domain"), TopicAccentRole.SKY),
+              DrawerNavItem("فرزند من", Icons.Rounded.PersonOutline, MyChildRoute, TopicAccentRole.MANGO, PediatricIconKind.FAMILY),
+              DrawerNavItem("منابع علمی و حریم خصوصی", Icons.Rounded.HealthAndSafety, InfoRoute("sources"), TopicAccentRole.GOLD, PediatricIconKind.SAFETY_SHIELD),
+              DrawerNavItem("اتصال دامنه (manokid.ir)", Icons.Rounded.Language, InfoRoute("domain"), TopicAccentRole.SKY, PediatricIconKind.FOLLOW_UP),
             )
 
           drawerLinks.forEach { item ->
@@ -829,22 +857,19 @@ fun ManoApp(
               title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                   Surface(
-                    color = Color(0xFF0D8794),
+                    color = if (isDark) Color(0xFF132238) else Color(0xFFEAF5F7),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.2.dp, PureWhite.copy(alpha = 0.55f)),
+                    border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.36f)),
                     modifier =
                       Modifier
                         .size(38.dp)
-                        .shadow(6.dp, RoundedCornerShape(12.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                        .shadow(4.dp, RoundedCornerShape(12.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
                   ) {
-                    Image(
-                      painter = painterResource(id = R.drawable.img_mano_launcher),
-                      contentDescription = null,
-                      contentScale = ContentScale.Crop,
-                      modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
-                    )
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(3.dp)) {
+                      ManoBrandCrest(size = 32.dp, isDark = isDark)
+                    }
                   }
-                  Text("مانو کیدز", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                  ManoKidWordmark(isDark = isDark, fontSize = 16.sp)
                 }
               },
               actions = {
@@ -920,7 +945,8 @@ fun ManoApp(
                     is SymptomsRoute -> currentDest?.hasRoute<SymptomsRoute>() == true
                     is MedicinesRoute ->
                       currentDest?.hasRoute<MedicinesRoute>() == true ||
-                        currentDest?.hasRoute<MedicineDetailRoute>() == true
+                        currentDest?.hasRoute<MedicineDetailRoute>() == true ||
+                        currentDest?.hasRoute<SyrupScannerRoute>() == true
                     is GrowthRoute ->
                       currentDest?.hasRoute<GrowthRoute>() == true ||
                         currentDest?.hasRoute<NutritionRoute>() == true ||
@@ -945,7 +971,10 @@ fun ManoApp(
                     when (tab.route) {
                       is HomeRoute -> currentDest?.hasRoute<HomeRoute>() == true
                       is SymptomsRoute -> currentDest?.hasRoute<SymptomsRoute>() == true
-                      is MedicinesRoute -> currentDest?.hasRoute<MedicinesRoute>() == true
+                      is MedicinesRoute ->
+                        currentDest?.hasRoute<MedicinesRoute>() == true ||
+                          currentDest?.hasRoute<MedicineDetailRoute>() == true ||
+                          currentDest?.hasRoute<SyrupScannerRoute>() == true
                       is GrowthRoute ->
                         currentDest?.hasRoute<GrowthRoute>() == true ||
                           currentDest?.hasRoute<NutritionRoute>() == true ||
@@ -953,10 +982,25 @@ fun ManoApp(
                       is FaqRoute -> currentDest?.hasRoute<FaqRoute>() == true
                       else -> false
                     }
+                  val railAccent = tab.accentRole.resolveAccentColor()
+                  val railProgress by
+                    animateFloatAsState(
+                      targetValue = if (selected) 1f else 0f,
+                      animationSpec = spring(),
+                      label = "railProgress_${tab.tag}",
+                    )
                   NavigationRailItem(
                     selected = selected,
                     onClick = { navigateTopLevel(tab.route) },
-                    icon = { Icon(if (selected) tab.selectedIcon else tab.unselectedIcon, contentDescription = null) },
+                    icon = {
+                      ManoAlgorithmicNavIcon(
+                        tabTag = tab.tag,
+                        selectionProgress = railProgress,
+                        accentColor = railAccent,
+                        inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp),
+                      )
+                    },
                     label = { Text(tab.label) },
                     colors =
                       NavigationRailItemDefaults.colors(
@@ -1056,6 +1100,7 @@ fun ManoApp(
                       }
                     }
                   },
+                  scrollToTopTrigger = homeScrollToTopTrigger,
                 )
               }
 
@@ -1709,7 +1754,7 @@ fun ManoApp(
               childProfile = effectiveChildProfile,
               snapshot = timelineSnapshot,
             ) { cached ->
-              val titleFa = (visitDraftUiState as? com.example.ui.viewmodel.VisitDraftUiState.Ready)?.titleFa ?: "گزارش ویزیت مانو کیدز"
+              val titleFa = (visitDraftUiState as? com.example.ui.viewmodel.VisitDraftUiState.Ready)?.titleFa ?: "گزارش ویزیت مانو کید"
               com.example.ui.util.VisitDraftPdfHelper.printCachedPdf(context, cached, titleFa)
                 .onFailure { err ->
                   viewModel.showToast("راه‌اندازی چاپ انجام نشد: ${err.localizedMessage ?: "خطای دستگاه"}")
@@ -1722,7 +1767,7 @@ fun ManoApp(
               childProfile = effectiveChildProfile,
               snapshot = timelineSnapshot,
             ) { cached ->
-              val titleFa = (visitDraftUiState as? com.example.ui.viewmodel.VisitDraftUiState.Ready)?.titleFa ?: "گزارش ویزیت مانو کیدز"
+              val titleFa = (visitDraftUiState as? com.example.ui.viewmodel.VisitDraftUiState.Ready)?.titleFa ?: "گزارش ویزیت مانو کید"
               com.example.ui.util.VisitDraftPdfHelper.shareCachedPdf(context, cached, titleFa)
                 .onFailure { err ->
                   viewModel.showToast("اشتراک‌گذاری PDF انجام نشد: ${err.localizedMessage ?: "اپلیکیشن مناسب یافت نشد"}")
@@ -1924,6 +1969,12 @@ private fun ManoFloatingBottomNavBar(
         tabs.forEach { tab ->
           val selected = isTabSelected(tab)
           val tabAccent = tab.accentRole.resolveAccentColor()
+          val selectionProgress by
+            animateFloatAsState(
+              targetValue = if (selected) 1f else 0f,
+              animationSpec = spring(),
+              label = "navTabProgress_${tab.tag}",
+            )
           val iconScale by
             animateFloatAsState(
               targetValue = if (selected) 1.12f else 1.0f,
@@ -1956,11 +2007,12 @@ private fun ManoFloatingBottomNavBar(
               horizontalAlignment = Alignment.CenterHorizontally,
               verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-              Icon(
-                imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                contentDescription = null,
-                tint = if (selected) tabAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp).scale(iconScale),
+              ManoAlgorithmicNavIcon(
+                tabTag = tab.tag,
+                selectionProgress = selectionProgress,
+                accentColor = tabAccent,
+                inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp).scale(iconScale),
               )
               Text(
                 text = tab.label,

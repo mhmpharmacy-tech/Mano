@@ -226,7 +226,7 @@ fun FeverDoseTimelineCard(
             val sendIntent =
               Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, "گزارش ۲۴ ساعته تب و داروی کودک — مانو کیدز")
+                putExtra(Intent.EXTRA_SUBJECT, "گزارش ۲۴ ساعته تب و داروی کودک — مانو کید")
                 putExtra(Intent.EXTRA_TEXT, reportText)
               }
             runCatching {

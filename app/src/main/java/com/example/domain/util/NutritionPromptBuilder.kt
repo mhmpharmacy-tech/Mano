@@ -137,7 +137,7 @@ object NutritionPromptBuilder {
 
     val promptText =
       """
-      شما مشاور آموزشی تغذیه کودک در اپلیکیشن فارسی «مانو کیدز» هستید و بر پایه راهنماهای علمی معتبر (WHO، AAP و UNICEF) به والدین پیشنهاد غذای سالم، کاربردی و بومی ایرانی ارائه می‌دهید.
+      شما مشاور آموزشی تغذیه کودک در اپلیکیشن فارسی «مانو کید» هستید و بر پایه راهنماهای علمی معتبر (WHO، AAP و UNICEF) به والدین پیشنهاد غذای سالم، کاربردی و بومی ایرانی ارائه می‌دهید.
       محدوده وظیفه:
       - تشخیص بیماری یا تجویز رژیم درمانی/مکمل دارویی صادر نکنید؛ لحن آرام، حمایتی و علمی داشته باشید.
       - هر پیشنهاد غذایی باید دقیقاً با سن کودک، داده‌های رشد (وزن، قد، نقاط عطف تکاملی تیک‌خورده)، حساسیت‌ها و وضعیت فعلی کودک هماهنگ باشد.
@@ -175,7 +175,7 @@ object NutritionPromptBuilder {
 
   fun formatShareableNutritionTextFa(plan: NutritionPlanResult): String =
     buildString {
-      appendLine("پیشنهاد غذای سالم و مقوی کودک — مانو کیدز")
+      appendLine("پیشنهاد غذای سالم و مقوی کودک — مانو کید")
       appendLine(plan.planTitleFa)
       if (plan.childContextSummaryFa.isNotBlank()) {
         appendLine("مشخصات کودک: ${plan.childContextSummaryFa}")

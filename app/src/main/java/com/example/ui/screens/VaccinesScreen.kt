@@ -160,7 +160,7 @@ fun VaccinesScreen(
         SectionCard(modifier = Modifier.testTag("vaccine_overview_card")) {
           ManoBannerFrame(
             resId = R.drawable.img_vaccines_banner,
-            contentDescription = "تصویر برنامه واکسیناسیون و مراقبت پیشگیرانه مانو کیدز",
+            contentDescription = "تصویر برنامه واکسیناسیون و مراقبت پیشگیرانه مانو کید",
             aspectRatio = 16f / 9f,
           )
           Row(
@@ -274,7 +274,7 @@ fun VaccinesScreen(
             OutlinedButton(
               onClick = {
                 val shareBody = ManoDomainLinks.buildVaccinesShareText(summary, childProfile?.aliasFa)
-                ManoLinkShareHelper.shareTextWithLink(context, "برنامه واکسیناسیون مانو کیدز", shareBody)
+                ManoLinkShareHelper.shareTextWithLink(context, "برنامه واکسیناسیون مانو کید", shareBody)
                   .onFailure {
                     ManoLinkShareHelper.copyToClipboard(context, "لینک برنامه واکسن", vaccinesUrl)
                     onFeedback("لینک برنامه واکسیناسیون کپی شد.")

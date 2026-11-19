@@ -309,7 +309,7 @@ object FeverDoseTimelineEngine {
     childProfile: ChildProfileDemo?,
   ): String {
     val sb = StringBuilder()
-    sb.appendLine("گزارش ۲۴ ساعته تب و دارو — مانو کیدز")
+    sb.appendLine("گزارش ۲۴ ساعته تب و دارو — مانو کید")
     if (childProfile != null) {
       sb.appendLine(
         "کودک: ${childProfile.aliasFa} (${childProfile.ageBand.labelFa} • وزن: ${childProfile.weightKgText.ifBlank { "ثبت‌نشده" }} kg)"

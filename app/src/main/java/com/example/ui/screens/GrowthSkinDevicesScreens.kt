@@ -90,10 +90,10 @@ fun GrowthScreen(
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoFramedIllustration(
-              resId = R.drawable.mascot_growth,
-              contentDescription = "مانو در حال مراقبت از نهال رشد کودک",
-              width = 100.dp,
-              aspectRatio = 0.80f,
+              resId = R.drawable.img_mano_orbital_mascot,
+              contentDescription = "ربات مهربان مانو کید همراه پایش رشد کودک",
+              width = 96.dp,
+              aspectRatio = 1.0f,
               accentColor = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -231,10 +231,10 @@ fun SkinScreen(
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoFramedIllustration(
-              resId = R.drawable.mascot_skin,
-              contentDescription = "مانو در کنار محصولات ملایم مراقبت پوست کودک",
-              width = 98.dp,
-              aspectRatio = 0.94f,
+              resId = R.drawable.mano_pose_caution,
+              contentDescription = "ربات مهربان مانو کید همراه مراقبت پوست کودک",
+              width = 96.dp,
+              aspectRatio = 1.0f,
               accentColor = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

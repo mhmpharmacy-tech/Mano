@@ -117,28 +117,31 @@ class ManoMedicationChecklistTest {
     composeTestRule.onNodeWithTag("medicines_open_checklist_btn").assertIsDisplayed().performClick()
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToIndex(2)
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_safety_count_badge"))
     composeTestRule.onNodeWithTag("med_safety_count_badge").assertIsDisplayed()
     composeTestRule.onNodeWithText("0/8").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_safety_live_context_card"))
     composeTestRule.onNodeWithTag("med_safety_live_context_card").assertIsDisplayed()
 
     // Toggle expiry and dose interval items and inspect rationale tip
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToIndex(5)
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_check_tip_toggle_check_expiry_and_opened_date"))
     composeTestRule.onNodeWithTag("med_check_tip_toggle_check_expiry_and_opened_date").performClick()
     composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_check_tip_body_check_expiry_and_opened_date"))
     composeTestRule.onNodeWithTag("med_check_tip_body_check_expiry_and_opened_date").assertIsDisplayed()
     composeTestRule.onNodeWithText("روی بطری تاریخ باز شدن را یادداشت کنید.", substring = true).assertIsDisplayed()
 
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_check_box_check_expiry_and_opened_date"))
     composeTestRule.onNodeWithTag("med_check_box_check_expiry_and_opened_date").performClick()
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToIndex(10)
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_check_box_check_dose_time_interval"))
     composeTestRule.onNodeWithTag("med_check_box_check_dose_time_interval").performClick()
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToIndex(2)
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_safety_count_badge"))
     composeTestRule.onNodeWithText("2/8").assertIsDisplayed()
 
     // Navigate to Dose Logbook from Checklist bottom action bar and verify readiness gate banner
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToIndex(14)
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_checklist_go_logbook_btn"))
     composeTestRule.onNodeWithTag("med_checklist_go_logbook_btn").performClick()
     composeTestRule.waitForIdle()
 
@@ -146,13 +149,14 @@ class ManoMedicationChecklistTest {
     composeTestRule.onNodeWithText("چک‌لیست ایمنی پیش از دارو: 2/8").assertIsDisplayed()
 
     // Return to checklist and reset checks for next dose
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("dose_log_open_checklist_btn"))
     composeTestRule.onNodeWithTag("dose_log_open_checklist_btn").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToIndex(14)
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_checklist_reset_btn"))
     composeTestRule.onNodeWithTag("med_checklist_reset_btn").performClick()
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("medicines_list").performScrollToIndex(2)
+    composeTestRule.onNodeWithTag("medicines_list").performScrollToNode(hasTestTag("med_safety_count_badge"))
     composeTestRule.onNodeWithText("0/8").assertIsDisplayed()
   }
 

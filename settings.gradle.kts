@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "MANO Kids"
+rootProject.name = "MANO Kid"
 
 include(":app")

@@ -253,10 +253,9 @@ class ManoSyrupScannerTest {
   @Test
   fun homeAndScannerFlow_manualCalibrationAndParentConfirm_opens3DStudioWithScannedBottle() {
     composeTestRule.waitForIdle()
-    // 1. Verify Home screen quick-launch scanner card & outer galactic scanner satellite
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_syrup_scanner_card"))
-    composeTestRule.onNodeWithTag("home_syrup_scanner_card").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("home_syrup_scanner_btn").performScrollTo().performClick()
+    // 1. Verify Home Selective Menu syrup scanner card
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_scanner"))
+    composeTestRule.onNodeWithTag("home_menu_scanner").assertIsDisplayed().performClick()
     composeTestRule.waitForIdle()
 
     // 2. Scanner screen opens with camera, gallery, and manual calibration options
