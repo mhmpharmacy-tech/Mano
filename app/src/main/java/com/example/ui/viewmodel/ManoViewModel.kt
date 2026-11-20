@@ -564,6 +564,10 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
     val cleanedBirthOrAge = birthDateOrAgeFa.trim().ifEmpty { ageBand.labelFa }
     val parsedBirthEpochMs = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(cleanedBirthOrAge)
+    if (parsedBirthEpochMs != null && parsedBirthEpochMs > System.currentTimeMillis()) {
+      showToast("تاریخ تولد نمی‌تواند در آینده باشد.")
+      return null
+    }
     val computedAgeMonths =
       parsedBirthEpochMs?.let { bMs ->
         val days = VaccinationScheduleEngine.diffDays(bMs, System.currentTimeMillis()).coerceAtLeast(0)
