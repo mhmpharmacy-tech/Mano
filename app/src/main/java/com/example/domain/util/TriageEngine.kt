@@ -19,6 +19,7 @@ object TriageEngine {
     temperatureCelsius: Double?,
     durationHours: Int?,
     selectedRedFlagIds: Set<String>,
+    ageMonthsExact: Int? = null,
   ): TriageEvaluationResult {
     val checkedImmediateFlags =
       flow.redFlags.filter { it.id in selectedRedFlagIds && it.isImmediateEmergency }
@@ -43,14 +44,16 @@ object TriageEngine {
             id = "rule_critical_red_flag_bypass",
             descriptionFa = "وجود علامت هشدار بحرانی، مسیر مراقبت خانگی را متوقف می‌کند.",
             outcome = TriageOutcome.URGENT_EMERGENCY,
-            reviewStatus = ReviewStatus.APPROVED,
+            reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
           ),
         showPharmacistOption = false,
       )
     }
 
     // Rule 2: Fever >= 38.0 °C in infant younger than 3 months (NEWBORN band)
-    if (flow.id == "fever" && ageBand == AgeBand.NEWBORN && (temperatureCelsius == null || temperatureCelsius >= 38.0)) {
+    if (ageBand == AgeBand.NEWBORN &&
+      ((temperatureCelsius != null && temperatureCelsius >= 38.0) ||
+        (flow.id == "fever" && temperatureCelsius == null))) {
       val tempText =
         if (temperatureCelsius != null) {
           "دمای ثبت‌شده ${temperatureCelsius} درجه سانتی‌گراد"
@@ -76,11 +79,28 @@ object TriageEngine {
             id = "rule_infant_under_3m_fever_38",
             descriptionFa = "تب ۳۸ درجه یا بیشتر در شیرخوار زیر ۳ ماه نیازمند ارزیابی فوری پزشکی است.",
             outcome = TriageOutcome.URGENT_EMERGENCY,
-            reviewStatus = ReviewStatus.APPROVED,
+            reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
           ),
         showPharmacistOption = false,
       )
     }
+
+    val invalidInput =
+      (temperatureCelsius != null && (!temperatureCelsius.isFinite() || temperatureCelsius !in 34.0..43.0)) ||
+      (durationHours != null && durationHours !in 0..8760) ||
+      selectedRedFlagIds.any { id -> flow.redFlags.none { it.id == id } } ||
+      (ageMonthsExact != null && ageBand == AgeBand.INFANT_3_12M && ageMonthsExact !in 3..11)
+    if (invalidInput) return TriageEvaluationResult(
+      outcome = TriageOutcome.NEEDS_TIMELY_REVIEW,
+      titleFa = "اطلاعات نیاز به اصلاح دارد",
+      summaryFa = "ورودی نامعتبر یا علامت ناشناخته دریافت شد. اطلاعات را بررسی کنید؛ این نتیجه به معنی نبود خطر نیست.",
+      immediateActionsFa = listOf("در تنفس سخت، تشنج یا اختلال هوشیاری، منتظر اصلاح فرم نمانید و فوراً کمک پزشکی بگیرید."),
+      escalationCriteriaFa = flow.escalationCriteriaFa,
+      relatedArticleSlug = flow.relatedArticleSlug, canShowSelfCare = false,
+      triggeredRule = TriageRule("rule_invalid_input", "ورودی ناقص یا نامعتبر؛ بدون نتیجهٔ اطمینان‌بخش",
+        TriageOutcome.NEEDS_TIMELY_REVIEW, ReviewStatus.NEEDS_CLINICAL_REVIEW),
+      showPharmacistOption = false,
+    )
 
     // Rule 3: Timely clinician review flags (non-immediate red flags or prolonged duration)
     val checkedReviewFlags =
@@ -88,7 +108,8 @@ object TriageEngine {
     val prolongedFever = flow.id == "fever" && (durationHours ?: 0) >= 72
     val prolongedCough = flow.id == "cough" && (durationHours ?: 0) >= 24 * 14
     val youngInfantHighTemp =
-      flow.id == "fever" && ageBand == AgeBand.INFANT_3_12M && (temperatureCelsius ?: 0.0) >= 39.0
+      ageBand == AgeBand.INFANT_3_12M && (ageMonthsExact == null || ageMonthsExact <= 6) &&
+        (temperatureCelsius ?: 0.0) >= 39.0
 
     if (checkedReviewFlags.isNotEmpty() || prolongedFever || prolongedCough || youngInfantHighTemp) {
       val reasonParts = mutableListOf<String>()
@@ -97,25 +118,28 @@ object TriageEngine {
       }
       if (prolongedFever) reasonParts += "تداوم تب بیش از ۷۲ ساعت"
       if (prolongedCough) reasonParts += "تداوم سرفه بیش از ۲ هفته"
-      if (youngInfantHighTemp) reasonParts += "تب ۳۹ درجه یا بالاتر در شیرخوار ۳ تا ۱۲ ماه"
+      if (youngInfantHighTemp) reasonParts += if (ageMonthsExact == null)
+        "دمای ۳۹ یا بیشتر و سن دقیق شیرخوار نامشخص است؛ احتمال سن ۳ تا ۶ ماه"
+        else "دمای ۳۹ یا بیشتر در شیرخوار ۳ تا ۶ ماه"
+      if (flow.id == "fever" && (durationHours ?: 0) >= 120) reasonParts += "تب ۵ روز یا بیشتر؛ نیاز به ارزیابی علل تب طولانی"
 
       return TriageEvaluationResult(
         outcome = TriageOutcome.NEEDS_TIMELY_REVIEW,
-        titleFa = "توصیه به معاینه پزشک در زمان نزدیک",
+        titleFa = if (youngInfantHighTemp) "تماس فوری با پزشک برای ارزیابی سریع" else "نیاز به ارزیابی پزشک",
         summaryFa =
           "بر اساس اطلاعات واردشده (${reasonParts.joinToString("، ")})، لازم است کودک در اولین فرصت مناسب توسط پزشک معاینه شود. نکات زیر صرفاً برای مراقبت حمایتی تا زمان ویزیت است و جایگزین تشخیص پزشکی نیست.",
-        immediateActionsFa = flow.educationalStepsFa,
+        immediateActionsFa = if (youngInfantHighTemp) listOf("برای ارزیابی سریع با پزشک یا مرکز درمانی تماس بگیرید؛ منتظر پاسخ مشاورهٔ آنلاین نمانید.") else flow.educationalStepsFa,
         escalationCriteriaFa = flow.escalationCriteriaFa,
         relatedArticleSlug = flow.relatedArticleSlug,
-        canShowSelfCare = true,
+        canShowSelfCare = !youngInfantHighTemp,
         triggeredRule =
           TriageRule(
             id = "rule_timely_clinician_review",
             descriptionFa = "وجود عامل خطر غیرفوری یا تداوم علامت نیازمند ویزیت پزشک است.",
             outcome = TriageOutcome.NEEDS_TIMELY_REVIEW,
-            reviewStatus = ReviewStatus.APPROVED,
+            reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
           ),
-        showPharmacistOption = true,
+        showPharmacistOption = !youngInfantHighTemp,
       )
     }
 
@@ -134,7 +158,7 @@ object TriageEngine {
           id = "rule_general_educational_support",
           descriptionFa = "نبود علامت هشدار در ارزیابی اولیه؛ نمایش راهنمای آموزشی و معیارهای پیگیری.",
           outcome = TriageOutcome.GENERAL_EDUCATIONAL,
-          reviewStatus = ReviewStatus.APPROVED,
+          reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
         ),
       showPharmacistOption = true,
     )

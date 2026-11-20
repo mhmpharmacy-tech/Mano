@@ -15,13 +15,13 @@ import com.example.domain.util.PersianNormalizer
 
 class ManoContentRepository {
 
-  val articles: List<Article> = ManoArticlesSeed.starterArticles
-  val faqs: List<FaqItem> = ManoFaqSeed.faqs
-  val symptomFlows: List<SymptomFlow> = ManoSourcesAndClinicalSeed.symptomFlows
+  val articles: List<Article> = ManoArticlesSeed.starterArticles.map(ManoTextbookEvidence::reviseArticle)
+  val faqs: List<FaqItem> = ManoFaqSeed.faqs + ManoTextbookEvidence.faqs
+  val symptomFlows: List<SymptomFlow> = ManoSourcesAndClinicalSeed.symptomFlows.map(ManoTextbookEvidence::reviseFlow)
   val medications: List<MedicationMonograph> = ManoSourcesAndClinicalSeed.medicationMonographs
   val milestones: List<MilestoneItem> = ManoSourcesAndClinicalSeed.milestones
   val deviceGuides: List<DeviceGuide> = ManoSourcesAndClinicalSeed.deviceGuides
-  val sources: List<SourceReference> = ManoSourcesAndClinicalSeed.allSources
+  val sources: List<SourceReference> = ManoSourcesAndClinicalSeed.allSources + ManoTextbookEvidence.allSources
   val demoPharmacistCases: List<PharmacistCaseDemo> = ManoSourcesAndClinicalSeed.demoPharmacistCases
 
   fun articleBySlug(slug: String): Article? = articles.firstOrNull { it.slug == slug }

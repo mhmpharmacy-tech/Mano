@@ -225,7 +225,7 @@ fun SyrupScannerScreen(
       if (childProfile != null) {
         "${childProfile.aliasFa} • ${LiquidDoseVisualizerEngine.formatAgeFa(ageMonths)} • وزن ${LiquidDoseVisualizerEngine.formatKg(weightKg)}"
       } else {
-        "پروفایل کودک ثبت نشده • مقادیر محافظه‌کارانه (${LiquidDoseVisualizerEngine.formatAgeFa(ageMonths)}، ${LiquidDoseVisualizerEngine.formatKg(weightKg)})"
+        "پروفایل کودک ثبت نشده است."
       }
     }
 
@@ -809,7 +809,7 @@ fun SyrupScannerScreen(
                       if (ext.canAutoFillSyringe) {
                         "تایید و پر کردن سرنگ سه‌بعدی (${LiquidDoseVisualizerEngine.formatMl(labelMl)})"
                       } else {
-                        "پر کردن خودکار سرنگ برای این سن قفل است"
+                        "پر کردن سرنگ در دسترس نیست؛ سن، وزن و غلظت را بررسی کنید"
                       },
                     fontWeight = FontWeight.Bold,
                   )

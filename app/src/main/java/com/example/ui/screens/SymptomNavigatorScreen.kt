@@ -112,6 +112,7 @@ fun SymptomNavigatorScreen(
   safetyChecklistState: SafetyChecklistUiState = SafetyChecklistUiState.Idle,
   onGenerateSafetyChecklist: (primaryFlow: SymptomFlow, coSymptomsFa: List<String>) -> Unit = { _, _ -> },
   onToggleSafetyChecklistItem: (String) -> Unit = {},
+  onUpdateAgeMonths: (String) -> Unit = {},
 ) {
   val currentFlow = flows.firstOrNull { it.id == wizard.selectedSymptomId } ?: flows.first()
 
@@ -169,7 +170,7 @@ fun SymptomNavigatorScreen(
                     LtrText(text = "MANO Safety Triage", color = MaterialTheme.colorScheme.primary)
                   }
                 }
-                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
+                SourceBadge(reviewStatus = currentFlow.review.status)
               }
               Text("هدایتگر گام‌به‌گام علائم کودک", style = MaterialTheme.typography.headlineMedium)
               Text(
@@ -179,7 +180,7 @@ fun SymptomNavigatorScreen(
               )
             }
             TextButton(
-              onClick = onReset,
+              onClick = { selectedCompanionSymptoms = emptyList(); onReset() },
               modifier = Modifier.minimumInteractiveComponentSize().testTag("wizard_reset_button"),
             ) {
               Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -202,9 +203,10 @@ fun SymptomNavigatorScreen(
             item {
               SectionCard {
                 ManoBannerFrame(
-                  resId = R.drawable.img_symptom_care_banner,
-                  contentDescription = "مانو در اتاق آرام کودک همراه دماسنج و سرنگ خوراکی",
-                  aspectRatio = 16f / 9f,
+                  resId = R.drawable.mano_symptoms_orbit,
+                  contentDescription = "مانو شناور با دماسنج و نشان توجه برای بررسی علائم",
+                  aspectRatio = 1.5f,
+                  contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                   ManoPoseAvatar(pose = MascotPose.LISTEN, size = 56.dp)
@@ -280,7 +282,16 @@ fun SymptomNavigatorScreen(
                   }
                 }
 
-                if (currentFlow.asksTemperature) {
+                if (wizard.selectedAgeBand == AgeBand.INFANT_3_12M) {
+                  OutlinedTextField(
+                    value = wizard.ageMonthsText, onValueChange = onUpdateAgeMonths,
+                    label = { Text("سن دقیق به ماه (اگر می‌دانید)") },
+                    supportingText = { Text("در نبود سن دقیق، برای تب بالا مسیر محتاطانه انتخاب می‌شود.") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
+                    modifier = Modifier.fillMaxWidth().testTag("wizard_exact_age_input"),
+                  )
+                }
+                if (currentFlow.asksTemperature || wizard.selectedAgeBand in setOf(AgeBand.NEWBORN, AgeBand.INFANT_3_12M)) {
                   OutlinedTextField(
                     value = wizard.temperatureText,
                     onValueChange = onUpdateTemp,
@@ -392,7 +403,7 @@ fun SymptomNavigatorScreen(
                 )
               }
 
-              item {
+              if (result.canShowSelfCare) item {
                 GeminiPediatricianSafetyChecklistCard(
                   currentFlow = currentFlow,
                   companionSymptoms = selectedCompanionSymptoms,
@@ -579,7 +590,7 @@ private fun GeminiPediatricianSafetyChecklistCard(
     }
 
     Text(
-      text = "با انتخاب علامت اصلی (${currentFlow.titleFa}) و علائم همراه، هوش مصنوعی مانو یک چک‌لیست ایمنی مستند از علائم هشدار فوری، زمان مراجعه هم‌روز به متخصص کودکان و سوالات کلیدی ویزیت تهیه می‌کند.",
+      text = "با انتخاب علامت اصلی (${currentFlow.titleFa}) و علائم همراه، هوش مصنوعی مانو یک چک‌لیست آموزشی تأییدنشده از علائم هشدار فوری، زمان مراجعه هم‌روز به متخصص کودکان و سوالات کلیدی ویزیت تهیه می‌کند.",
       style = MaterialTheme.typography.bodySmall,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

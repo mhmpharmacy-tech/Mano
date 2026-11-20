@@ -72,8 +72,8 @@ data class WhoGrowthAssessment(
 )
 
 /**
- * Deterministic WHO Child Growth Standards (2006, 0–60 months) LMS reference engine.
- * Computes smoothed L, M, S interpolation, reference percentile curves (P3, P15, P50, P85, P97),
+ * Educational interpolation of WHO monthly LMS tables (2006, 0–60 months).
+ * Monthly interpolation is approximate, not the WHO Anthro daily algorithm. Computes linear L, M, S interpolation, reference percentile curves (P3, P15, P50, P85, P97),
  * Z-scores, and non-diagnostic educational percentile bands without external charting SDKs.
  */
 object WhoGrowthStandardsEngine {
@@ -84,97 +84,10 @@ object WhoGrowthStandardsEngine {
   private const val Z_P85 = 1.0364334
   private const val Z_P97 = 1.8807936
 
-  // WHO Child Growth Standards: Weight-for-age (0–60 months), Boys
-  private val weightBoysLms =
-    listOf(
-      WhoLmsPoint(0.0, 0.3487, 3.3464, 0.14602),
-      WhoLmsPoint(1.0, 0.2297, 4.4709, 0.13395),
-      WhoLmsPoint(2.0, 0.1970, 5.5675, 0.12385),
-      WhoLmsPoint(3.0, 0.1738, 6.3762, 0.11727),
-      WhoLmsPoint(4.0, 0.1553, 7.0023, 0.11316),
-      WhoLmsPoint(5.0, 0.1395, 7.5105, 0.11080),
-      WhoLmsPoint(6.0, 0.1257, 7.9340, 0.10958),
-      WhoLmsPoint(9.0, 0.0920, 8.9022, 0.10798),
-      WhoLmsPoint(12.0, 0.0644, 9.6479, 0.10665),
-      WhoLmsPoint(15.0, 0.0398, 10.3046, 0.10631),
-      WhoLmsPoint(18.0, 0.0170, 10.9403, 0.10695),
-      WhoLmsPoint(24.0, -0.0238, 12.1515, 0.10957),
-      WhoLmsPoint(30.0, -0.0593, 13.2665, 0.11264),
-      WhoLmsPoint(36.0, -0.0906, 14.3429, 0.11572),
-      WhoLmsPoint(42.0, -0.1182, 15.3712, 0.11940),
-      WhoLmsPoint(48.0, -0.1427, 16.3489, 0.12352),
-      WhoLmsPoint(54.0, -0.1645, 17.3264, 0.12789),
-      WhoLmsPoint(60.0, -0.1839, 18.3366, 0.13227),
-    )
-
-  // WHO Child Growth Standards: Weight-for-age (0–60 months), Girls
-  private val weightGirlsLms =
-    listOf(
-      WhoLmsPoint(0.0, 0.3809, 3.2322, 0.14171),
-      WhoLmsPoint(1.0, 0.1714, 4.1873, 0.13724),
-      WhoLmsPoint(2.0, 0.0962, 5.1282, 0.13000),
-      WhoLmsPoint(3.0, 0.0402, 5.8458, 0.12619),
-      WhoLmsPoint(4.0, -0.0050, 6.4237, 0.12402),
-      WhoLmsPoint(5.0, -0.0430, 6.8985, 0.12274),
-      WhoLmsPoint(6.0, -0.0756, 7.2970, 0.12204),
-      WhoLmsPoint(9.0, -0.1500, 8.2254, 0.12116),
-      WhoLmsPoint(12.0, -0.1945, 8.9481, 0.12029),
-      WhoLmsPoint(15.0, -0.2194, 9.6050, 0.11971),
-      WhoLmsPoint(18.0, -0.2330, 10.2322, 0.11986),
-      WhoLmsPoint(24.0, -0.2421, 11.4775, 0.12131),
-      WhoLmsPoint(30.0, -0.2392, 12.6901, 0.12377),
-      WhoLmsPoint(36.0, -0.2323, 13.8503, 0.12687),
-      WhoLmsPoint(42.0, -0.2236, 14.9693, 0.13022),
-      WhoLmsPoint(48.0, -0.2140, 16.0697, 0.13370),
-      WhoLmsPoint(54.0, -0.2039, 17.1520, 0.13719),
-      WhoLmsPoint(60.0, -0.1934, 18.2193, 0.14065),
-    )
-
-  // WHO Child Growth Standards: Length/Height-for-age (0–60 months), Boys
-  private val heightBoysLms =
-    listOf(
-      WhoLmsPoint(0.0, 1.0, 49.8842, 0.03795),
-      WhoLmsPoint(1.0, 1.0, 54.7244, 0.03557),
-      WhoLmsPoint(2.0, 1.0, 58.4249, 0.03424),
-      WhoLmsPoint(3.0, 1.0, 61.4292, 0.03328),
-      WhoLmsPoint(4.0, 1.0, 63.8860, 0.03257),
-      WhoLmsPoint(5.0, 1.0, 65.9026, 0.03204),
-      WhoLmsPoint(6.0, 1.0, 67.6236, 0.03165),
-      WhoLmsPoint(9.0, 1.0, 71.9687, 0.03117),
-      WhoLmsPoint(12.0, 1.0, 75.7488, 0.03137),
-      WhoLmsPoint(15.0, 1.0, 79.1462, 0.03201),
-      WhoLmsPoint(18.0, 1.0, 82.2587, 0.03283),
-      WhoLmsPoint(24.0, 1.0, 87.1161, 0.03465),
-      WhoLmsPoint(30.0, 1.0, 91.9308, 0.03651),
-      WhoLmsPoint(36.0, 1.0, 96.0835, 0.03824),
-      WhoLmsPoint(42.0, 1.0, 99.8950, 0.03970),
-      WhoLmsPoint(48.0, 1.0, 103.3273, 0.04088),
-      WhoLmsPoint(54.0, 1.0, 106.6634, 0.04182),
-      WhoLmsPoint(60.0, 1.0, 109.9921, 0.04257),
-    )
-
-  // WHO Child Growth Standards: Length/Height-for-age (0–60 months), Girls
-  private val heightGirlsLms =
-    listOf(
-      WhoLmsPoint(0.0, 1.0, 49.1477, 0.03790),
-      WhoLmsPoint(1.0, 1.0, 53.6872, 0.03640),
-      WhoLmsPoint(2.0, 1.0, 57.0673, 0.03568),
-      WhoLmsPoint(3.0, 1.0, 59.8029, 0.03520),
-      WhoLmsPoint(4.0, 1.0, 62.0899, 0.03486),
-      WhoLmsPoint(5.0, 1.0, 64.0301, 0.03463),
-      WhoLmsPoint(6.0, 1.0, 65.7311, 0.03448),
-      WhoLmsPoint(9.0, 1.0, 70.1435, 0.03449),
-      WhoLmsPoint(12.0, 1.0, 74.0150, 0.03497),
-      WhoLmsPoint(15.0, 1.0, 77.5236, 0.03574),
-      WhoLmsPoint(18.0, 1.0, 80.7079, 0.03661),
-      WhoLmsPoint(24.0, 1.0, 85.7153, 0.03846),
-      WhoLmsPoint(30.0, 1.0, 90.6976, 0.04016),
-      WhoLmsPoint(36.0, 1.0, 95.0515, 0.04156),
-      WhoLmsPoint(42.0, 1.0, 99.0442, 0.04269),
-      WhoLmsPoint(48.0, 1.0, 102.7312, 0.04358),
-      WhoLmsPoint(54.0, 1.0, 106.1731, 0.04427),
-      WhoLmsPoint(60.0, 1.0, 109.4239, 0.04481),
-    )
+  private val weightBoysLms = WhoReferenceData.weightBoys
+  private val weightGirlsLms = WhoReferenceData.weightGirls
+  private val heightBoysLms = WhoReferenceData.lengthBoys.filter { it.ageMonths < 24 } + WhoReferenceData.heightBoys
+  private val heightGirlsLms = WhoReferenceData.lengthGirls.filter { it.ageMonths < 24 } + WhoReferenceData.heightGirls
 
   fun lmsTableFor(metric: GrowthMetric, sex: ChildSex): List<WhoLmsPoint> =
     when (metric) {
@@ -183,8 +96,12 @@ object WhoGrowthStandardsEngine {
     }
 
   fun interpolateLms(metric: GrowthMetric, sex: ChildSex, ageMonths: Double): WhoLmsPoint {
-    val clampedAge = ageMonths.coerceIn(0.0, 60.0)
-    val table = lmsTableFor(metric, sex)
+    require(ageMonths.isFinite() && ageMonths in 0.0..60.0) { "Age must be finite and within 0–60 months" }
+    val clampedAge = ageMonths
+    // Do not interpolate across the 0.7 cm change from length to standing height at 24 months.
+    val table = if (metric == GrowthMetric.HEIGHT_FOR_AGE && ageMonths < 24.0) {
+      if (sex == ChildSex.BOY) WhoReferenceData.lengthBoys else WhoReferenceData.lengthGirls
+    } else lmsTableFor(metric, sex)
     val exact = table.firstOrNull { abs(it.ageMonths - clampedAge) < 1e-6 }
     if (exact != null) return exact
 
@@ -237,6 +154,8 @@ object WhoGrowthStandardsEngine {
     maxMonth: Double = 60.0,
     stepMonths: Double = 2.0,
   ): WhoPercentileCurves {
+    require(stepMonths.isFinite() && stepMonths >= 0.05) { "Curve step must be finite and at least 0.05 months" }
+    require(minMonth.isFinite() && maxMonth.isFinite() && minMonth <= maxMonth)
     val ages = mutableListOf<Double>()
     var cur = minMonth.coerceIn(0.0, 60.0)
     val end = maxMonth.coerceIn(cur, 60.0)
@@ -277,8 +196,8 @@ object WhoGrowthStandardsEngine {
     ageMonths: Double,
     measuredValue: Double,
   ): WhoGrowthAssessment? {
-    if (ageMonths.isNaN() || ageMonths < 0.0 || ageMonths > 60.0) return null
-    if (measuredValue.isNaN() || measuredValue < metric.minValid || measuredValue > metric.maxValid) return null
+    if (!ageMonths.isFinite() || ageMonths < 0.0 || ageMonths > 60.0) return null
+    if (!measuredValue.isFinite() || measuredValue < metric.minValid || measuredValue > metric.maxValid) return null
 
     val lms = interpolateLms(metric, sex, ageMonths)
     val z = zScoreForValue(lms, measuredValue)
@@ -306,13 +225,13 @@ object WhoGrowthStandardsEngine {
         percentile <= 85.0 ->
           Triple(
             "محدوده میانی استاندارد (P15–P85)",
-            "نقطه ثبت‌شده در محدوده شایع استاندارد رشد سازمان جهانی بهداشت (WHO) برای این سن و جنس قرار دارد.",
+            "نقطه بین خطوط صدک ۱۵ و ۸۵ است. این نتیجه سلامت رشد را تأیید نمی‌کند؛ افت روند یا نگرانی والد حتی در این بازه نیاز به بررسی دارد.",
             false,
           )
         percentile <= 97.0 ->
           Triple(
             "بازه صدک ۸۵ تا ۹۷ (P85–P97)",
-            "در محدوده بالای طبیعی استاندارد WHO قرار دارد؛ هماهنگی روند قد و وزن در مراجعات دوره‌ای بررسی می‌شود.",
+            "این اندازه‌گیری بین خطوط صدک ۸۵ و ۹۷ است؛ به‌تنهایی نشانهٔ سلامت یا بیماری نیست. وزن نسبت به سن برای تشخیص چاقی کافی نیست.",
             false,
           )
         else ->

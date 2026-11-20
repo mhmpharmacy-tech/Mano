@@ -1,0 +1,59 @@
+{
+  "notes": "Monthly interpolation is an approximation, not the daily WHO Anthro algorithm. Separate recumbent length (<24 months) and standing height (>=24 months). No WHO endorsement or clinical sign-off implied.",
+  "sources": [
+    {
+      "table": "weightBoys",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/wfa-boys-0-5-zscores.pdf?sfvrsn=be07c977_11",
+      "accessed": "2026-11-20",
+      "rows": 61,
+      "firstMonth": 0,
+      "lastMonth": 60,
+      "method": "WHO published PDF via web retrieval; monthly LMS coefficients and rounded z-score columns."
+    },
+    {
+      "table": "heightBoys",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/hfa_boys_2_5_zscoresba2ba0820f064f4abf5915abac01e894.pdf?sfvrsn=4d77e340_9",
+      "accessed": "2026-11-20",
+      "rows": 37,
+      "firstMonth": 24,
+      "lastMonth": 60,
+      "method": "WHO published PDF via web retrieval; monthly LMS coefficients and rounded z-score columns."
+    },
+    {
+      "table": "weightGirls",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/wfa-girls-0-5-zscores.pdf?sfvrsn=810222cc_11",
+      "accessed": "2026-11-20",
+      "rows": 61,
+      "firstMonth": 0,
+      "lastMonth": 60,
+      "method": "WHO published PDF via web retrieval; monthly LMS coefficients and rounded z-score columns."
+    },
+    {
+      "table": "lengthBoys",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/lfa_boys_0_2_zscores.pdf?sfvrsn=cc17e50a_14",
+      "accessed": "2026-11-20",
+      "rows": 25,
+      "firstMonth": 0,
+      "lastMonth": 24,
+      "method": "WHO published PDF via web retrieval; monthly LMS coefficients and rounded z-score columns."
+    },
+    {
+      "table": "lengthGirls",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/lfa_girls_0_2_zscores.pdf?sfvrsn=af7d2671_11",
+      "accessed": "2026-11-20",
+      "rows": 25,
+      "firstMonth": 0,
+      "lastMonth": 24,
+      "method": "WHO published PDF via web retrieval; monthly LMS coefficients and rounded z-score columns."
+    },
+    {
+      "table": "heightGirls",
+      "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/hfa_girls_2_5_zscores.pdf?sfvrsn=9d3a6c08_9",
+      "accessed": "2026-11-20",
+      "rows": 37,
+      "firstMonth": 24,
+      "lastMonth": 60,
+      "method": "WHO published PDF via web retrieval; monthly LMS coefficients and rounded z-score columns."
+    }
+  ]
+}

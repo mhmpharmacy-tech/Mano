@@ -203,14 +203,15 @@ class WhoGrowthAndStaffTest {
     composeTestRule.onNodeWithTag("mano_squad_connect").performScrollTo().assertIsDisplayed()
 
     composeTestRule.onNodeWithTag("who_growth_chart_card").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("who_growth_canvas").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("who_percentile_result").performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("who_growth_canvas").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("who_percentile_result").assertDoesNotExist()
 
     // Interactive switch to Height-for-Age + Girl + Age preset 24m
     composeTestRule.onNodeWithTag("who_metric_height").performScrollTo().performClick()
     composeTestRule.onNodeWithTag("who_sex_girl").performScrollTo().performClick()
     composeTestRule.onNodeWithTag("who_age_preset_24").performScrollTo().performClick()
     composeTestRule.onNodeWithTag("who_value_input").performScrollTo().performTextReplacement("86.0")
+    composeTestRule.onNodeWithTag("who_length_method_confirm").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("who_percentile_result").performScrollTo().assertIsDisplayed()
   }

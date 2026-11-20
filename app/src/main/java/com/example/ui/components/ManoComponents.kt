@@ -386,6 +386,7 @@ fun ManoBannerFrame(
   aspectRatio: Float = 16f / 9f,
   modifier: Modifier = Modifier,
   cornerRadius: Dp = 18.dp,
+  contentScale: ContentScale = ContentScale.Crop,
 ) {
   val shape = RoundedCornerShape(cornerRadius)
   val borderColor = manoBorderColor()
@@ -399,7 +400,7 @@ fun ManoBannerFrame(
     Image(
       painter = painterResource(id = resId),
       contentDescription = contentDescription,
-      contentScale = ContentScale.Crop,
+      contentScale = contentScale,
       alignment = Alignment.Center,
       modifier = Modifier.fillMaxSize().clip(shape),
     )
@@ -1056,7 +1057,7 @@ fun ClinicalNote(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
-          LtrText(text = src.url, color = manoSemanticAccent(InfoBlue, DarkSky))
+          if (src.url.isNotBlank()) LtrText(text = src.url, color = manoSemanticAccent(InfoBlue, DarkSky))
         }
       }
     }

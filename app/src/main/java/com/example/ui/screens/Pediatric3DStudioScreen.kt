@@ -211,8 +211,7 @@ fun Pediatric3DStudioScreen(
 
   val childWeightKg =
     remember(childProfile) {
-      val raw = childProfile?.let { LiquidDoseVisualizerEngine.initialWeightKgFromProfile(it) } ?: 11.5f
-      raw.coerceIn(2.5f, 40.0f)
+      LiquidDoseVisualizerEngine.initialWeightKgFromProfile(childProfile)
     }
 
   val defaultWeighingPosture =
@@ -339,7 +338,7 @@ fun Pediatric3DStudioScreen(
 
   LaunchedEffect(pageLoaded, childWeightKg) {
     if (pageLoaded) {
-      val weightStr = String.format(Locale.US, "%.1f", childWeightKg)
+      val weightStr = String.format(Locale.US, "%.1f", childWeightKg ?: 11.5f)
       runJs("window.Mano3D && window.Mano3D.setChildWeightKg($weightStr);")
     }
   }
@@ -805,7 +804,7 @@ fun Pediatric3DStudioScreen(
                     fontWeight = FontWeight.Bold,
                   )
                   Text(
-                    text = "وزن ثبت‌شده: ${String.format(Locale.US, "%.1f", childWeightKg)} kg",
+                    text = if (childWeightKg == null) "وزن مانکن تمرینی: ۱۱٫۵ کیلوگرم" else "وزن ثبت‌شده: ${String.format(Locale.US, "%.1f", childWeightKg)} kg",
                     style = MaterialTheme.typography.labelSmall,
                     color = successAccent,
                     fontWeight = FontWeight.Bold,

@@ -105,7 +105,7 @@ class ConsultationCaseService {
         const decision = (0, triage_1.evaluateServerTriage)(req);
         if (decision.outcome !== "NONURGENT") {
             return {
-                outcome: "URGENT_EMERGENCY",
+                outcome: decision.outcome,
                 eligibleForNonUrgentConsultation: false,
                 triagePassId: null,
                 expiresAt: null,

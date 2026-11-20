@@ -59,7 +59,10 @@ import androidx.compose.ui.unit.sp
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ReviewStatus
+import com.example.domain.util.ClinicalNumberInput
 import com.example.domain.util.ChildSex
+import com.example.data.ManoTextbookEvidence
+import androidx.compose.material3.Checkbox
 import com.example.domain.util.GrowthMetric
 import com.example.domain.util.LiquidDoseVisualizerEngine
 import com.example.domain.util.PersianNormalizer
@@ -95,44 +98,37 @@ fun WhoGrowthChartCard(
   onOpen3DWeighingGuide: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val initialAgeMonths =
-    remember(childProfile, selectedAgeBand) {
-      when {
-        childProfile != null -> LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile).coerceIn(0, 60)
-        selectedAgeBand == AgeBand.NEWBORN -> 1
-        selectedAgeBand == AgeBand.INFANT_3_12M -> 6
-        selectedAgeBand == AgeBand.TODDLER_1_3Y -> 18
-        selectedAgeBand == AgeBand.PRESCHOOL_3_6Y -> 42
-        else -> 12
-      }
-    }
+  // A broad age band is never a measured age. Preserve only explicit profile age.
+  val initialAgeMonths = childProfile?.ageMonthsExact?.takeIf { it in 0..60 }
 
   val initialWeightStr =
     remember(childProfile) {
       val parsed = PersianNormalizer.toAsciiDigits(childProfile?.weightKgText.orEmpty()).toDoubleOrNull()
-      if (parsed != null && parsed in 1.5..35.0) String.format(Locale.US, "%.1f", parsed) else "9.6"
+      if (parsed != null && parsed in 1.5..35.0) String.format(Locale.US, "%.1f", parsed) else "" // Never fabricate a child measurement when profile data is missing.
     }
   val initialHeightStr =
     remember(savedHeightCm) {
       val parsed = PersianNormalizer.toAsciiDigits(savedHeightCm).toDoubleOrNull()
-      if (parsed != null && parsed in 40.0..130.0) String.format(Locale.US, "%.1f", parsed) else "75.7"
+      if (parsed != null && parsed in 40.0..130.0) String.format(Locale.US, "%.1f", parsed) else "" // Prompt for a measured value instead of showing a sample as real data.
     }
 
   var metric by rememberSaveable { mutableStateOf(GrowthMetric.WEIGHT_FOR_AGE) }
-  var sex by rememberSaveable { mutableStateOf(ChildSex.BOY) }
-  var ageInput by rememberSaveable { mutableStateOf(initialAgeMonths.toString()) }
-  var weightInput by rememberSaveable { mutableStateOf(initialWeightStr) }
-  var heightInput by rememberSaveable { mutableStateOf(initialHeightStr) }
+  var sex by rememberSaveable { mutableStateOf<ChildSex?>(null) }
+  var ageInput by rememberSaveable(childProfile?.ageMonthsExact) { mutableStateOf(initialAgeMonths?.toString().orEmpty()) }
+  var weightInput by rememberSaveable(initialWeightStr) { mutableStateOf(initialWeightStr) }
+  var heightInput by rememberSaveable(initialHeightStr) { mutableStateOf(initialHeightStr) }
 
   val activeValueInput = if (metric == GrowthMetric.WEIGHT_FOR_AGE) weightInput else heightInput
-  val parsedAge = PersianNormalizer.toAsciiDigits(ageInput).toDoubleOrNull()
-  val parsedValue = PersianNormalizer.toAsciiDigits(activeValueInput).toDoubleOrNull()
+  val parsedAge = ClinicalNumberInput.decimal(ageInput)
+  val parsedValue = ClinicalNumberInput.decimal(activeValueInput)
+
+  var lengthMethodConfirmed by rememberSaveable(metric, ageInput) { mutableStateOf(false) }
 
   val curves =
     remember(metric, sex) {
       WhoGrowthStandardsEngine.buildCurves(
         metric = metric,
-        sex = sex,
+        sex = sex ?: ChildSex.BOY,
         minMonth = 0.0,
         maxMonth = 60.0,
         stepMonths = 2.0,
@@ -140,9 +136,10 @@ fun WhoGrowthChartCard(
     }
 
   val assessment =
-    remember(metric, sex, parsedAge, parsedValue) {
-      if (parsedAge != null && parsedValue != null) {
-        WhoGrowthStandardsEngine.evaluate(metric, sex, parsedAge, parsedValue)
+    remember(metric, sex, parsedAge, parsedValue, lengthMethodConfirmed) {
+      if (parsedAge != null && parsedValue != null && sex != null &&
+          (metric == GrowthMetric.WEIGHT_FOR_AGE || lengthMethodConfirmed)) {
+        WhoGrowthStandardsEngine.evaluate(metric, sex!!, parsedAge, parsedValue)
       } else {
         null
       }
@@ -184,19 +181,19 @@ fun WhoGrowthChartCard(
           )
           Column {
             Text(
-              text = "منحنی استاندارد صدک رشد WHO (۰ تا ۶۰ ماه)",
+              text = "نمودار آموزشی رشد (۰ تا ۶۰ ماه)",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
               color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-              text = "جدول رسمی سازمان جهانی بهداشت • P3 تا P97",
+              text = "بر پایه جدول‌های ماهانهٔ WHO؛ صدک بین ماه‌ها تقریبی است",
               style = MaterialTheme.typography.labelSmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
           }
         }
-        SourceBadge(reviewStatus = ReviewStatus.APPROVED)
+        SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
       }
 
       // Metric & Sex Pickers (FlowRow safe for large fontScale)
@@ -245,7 +242,8 @@ fun WhoGrowthChartCard(
       ) {
         OutlinedTextField(
           value = ageInput,
-          onValueChange = { ageInput = PersianNormalizer.toAsciiDigits(it).filter { ch -> ch.isDigit() || ch == '.' }.take(5) },
+          onValueChange = { ageInput = it.take(20) },
+          isError = ageInput.isNotBlank() && (parsedAge == null || parsedAge !in 0.0..60.0),
           label = { Text("سن (ماه، ۰ تا ۶۰)") },
           singleLine = true,
           keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -254,9 +252,10 @@ fun WhoGrowthChartCard(
         OutlinedTextField(
           value = activeValueInput,
           onValueChange = { raw ->
-            val sanitized = PersianNormalizer.toAsciiDigits(raw).filter { ch -> ch.isDigit() || ch == '.' }.take(6)
+            val sanitized = raw.take(20)
             if (metric == GrowthMetric.WEIGHT_FOR_AGE) weightInput = sanitized else heightInput = sanitized
           },
+          isError = activeValueInput.isNotBlank() && (parsedValue == null || parsedValue !in metric.minValid..metric.maxValid),
           label = {
             Text(
               if (metric == GrowthMetric.WEIGHT_FOR_AGE) "وزن (kg)" else "قد (cm)"
@@ -268,8 +267,19 @@ fun WhoGrowthChartCard(
         )
       }
 
-      // Canvas WHO Percentile Curve
-      Surface(
+      if (metric == GrowthMetric.HEIGHT_FOR_AGE) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Checkbox(checked = lengthMethodConfirmed, onCheckedChange = { lengthMethodConfirmed = it },
+            modifier = Modifier.testTag("who_length_method_confirm"))
+          Text("تأیید روش اندازه‌گیری: زیر ۲۴ ماه طول درازکش؛ از ۲۴ ماه قد ایستاده.",
+            style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        }
+      }
+      Text("سن دقیق و جنس مربوط به نمودار را انتخاب کنید. این ابزار برای تفسیر رشد نوزاد نارس یا شرایط نیازمند نمودار اختصاصی کافی نیست.",
+        style = MaterialTheme.typography.bodySmall)
+
+      // No sex is silently assumed for the child's chart.
+      if (sex != null) Surface(
         color = chartCardBg,
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.dp, manoBorderColor()),
@@ -443,7 +453,7 @@ fun WhoGrowthChartCard(
       ) {
         WhoLegendChip("P50 میانه استاندارد", skyAccent)
         WhoLegendChip("P15–P85 محدوده رایج", sageAccent)
-        WhoLegendChip("P3 و P97 مرز پیگیری", amberAccent)
+        WhoLegendChip("P3 و P97 خطوط مرجع", amberAccent)
       }
 
       // Live Assessment Summary
@@ -466,7 +476,7 @@ fun WhoGrowthChartCard(
               verticalAlignment = Alignment.CenterVertically,
             ) {
               Text(
-                text = "صدک تخمینی: ${String.format(Locale.US, "%.1f", assessment.percentile)} (${assessment.bandLabelFa})",
+                text = if (kotlin.math.abs(assessment.zScore) >= 3) assessment.bandLabelFa else "صدک تخمینی: ${String.format(Locale.US, "%.1f", assessment.percentile)} (${assessment.bandLabelFa})",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = resultAccent,
@@ -475,7 +485,7 @@ fun WhoGrowthChartCard(
             }
             Text(
               text =
-                "میانه استاندارد این سن (P50): ${String.format(Locale.US, "%.1f", assessment.p50)} ${metric.unitFa} • Z-score: ${String.format(Locale.US, "%.2f", assessment.zScore)}",
+                "میانه استاندارد این سن (P50): ${String.format(Locale.US, "%.1f", assessment.p50)} ${metric.unitFa}" + if (kotlin.math.abs(assessment.zScore) < 3) " • Z-score: ${String.format(Locale.US, "%.2f", assessment.zScore)}" else "",
               style = MaterialTheme.typography.labelLarge,
               color = MaterialTheme.colorScheme.onSurface,
             )
@@ -488,12 +498,20 @@ fun WhoGrowthChartCard(
         }
       } else {
         Text(
-          text = "برای مشاهده صدک واقعی WHO، سن (۰ تا ۶۰ ماه) و وزن یا قد معتبر را وارد کنید.",
+          text = "برای برآورد آموزشی، سن دقیق (۰ تا ۶۰ ماه)، جنس و مقدار اندازه‌گیری‌شده را وارد کنید؛ برای قد، روش اندازه‌گیری را هم تأیید کنید.",
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
 
+      ClinicalNote(
+        title = "چطور نتیجهٔ رشد را بخوانیم؟",
+        items = listOf("روند چند نوبت از عدد تکی مهم‌تر است. برای عدد غیرمنتظره، ابتدا اندازه‌گیری را تکرار کنید.",
+          "وزن نسبت به سن برای تشخیص چاقی کافی نیست. صدک میانی، بیماری یا افت روند را رد نمی‌کند.",
+          "نمودار از داده‌های ماهانه استفاده می‌کند؛ برآورد بین ماه‌ها جای محاسبهٔ روزانهٔ استاندارد و ارزیابی پزشک را نمی‌گیرد."),
+        sources = listOf(ManoTextbookEvidence.nelsonGrowth),
+        reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+      )
       LtrText(text = "WHO Child Growth Standards (2006) — who.int/tools/child-growth-standards")
 
       OutlinedButton(
