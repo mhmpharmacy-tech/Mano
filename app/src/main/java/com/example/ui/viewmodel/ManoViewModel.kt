@@ -714,7 +714,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
         medicationNameFa = medicationNameFa,
         dosageFormFa = dosageFormFa,
         volumeMlText = volumeMlText,
-        timestampMs = now,
+        timestampMs = FeverDoseTimelineEngine.resolveDoseTimeMs(givenAtLabelFa, now) ?: now,
         givenAtLabelFa = givenAtLabelFa.trim().ifEmpty { FeverDoseTimelineEngine.formatHourMinute(now) },
         noteFa = noteFa.trim(),
         isSyncedCloud = false,
