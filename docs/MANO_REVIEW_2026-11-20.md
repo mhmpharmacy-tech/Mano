@@ -19,7 +19,7 @@ Status: NOT release-cleared. No device/simulator screenshots or Android build we
 ## Remediations applied on this branch
 1. `ManoEcosystemHub.kt`: MANO Connect uses branded `FAMILY` artwork, rather than reusing `PHARMACY`.
 2. `WhoGrowthChartCard.kt`: empty unknown weight/height instead of injecting synthetic measurements; WHO percentile remains unavailable until a valid value is provided.
-3. `ManoAuditRemediationTest.kt`: regression checks for distinct icon kinds and missing-data growth safety.
+3. `ManoAuditRemediationTest.kt`: regression checks for distinct icon kinds, missing-data growth safety, and click callbacks for all six ecosystem cards.
 
 ## Manual test plan — mandatory before any release
 | Priority | Area | Interaction | Pass criterion |
