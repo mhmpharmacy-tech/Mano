@@ -381,7 +381,7 @@ fun ManoApp(
   val cloudSyrupScansState by cloudVm?.syrupScansState?.collectAsStateWithLifecycle()
     ?: remember { mutableStateOf<CloudDataState<List<com.example.domain.model.SavedSyrupScan>>>(CloudDataState.Success(emptyList())) }
 
-  val effectiveBookmarks = if (currentUser != null) (localBookmarkedSlugs + cloudBookmarks) else localBookmarkedSlugs
+  val effectiveBookmarks = if (currentUser != null) cloudBookmarks else localBookmarkedSlugs
   val effectiveChildProfile =
     if (currentUser != null) (cloudProfileState as? CloudDataState.Success)?.data else localChildProfile
   val effectiveConsultations =
@@ -414,10 +414,17 @@ fun ManoApp(
   LaunchedEffect(effectiveChildProfile?.aliasFa) {
     viewModel.setChildAliasFa(effectiveChildProfile?.aliasFa)
   }
-  val resolvedChildBirthDateEpochMs = childBirthDateEpochMs
-    ?: com.example.domain.util.VaccinationScheduleEngine.parseFlexibleDateToEpochMs(
+  val resolvedChildBirthDateEpochMs = if (currentUser != null) {
+    // Do not reuse a previous offline child's birth date for a different Google UID.
+    com.example.domain.util.VaccinationScheduleEngine.parseFlexibleDateToEpochMs(
       effectiveChildProfile?.birthDateOrAgeFa.orEmpty()
     )
+  } else {
+    childBirthDateEpochMs
+      ?: com.example.domain.util.VaccinationScheduleEngine.parseFlexibleDateToEpochMs(
+        effectiveChildProfile?.birthDateOrAgeFa.orEmpty()
+      )
+  }
   val vaccineSummary =
     remember(activeCloudVaccineRecords, localVaccineRecords, resolvedChildBirthDateEpochMs, vaccineReminderSettings, currentUser?.uid) {
       VaccinationScheduleEngine.resolveSchedule(
@@ -428,22 +435,18 @@ fun ManoApp(
       )
     }
   val effectiveSavedVisitDrafts =
-    remember(activeCloudVisitDrafts, localVisitDrafts) {
-      (activeCloudVisitDrafts + localVisitDrafts)
-        .distinctBy { it.id }
-        .sortedByDescending { it.createdAtMs }
-    }
+    if (currentUser != null) activeCloudVisitDrafts else localVisitDrafts
   val activeSymptomFlow =
     remember(uiState.symptomWizard.selectedSymptomId) {
       viewModel.allSymptomFlows.firstOrNull { it.id == uiState.symptomWizard.selectedSymptomId }
     }
   val timelineSnapshot =
-    remember(activeCloudFeverLogs, localFeverLogs, activeCloudDoseLogs, localDoseLogs) {
+    remember(activeCloudFeverLogs, localFeverLogs, activeCloudDoseLogs, localDoseLogs, currentUser?.uid) {
       FeverDoseTimelineEngine.buildSnapshot(
         cloudFeverLogs = activeCloudFeverLogs,
-        localFeverLogs = localFeverLogs,
+        localFeverLogs = if (currentUser == null) localFeverLogs else emptyList(),
         cloudDoseLogs = activeCloudDoseLogs,
-        localDoseLogs = localDoseLogs,
+        localDoseLogs = if (currentUser == null) localDoseLogs else emptyList(),
       )
     }
 
