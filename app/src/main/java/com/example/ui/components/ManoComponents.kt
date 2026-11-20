@@ -388,22 +388,60 @@ fun ManoBannerFrame(
   cornerRadius: Dp = 18.dp,
   contentScale: ContentScale = ContentScale.Crop,
 ) {
+  val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(cornerRadius)
   val borderColor = manoBorderColor()
+  val glassRimBrush =
+    Brush.linearGradient(
+      colors =
+        if (isDark) {
+          listOf(
+            TealGlow.copy(alpha = 0.50f),
+            PureWhite.copy(alpha = 0.22f),
+            borderColor.copy(alpha = 0.85f),
+          )
+        } else {
+          listOf(
+            PureWhite.copy(alpha = 0.92f),
+            TealGlow.copy(alpha = 0.42f),
+            borderColor.copy(alpha = 0.90f),
+          )
+        }
+    )
+
   Surface(
     color = MaterialTheme.colorScheme.surfaceVariant,
     shape = shape,
-    border = BorderStroke(1.2.dp, borderColor),
-    shadowElevation = 2.dp,
+    border = BorderStroke(1.3.dp, glassRimBrush),
+    shadowElevation = if (isDark) 4.dp else 3.dp,
     modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio),
   ) {
-    Image(
-      painter = painterResource(id = resId),
-      contentDescription = contentDescription,
-      contentScale = contentScale,
-      alignment = Alignment.Center,
-      modifier = Modifier.fillMaxSize().clip(shape),
-    )
+    Box(modifier = Modifier.fillMaxSize().clip(shape)) {
+      Image(
+        painter = painterResource(id = resId),
+        contentDescription = contentDescription,
+        contentScale = contentScale,
+        alignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize(),
+      )
+      // Subtle frosted-glass top specular sheen for clinical depth
+      Box(
+        modifier =
+          Modifier
+            .fillMaxWidth()
+            .height(28.dp)
+            .align(Alignment.TopCenter)
+            .background(
+              Brush.verticalGradient(
+                colors =
+                  listOf(
+                    PureWhite.copy(alpha = if (isDark) 0.14f else 0.24f),
+                    Color.Transparent,
+                  )
+              )
+            ),
+      )
+    }
   }
 }
 
