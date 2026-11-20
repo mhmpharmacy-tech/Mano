@@ -47,13 +47,25 @@ object NutritionPromptBuilder {
   /**
    * Detects infants likely under 6 months so prompt & UI strictly preserve exclusive milk feeding guidance.
    */
-  fun isLikelyUnderSixMonths(ageBand: AgeBand, ageDetailFa: String): Boolean {
+  fun isLikelyUnderSixMonths(
+    ageBand: AgeBand,
+    ageDetailFa: String,
+    profileAgeMonths: Int? = null,
+    nowMs: Long = System.currentTimeMillis(),
+  ): Boolean {
     if (ageBand == AgeBand.NEWBORN) return true
     if (ageBand != AgeBand.INFANT_3_12M) return false
     val norm = PersianNormalizer.normalize(ageDetailFa)
-    val monthMatch = Regex("""(\d+)\s*ماه""").find(norm)
-    val months = monthMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-    return months != null && months < 6
+    val explicitMonths = profileAgeMonths?.takeIf { it in 0..144 }
+      ?: LiquidDoseVisualizerEngine.parseAgeMonthsFromText(norm)
+      ?: Regex("""(\d+)\s*ماه""").find(norm)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    val birthDate = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(ageDetailFa)
+    val fromBirth = birthDate?.let {
+      LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(null, it, nowMs)
+    }
+    val months = fromBirth ?: explicitMonths
+    // Ambiguous 3–12 month band means a child MAY be under six months: fail closed.
+    return months == null || months < 6
   }
 
   fun buildContext(
@@ -77,7 +89,7 @@ object NutritionPromptBuilder {
       allergiesFa.trim().ifEmpty { childProfile?.allergiesFa?.trim().orEmpty() }.ifEmpty { "موردی ثبت نشده" }
     val currentMeds = childProfile?.currentMedsFa?.trim()?.ifEmpty { "ثبت نشده" } ?: "ثبت نشده"
 
-    val underSixMonths = isLikelyUnderSixMonths(ageBand, effectiveAgeDetail)
+    val underSixMonths = isLikelyUnderSixMonths(ageBand, effectiveAgeDetail, childProfile?.ageMonthsExact)
     val underTwelveMonths = ageBand == AgeBand.NEWBORN || ageBand == AgeBand.INFANT_3_12M
 
     val weightSummary =
