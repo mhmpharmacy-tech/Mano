@@ -335,7 +335,8 @@ class ManoSyrupScannerViewModel(
         childProfile = childProfile,
         birthDateEpochMs = birthDateEpochMs,
       )
-    _uiState.value = current.copy(extraction = refreshed)
+    // Changed child context invalidates any earlier confirmation of the proposed volume.
+    _uiState.value = current.copy(extraction = refreshed, parentVerified = false)
   }
 
   fun loadSavedScan(scan: SavedSyrupScan, childProfile: ChildProfileDemo?, birthDateEpochMs: Long? = null) {
@@ -364,7 +365,8 @@ class ManoSyrupScannerViewModel(
       SyrupScannerUiState.Review(
         previewBitmap = null,
         extraction = reconciled,
-        parentVerified = true,
+        // A persisted label was verified earlier, not for today's child/profile and dose.
+        parentVerified = false,
         activeSavedId = scan.id,
       )
   }
@@ -373,6 +375,9 @@ class ManoSyrupScannerViewModel(
     val current = _uiState.value as? SyrupScannerUiState.Review ?: return null
     if (!current.parentVerified) return null
     val ext = current.extraction
+    if (!ext.mgAmount.isFinite() || ext.mgAmount <= 0.0 ||
+        !ext.perMlAmount.isFinite() || ext.perMlAmount <= 0.0 ||
+        !ext.mgPerMl.isFinite() || ext.mgPerMl <= 0.0) return null
     val now = System.currentTimeMillis()
     val id = current.activeSavedId?.takeIf { it.isNotBlank() } ?: "scan_$now"
     return SavedSyrupScan(
