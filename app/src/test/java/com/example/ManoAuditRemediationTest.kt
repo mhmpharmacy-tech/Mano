@@ -382,4 +382,27 @@ class ManoAuditRemediationTest {
   }
 
 
+  @Test
+  fun allSixEcosystemCards_dispatchTheCorrectClickCallback() {
+    val clicked = mutableListOf<com.example.ui.components.ManoEcosystemPillar>()
+    composeTestRule.setContent {
+      ManoKidsTheme(darkTheme = false) {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+          com.example.ui.components.ManoSpecializedEcosystemSection(
+            onSelectPillar = { clicked.add(it) },
+          )
+        }
+      }
+    }
+
+    com.example.ui.components.ManoEcosystemPillar.entries.forEach { pillar ->
+      composeTestRule
+        .onNodeWithTag("mano_pillar_${pillar.id}")
+        .performScrollTo()
+        .performClick()
+    }
+    assertEquals(com.example.ui.components.ManoEcosystemPillar.entries.toList(), clicked)
+  }
+
+
 }
