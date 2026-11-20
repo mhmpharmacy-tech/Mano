@@ -303,7 +303,7 @@ class ManoNutritionTest {
         ageBand = AgeBand.INFANT_3_12M,
         weightKgText = "8.8",
         weightDateFa = "امروز",
-        allergiesFa = "تخم‌مرغ",
+        allergiesFa = "",
         currentMedsFa = "ویتامین AD",
         consentGranted = true,
       )
@@ -320,7 +320,7 @@ class ManoNutritionTest {
                   """
                   {
                     "planTitleFa": "غذای مقوی ۹ ماهگی سامیار",
-                    "overviewFa": "ترکیب نرم و غنی از آهن بدون تخم‌مرغ.",
+                    "overviewFa": "ترکیب نرم و غنی از آهن برای کودک بدون آلرژی ثبت‌شده.",
                     "growthNutritionFocusFa": "افزایش انرژی و آهن قابل جذب",
                     "hydrationTipFa": "شیر مادر در فواصل وعده‌ها",
                     "meals": [
@@ -333,7 +333,7 @@ class ManoNutritionTest {
                         "prepStepsFa": ["مواد را با آب بجوشانید تا نرم شود."]
                       }
                     ],
-                    "safetyAvoidListFa": ["عسل و سفیده یا زرده تخم‌مرغ (به دلیل حساسیت ثبت‌شده)"],
+                    "safetyAvoidListFa": ["عسل تا پایان یک‌سالگی مجاز نیست"],
                     "doctorFollowUpHintFa": "وزن‌گیری ماهانه را با پزشک پیگیری کنید."
                   }
                   """.trimIndent()
