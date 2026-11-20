@@ -76,6 +76,9 @@ class ManoSyrupScannerTest {
       birthDateOrAgeFa = "۸ ماه",
       ageBand = AgeBand.INFANT_3_12M,
       weightKgText = "8.0",
+      weightDateFa = "امروز",
+      allergiesFa = "",
+      currentMedsFa = "",
       consentGranted = true,
       ageMonthsExact = 8,
     )
