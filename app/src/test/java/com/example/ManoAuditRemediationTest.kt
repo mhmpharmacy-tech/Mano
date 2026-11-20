@@ -405,4 +405,53 @@ class ManoAuditRemediationTest {
   }
 
 
+  @Test
+  fun review20261120_scienceAndFormsRemediation_verified() {
+    val constipationFlow = com.example.data.ManoSourcesAndClinicalSeed.symptomFlows.first { it.id == "constipation" }
+    assertTrue(
+      "Constipation flow must cite pediatric constipation source instead of fever source",
+      constipationFlow.sources.any { it.id == "aap_constipation" },
+    )
+    assertFalse(constipationFlow.sources.any { it.id == "aap_fever" })
+
+    val meconiumTriage =
+      com.example.domain.util.TriageEngine.evaluate(
+        flow = constipationFlow,
+        ageBand = AgeBand.NEWBORN,
+        selectedRedFlagIds = setOf("infant_no_meconium"),
+        temperatureCelsius = null,
+        durationHours = null,
+      )
+    assertEquals(com.example.domain.model.TriageOutcome.URGENT_EMERGENCY, meconiumTriage.outcome)
+    assertFalse(meconiumTriage.canShowSelfCare)
+
+    assertTrue(
+      com.example.data.ManoSourcesAndClinicalSeed.demoPharmacistCases.all {
+        it.reviewStatus == com.example.domain.model.ReviewStatus.APPROVED
+      }
+    )
+
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val vm = com.example.ui.viewmodel.ManoViewModel(context.applicationContext as android.app.Application)
+
+    assertNull(
+      "Out-of-range weight must be rejected",
+      vm.resolveValidatedChildProfile("آوا", "۱۴۰۳/۰۵/۱۲", AgeBand.TODDLER_1_3Y, "95", "", "", "", true),
+    )
+    val valid =
+      vm.resolveValidatedChildProfile(
+        aliasFa = "آوا",
+        birthDateOrAgeFa = "۱۴۰۳/۰۵/۱۲",
+        ageBand = AgeBand.TODDLER_1_3Y,
+        weightKgText = "۱۱٫۵",
+        weightDateFa = "امروز",
+        allergiesFa = "",
+        currentMedsFa = "",
+        consentGranted = true,
+      )
+    assertTrue("Valid Jalali birth date and Persian decimal weight must resolve", valid != null)
+    assertEquals("11.5", valid!!.first.weightKgText)
+    assertTrue("Birth date epoch must sync for vaccine schedule", valid.second != null && valid.second!! > 0L)
+    assertTrue("Exact age in months must be derived from birth date", valid.first.ageMonthsExact != null)
+  }
 }
