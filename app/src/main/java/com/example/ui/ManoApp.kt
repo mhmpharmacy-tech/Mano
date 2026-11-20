@@ -588,7 +588,8 @@ fun ManoApp(
   LaunchedEffect(timelineSnapshot.tempPoints, effectiveChildProfile) {
     val latestPoint = timelineSnapshot.tempPoints.lastOrNull()
     val alert = FeverDoseTimelineEngine.evaluateHighFeverAlert(timelineSnapshot, effectiveChildProfile)
-    if (latestPoint != null && alert != null && latestPoint.tempCelsius > FeverDoseTimelineEngine.HIGH_FEVER_ALERT_THRESHOLD_C) {
+    // The engine also escalates ≥38°C for infants under three months; do not silence its alert.
+    if (latestPoint != null && alert != null) {
       val eventKey = "${latestPoint.id}_${latestPoint.timestampMs}"
       if (eventKey != lastTriggeredHighFeverKey) {
         lastTriggeredHighFeverKey = eventKey
@@ -1685,6 +1686,7 @@ fun ManoApp(
                     }
                   },
                   onExportSummary = viewModel::exportChildProfileSummary,
+                  onEraseLocalData = viewModel::eraseLocalChildHealthData,
                   onDeleteProfile = {
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
