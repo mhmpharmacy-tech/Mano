@@ -56,6 +56,10 @@ object NutritionPromptBuilder {
     if (ageBand == AgeBand.NEWBORN) return true
     if (ageBand != AgeBand.INFANT_3_12M) return false
     val norm = PersianNormalizer.normalize(ageDetailFa)
+    val hasAmbiguousBand = profileAgeMonths == null &&
+      (AgeBand.entries.any { PersianNormalizer.normalize(it.labelFa) == norm } ||
+        Regex("""\\d+\\s*(?:تا|الی|-|–)\\s*\\d+""").containsMatchIn(norm))
+    if (hasAmbiguousBand) return true
     val explicitMonths = profileAgeMonths?.takeIf { it in 0..144 }
       ?: LiquidDoseVisualizerEngine.parseAgeMonthsFromText(norm)
       ?: Regex("""(\d+)\s*ماه""").find(norm)?.groupValues?.getOrNull(1)?.toIntOrNull()
@@ -65,7 +69,7 @@ object NutritionPromptBuilder {
     }
     val months = fromBirth ?: explicitMonths
     // Ambiguous 3–12 month band means a child MAY be under six months: fail closed.
-    return months == null || months < 6
+    return months == null || months !in 6..11
   }
 
   fun buildContext(
