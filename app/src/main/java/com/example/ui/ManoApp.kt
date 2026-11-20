@@ -1695,7 +1695,10 @@ fun ManoApp(
                       viewModel.saveChildProfileDemo(alias, birthOrAge, band, weightKg, weightDate, allergies, meds, consent)
                     }
                   },
-                  onExportSummary = viewModel::exportChildProfileSummary,
+                  onExportSummary = {
+                    // Export only the current displayed account's child, never a residual offline profile.
+                    viewModel.exportChildProfileSummary(effectiveChildProfile)
+                  },
                   onEraseLocalData = viewModel::eraseLocalChildHealthData,
                   onDeleteProfile = {
                     val activeCloudVm = cloudVm
