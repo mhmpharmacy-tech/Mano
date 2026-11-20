@@ -414,6 +414,8 @@ fun ManoApp(
   LaunchedEffect(effectiveChildProfile?.aliasFa) {
     viewModel.setChildAliasFa(effectiveChildProfile?.aliasFa)
   }
+  // Height currently lives in global offline DataStore; never attribute it to a cloud child.
+  val effectiveChildHeightCm = if (currentUser == null) childHeightCm else ""
   val resolvedChildBirthDateEpochMs = if (currentUser != null) {
     // Do not reuse a previous offline child's birth date for a different Google UID.
     com.example.domain.util.VaccinationScheduleEngine.parseFlexibleDateToEpochMs(
@@ -1329,7 +1331,7 @@ fun ManoApp(
                   onOpenGrowthArticle = { navController.navigate(TopicDetailRoute("growth-and-development")) },
                   onOpen3DWeighingGuide = { navController.navigate(Pediatric3DStudioRoute("weighing")) },
                   childProfile = effectiveChildProfile,
-                  savedHeightCm = childHeightCm,
+                  savedHeightCm = effectiveChildHeightCm,
                   savedNutritionPlansCount = savedNutritionPlans.size,
                   onOpenNutritionAdvisor = { navController.navigate(NutritionRoute) { launchSingleTop = true } },
                   vaccineProgressSummaryFa =
@@ -1393,7 +1395,7 @@ fun ManoApp(
                   savedPlans = savedNutritionPlans,
                   childProfile = effectiveChildProfile,
                   selectedAgeBand = selectedAgeBand,
-                  savedHeightCm = childHeightCm,
+                  savedHeightCm = effectiveChildHeightCm,
                   checkedMilestones = viewModel.checkedMilestonesList(),
                   timelineSnapshot = timelineSnapshot,
                   onSaveHeightCm = viewModel::setChildHeightCm,
@@ -1726,7 +1728,7 @@ fun ManoApp(
         ManoOnboardingOverlay(
           existingProfile = effectiveChildProfile,
           existingBirthDateEpochMs = resolvedChildBirthDateEpochMs,
-          existingHeightCm = childHeightCm,
+          existingHeightCm = effectiveChildHeightCm,
           onComplete = { alias, birthMs, band, weightKg, heightCm ->
             manualOnboardingOpen = false
             dismissedAutoOnboarding = true
