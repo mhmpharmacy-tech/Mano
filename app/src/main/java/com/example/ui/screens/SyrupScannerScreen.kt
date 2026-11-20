@@ -822,7 +822,7 @@ fun SyrupScannerScreen(
               ) {
                 OutlinedButton(
                   onClick = onConfirmSaveOnly,
-                  enabled = scannerUiState.parentVerified,
+                  enabled = scannerUiState.parentVerified && ext.mgAmount > 0.0 && ext.perMlAmount > 0.0 && ext.mgPerMl > 0.0,
                   modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("scanner_save_only_btn"),
                 ) {
                   Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
