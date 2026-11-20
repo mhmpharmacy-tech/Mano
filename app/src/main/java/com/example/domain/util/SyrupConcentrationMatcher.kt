@@ -151,7 +151,7 @@ object SyrupConcentrationMatcher {
     val canAutoFill =
       matchedFormulation != null &&
         validConcentration &&
-        confidence != SyrupScanConfidence.LOW &&
+        confidence == SyrupScanConfidence.HIGH &&
         dosePreview != null &&
         !dosePreview.isBlocked &&
         dosePreview.recommendedMl > 0f
