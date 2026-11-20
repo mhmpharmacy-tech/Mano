@@ -21,4 +21,5 @@ Google Play account deletion requirements: https://support.google.com/googleplay
 - `ManoPreferencesRepository.clearLocalChildHealthData()` removes DataStore values for child profiles, weight/height metadata, logs, nutrition, vaccination, drafts, scans, safety checklists, bookmarks and onboarding.
 - `FeverTimelineWidgetStore.clearStoredSummary()` clears any old fever/dose summary shown on the home-screen widget.
 - A two-step explicit UI confirmation distinguishes *local data removal* from *cloud profile document removal*. The latter still leaves other cloud collections intact.
+- This local reset does **not** guarantee erasure of the Firebase SDK on-disk Firestore cache. In-app copy instructs caregivers to sign out and use Android Settings > Apps > Manokid > Storage > Clear storage for full device-level app data removal.
 - No irreversible erasure of production cloud data has been attempted.
