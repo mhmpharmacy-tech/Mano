@@ -351,4 +351,34 @@ class ManoAuditRemediationTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("comparison_option_card_antipyretic_forms_0").performScrollTo().assertIsDisplayed()
   }
+  @Test
+  fun ecosystemPillars_haveDistinctBrandedIconKinds() {
+    val pillars = com.example.ui.components.ManoEcosystemPillar.entries
+    assertEquals(6, pillars.size)
+    assertEquals("Every pillar should have a visually distinct branded symbol", 6, pillars.map { it.iconKind }.distinct().size)
+    assertEquals(
+      PediatricIconKind.FAMILY,
+      com.example.ui.components.ManoEcosystemPillar.MANO_CONNECT.iconKind,
+    )
+  }
+
+  @Test
+  fun growthChart_withoutChildMeasurements_doesNotSuggestSyntheticPercentile() {
+    composeTestRule.setContent {
+      ManoKidsTheme(darkTheme = false) {
+        com.example.ui.components.WhoGrowthChartCard(
+          childProfile = null,
+          savedHeightCm = "",
+          selectedAgeBand = null,
+          onOpen3DWeighingGuide = {},
+        )
+      }
+    }
+    composeTestRule.waitForIdle()
+    composeTestRule
+      .onNodeWithText("برای مشاهده صدک واقعی WHO، سن (۰ تا ۶۰ ماه) و وزن یا قد معتبر را وارد کنید.")
+      .assertExists()
+  }
+
+
 }
