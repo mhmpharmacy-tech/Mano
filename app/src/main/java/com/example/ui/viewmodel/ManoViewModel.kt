@@ -676,7 +676,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
             exportedProfileJson = null,
             askPharmacist = AskPharmacistState(),
             symptomWizard = SymptomWizardState(),
-            toastMessageFa = "اطلاعات سلامت کودک از این دستگاه پاک شد؛ پرونده ابری، در صورت وجود، تغییری نکرده است.",
+            toastMessageFa = "داده‌های آفلاین مانو و خلاصه ویجت پاک شد؛ کش Firebase و پرونده ابری ممکن است همچنان وجود داشته باشند.",
           )
         }
       } catch (_: Exception) {
