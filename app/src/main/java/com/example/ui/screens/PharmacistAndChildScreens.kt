@@ -654,15 +654,15 @@ fun MyChildScreen(
   if (showLocalEraseConfirmation) {
     AlertDialog(
       onDismissRequest = { showLocalEraseConfirmation = false },
-      title = { Text("پاک‌سازی اطلاعات سلامت از این دستگاه") },
+      title = { Text("پاک‌سازی داده‌های آفلاین مانو") },
       text = {
-        Text("پرونده‌های کودک، ثبت تب و دارو، اسکن‌های شربت، واکسن‌ها، برنامه‌های غذایی و پیش‌نویس‌های ذخیره‌شده محلی پاک می‌شوند. اطلاعات ابری و سوابق قانونی/داروساز حذف نمی‌شوند. این عمل قابل بازگشت نیست.")
+        Text("اطلاعات آفلاین مانو (DataStore) و خلاصه ویجت پاک می‌شوند، ولی کش داخلی Firebase ممکن است باقی بماند. برای پاک‌سازی کامل فضای ذخیره‌سازی اپ پس از خروج از حساب، از تنظیمات Android > برنامه‌ها > Manokid > فضای ذخیره‌سازی > پاک کردن داده‌ها استفاده کنید. پرونده ابری حذف نمی‌شود.")
       },
       confirmButton = {
         TextButton(
           onClick = { showLocalEraseConfirmation = false; onEraseLocalData() },
           modifier = Modifier.testTag("confirm_local_health_erase_btn"),
-        ) { Text("پاک‌سازی این دستگاه", color = MaterialTheme.colorScheme.error) }
+        ) { Text("پاک‌سازی داده‌های آفلاین", color = MaterialTheme.colorScheme.error) }
       },
       dismissButton = {
         TextButton(onClick = { showLocalEraseConfirmation = false }) { Text("انصراف") }
@@ -857,13 +857,13 @@ fun MyChildScreen(
         SectionCard {
           Text("حریم خصوصی و پاک‌سازی دستگاه", style = MaterialTheme.typography.titleMedium)
           Text(
-            "این گزینه تمام اطلاعات سلامت ذخیره‌شده روی همین دستگاه را پاک می‌کند. برای حذف داده‌های ابری و سوابق مشاوره، روند مجزای درخواست حذف حساب لازم است.",
+            "این گزینه داده‌های آفلاین مانو و ویجت را پاک می‌کند، نه کش Firebase یا اطلاعات ابری. برای پاک‌سازی کامل حافظه اپ، پس از خروج از حساب از تنظیمات Android گزینه «پاک کردن داده‌ها» را انتخاب کنید.",
             style = MaterialTheme.typography.bodySmall,
           )
           OutlinedButton(
             onClick = { showLocalEraseConfirmation = true },
             modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("erase_local_health_data_btn"),
-          ) { Text("پاک‌سازی کامل داده‌های سلامت از این دستگاه") }
+          ) { Text("پاک‌سازی داده‌های آفلاین مانو و ویجت") }
         }
       }
     }
