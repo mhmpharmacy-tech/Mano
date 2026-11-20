@@ -715,6 +715,9 @@ fun MedicinesScreen(
                   val vol = volumeMlInput.trim()
                   if (vol.isBlank()) {
                     logFormError = "لطفاً مقدار mL یا قطره داده‌شده را وارد کنید."
+                  } else if (timeLabelInput.isNotBlank() && timeLabelInput.trim() != "امروز" &&
+                    FeverDoseTimelineEngine.resolveDoseTimeMs(timeLabelInput) == null) {
+                    logFormError = "ساعت مصرف را به شکل معتبر HH:mm در ۲۴ ساعت اخیر وارد کنید؛ ساعت نامعتبر مبنای هشدار دوز نیست."
                   } else {
                     val medName = selectedMed?.nameFa ?: "داروی ثبت‌شده"
                     val timeNow = FeverDoseTimelineEngine.formatHourMinute(System.currentTimeMillis())
