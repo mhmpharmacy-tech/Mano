@@ -150,6 +150,9 @@ class ManoNutritionTest {
 
     assertTrue(infant4m.isUnderSixMonths)
     assertTrue(infant4m.isUnderTwelveMonths)
+    assertTrue("Ambiguous age in 3–12m band must be treated conservatively",
+      NutritionPromptBuilder.isLikelyUnderSixMonths(AgeBand.INFANT_3_12M, AgeBand.INFANT_3_12M.labelFa))
+    assertFalse(NutritionPromptBuilder.isLikelyUnderSixMonths(AgeBand.INFANT_3_12M, "۱۰ ماهه"))
     assertEquals(6.5, infant4m.normalizedWeightKg ?: 0.0, 0.01)
     assertEquals(63.0, infant4m.normalizedHeightCm ?: 0.0, 0.01)
     assertTrue(infant4m.promptText.contains("نوزاد زیر ۶ ماه فقط باید با شیر مادر یا شیرخشک استاندارد تغذیه شود"))
@@ -219,6 +222,28 @@ class ManoNutritionTest {
       assertEquals(0, callCount)
       assertNull(savedPlan)
 
+      // No AI solid-food program for unknown infant age.
+      vm.generateNutritionPlan(
+        childProfile = null, ageBand = AgeBand.INFANT_3_12M,
+        ageDetailFa = AgeBand.INFANT_3_12M.labelFa, weightKgText = "8",
+        heightCmText = "70", allergiesFa = "", checkedMilestones = emptyList(),
+        timelineSnapshot = snapshot, appetiteStatus = NutritionAppetiteStatus.NORMAL,
+        availableIngredientsFa = "", onSavePlan = { savedPlan = it },
+      )
+      assertTrue(vm.uiState.value is NutritionUiState.Error)
+      assertEquals(0, callCount)
+
+      // Known allergies require an independently reviewed plan, not generative advice.
+      vm.generateNutritionPlan(
+        childProfile = null, ageBand = AgeBand.INFANT_3_12M,
+        ageDetailFa = "۱۰ ماهه", weightKgText = "9",
+        heightCmText = "74", allergiesFa = "بادام‌زمینی", checkedMilestones = emptyList(),
+        timelineSnapshot = snapshot, appetiteStatus = NutritionAppetiteStatus.NORMAL,
+        availableIngredientsFa = "", onSavePlan = { savedPlan = it },
+      )
+      assertTrue(vm.uiState.value is NutritionUiState.Error)
+      assertEquals(0, callCount)
+
       // Valid request parses JSON cleanly and triggers save callback
       vm.generateNutritionPlan(
         childProfile = null,
@@ -226,7 +251,7 @@ class ManoNutritionTest {
         ageDetailFa = "۱۰ ماهه",
         weightKgText = "9.2",
         heightCmText = "73",
-        allergiesFa = "بادام‌زمینی",
+        allergiesFa = "",
         checkedMilestones = emptyList(),
         timelineSnapshot = snapshot,
         appetiteStatus = NutritionAppetiteStatus.NORMAL,
@@ -278,7 +303,7 @@ class ManoNutritionTest {
         ageBand = AgeBand.INFANT_3_12M,
         weightKgText = "8.8",
         weightDateFa = "امروز",
-        allergiesFa = "تخم‌مرغ",
+        allergiesFa = "",
         currentMedsFa = "ویتامین AD",
         consentGranted = true,
       )
@@ -295,7 +320,7 @@ class ManoNutritionTest {
                   """
                   {
                     "planTitleFa": "غذای مقوی ۹ ماهگی سامیار",
-                    "overviewFa": "ترکیب نرم و غنی از آهن بدون تخم‌مرغ.",
+                    "overviewFa": "ترکیب نرم و غنی از آهن برای کودک بدون آلرژی ثبت‌شده.",
                     "growthNutritionFocusFa": "افزایش انرژی و آهن قابل جذب",
                     "hydrationTipFa": "شیر مادر در فواصل وعده‌ها",
                     "meals": [
@@ -308,7 +333,7 @@ class ManoNutritionTest {
                         "prepStepsFa": ["مواد را با آب بجوشانید تا نرم شود."]
                       }
                     ],
-                    "safetyAvoidListFa": ["عسل و سفیده یا زرده تخم‌مرغ (به دلیل حساسیت ثبت‌شده)"],
+                    "safetyAvoidListFa": ["عسل تا پایان یک‌سالگی مجاز نیست"],
                     "doctorFollowUpHintFa": "وزن‌گیری ماهانه را با پزشک پیگیری کنید."
                   }
                   """.trimIndent()

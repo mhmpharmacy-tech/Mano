@@ -85,31 +85,17 @@ class ManoCloudRepositoryRuleTest : FirestoreEmulatorTestBase() {
   }
 
   @Test
-  fun consultation_createAndAdvanceStatus_enforcesProgression() = runBlocking {
-    val uid = signInTestUser(ALICE_EMAIL)
+  fun consultation_legacyDirectClientWrite_isDeniedByRules() = runBlocking {
+    signInTestUser(ALICE_EMAIL)
     val repo = ManoCloudRepository(firestore, auth)
-
-    val createRes =
-      withTimeout(DEFAULT_TIMEOUT_MS) {
-        repo.createConsultation(
-          category = ConsultationCategory.OTC,
-          ageBand = AgeBand.TODDLER_1_3Y,
-          questionSummaryFa = "آیا می‌توانم قطره نرمال سالین همراه تب‌بر بدهم؟",
-        )
-      }
-    assertTrue("Expected consultation create to succeed: ${createRes.exceptionOrNull()}", createRes.isSuccess)
-    val consId = createRes.getOrThrow()
-
-    val adv1 = withTimeout(DEFAULT_TIMEOUT_MS) { repo.advanceConsultationStatus(consId, ConsultationStatus.PENDING) }
-    assertTrue(adv1.isSuccess)
-    val adv2 = withTimeout(DEFAULT_TIMEOUT_MS) { repo.advanceConsultationStatus(consId, ConsultationStatus.RECEIVED) }
-    assertTrue(adv2.isSuccess)
-
-    val list =
-      withTimeout(FLOW_TIMEOUT_MS) {
-        repo.observeConsultations(uid).first { items -> items.any { it.id == consId && it.status == ConsultationStatus.REVIEWED } }
-      }
-    assertEquals(ConsultationStatus.REVIEWED, list.first { it.id == consId }.status)
+    val result = withTimeout(DEFAULT_TIMEOUT_MS) {
+      repo.createConsultation(
+        category = ConsultationCategory.OTC,
+        ageBand = AgeBand.TODDLER_1_3Y,
+        questionSummaryFa = "درخواست مشاوره قدیمی که نباید قابل ارسال باشد",
+      )
+    }
+    assertTrue("Legacy direct consultation writes must be rejected; only server triage is authoritative", result.isFailure)
   }
 
   @Test

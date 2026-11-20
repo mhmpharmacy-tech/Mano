@@ -564,6 +564,10 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
     val cleanedBirthOrAge = birthDateOrAgeFa.trim().ifEmpty { ageBand.labelFa }
     val parsedBirthEpochMs = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(cleanedBirthOrAge)
+    if (parsedBirthEpochMs != null && parsedBirthEpochMs > System.currentTimeMillis()) {
+      showToast("تاریخ تولد نمی‌تواند در آینده باشد.")
+      return null
+    }
     val computedAgeMonths =
       parsedBirthEpochMs?.let { bMs ->
         val days = VaccinationScheduleEngine.diffDays(bMs, System.currentTimeMillis()).coerceAtLeast(0)
@@ -649,6 +653,8 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
   fun deleteChildProfileDemo() {
     viewModelScope.launch {
       prefs.setLocalChildProfile(null)
+      prefs.setChildBirthDateEpochMs(null)
+      prefs.setChildHeightCm("")
       _uiState.update {
         it.copy(
           exportedProfileJson = null,
@@ -714,7 +720,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
         medicationNameFa = medicationNameFa,
         dosageFormFa = dosageFormFa,
         volumeMlText = volumeMlText,
-        timestampMs = now,
+        timestampMs = FeverDoseTimelineEngine.resolveDoseTimeMs(givenAtLabelFa, now) ?: now,
         givenAtLabelFa = givenAtLabelFa.trim().ifEmpty { FeverDoseTimelineEngine.formatHourMinute(now) },
         noteFa = noteFa.trim(),
         isSyncedCloud = false,

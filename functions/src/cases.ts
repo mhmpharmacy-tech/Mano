@@ -348,6 +348,12 @@ export class ConsultationCaseService {
           "Triage pass ageBandId does not match submitted consultation.",
         );
       }
+      if (passDoc.symptomFlowId !== symptomFlowId) {
+        throw new AppError(
+          "invalid-argument",
+          "Triage pass symptomFlowId does not match submitted consultation. Repeat triage for the new concern.",
+        );
+      }
 
       const newCase: ConsultationCaseDoc = {
         caseId,

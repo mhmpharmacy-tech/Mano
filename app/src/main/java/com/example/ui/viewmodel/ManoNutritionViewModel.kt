@@ -156,6 +156,22 @@ class ManoNutritionViewModel(
         availableIngredientsFa = availableIngredientsFa,
       )
 
+    // Never ask a generative model for solid-food advice if the child is under six
+    // months, or if the 3–12 month age band has not been resolved precisely.
+    if (bundle.isUnderSixMonths) {
+      _uiState.value = NutritionUiState.Error(
+        "سن دقیقِ شش ماه یا بیشتر تأیید نشده است. برنامه غذایی خودکار متوقف است؛ برای شیرخوار فقط راهنمای تغذیه با شیر مادر یا شیرخشک استاندارد و مشاوره حضوری ارائه شود."
+      )
+      return
+    }
+    val allergyContext = allergiesFa.trim().ifEmpty { childProfile?.allergiesFa?.trim().orEmpty() }
+    if (allergyContext.isNotEmpty() && allergyContext !in setOf("ندارد", "ثبت نشده", "موردی ثبت نشده", "هیچ")) {
+      _uiState.value = NutritionUiState.Error(
+        "به دلیل سابقه حساسیت ثبت‌شده، تولید برنامه غذایی خودکار متوقف است. انتخاب مواد غذایی باید پس از بررسی آلرژن‌ها توسط فرد متخصص انجام شود."
+      )
+      return
+    }
+
     generateJob?.cancel()
     generateJob = viewModelScope.launch {
       _uiState.value = NutritionUiState.Loading(bundle.childContextSummaryFa)
@@ -169,6 +185,21 @@ class ManoNutritionViewModel(
           _uiState.value =
             NutritionUiState.Error("سرویس هوشمند پیشنهاد غذایی کاملی تولید نکرد. لطفاً دوباره تلاش کنید.")
           return@launch
+        }
+
+        // Validate model output AFTER generation, not merely in prompt text.
+        // Infant feeding hazards are blocked even if the model ignored instructions.
+        if (bundle.isUnderTwelveMonths) {
+          val proposedMeals = parsed.meals.joinToString(" ") { meal ->
+            listOf(meal.titleFa, meal.textureAndPortionFa, meal.ingredientsFa.joinToString(" "), meal.prepStepsFa.joinToString(" ")).joinToString(" ")
+          }
+          val forbidden = listOf("عسل", "شیر گاو", "انگور کامل", "آجیل کامل", "مغز کامل")
+          if (forbidden.any { proposedMeals.contains(it) }) {
+            _uiState.value = NutritionUiState.Error(
+              "پاسخ هوشمند شامل ماده غذایی نامناسب برای سن شیرخوار است و به دلایل ایمنی نمایش یا ذخیره نشد."
+            )
+            return@launch
+          }
         }
 
         val now = System.currentTimeMillis()

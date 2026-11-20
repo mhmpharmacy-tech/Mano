@@ -332,12 +332,15 @@ class ManoCloudSyncViewModel(
     }
   }
 
-  fun deleteChildProfile() {
+  fun deleteChildProfile(onDeleted: () -> Unit = {}) {
     viewModelScope.launch {
       val result = repository.deleteChildProfile()
-      _cloudToastFa.value =
-        if (result.isSuccess) "پروفایل کودک از فضای ابری حذف شد."
-        else "خطا در حذف پروفایل ابری."
+      if (result.isSuccess) {
+        onDeleted()
+        _cloudToastFa.value = "پروفایل کودک از فضای ابری و دستگاه حذف شد."
+      } else {
+        _cloudToastFa.value = "خطا در حذف پروفایل ابری؛ حذف محلی نیز انجام نشد."
+      }
     }
   }
 

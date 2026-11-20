@@ -135,9 +135,9 @@ object MedicationOverlapEngine {
     }
 
     return MedicationOverlapResult(
-      severity = AlertSeverity.SUCCESS,
-      titleFa = "تداخل شناخته‌شده‌ای در فهرست پایه ثبت نشده است",
-      summaryFa = "بین «${first.nameFa}» و «${second.nameFa}» تداخل شایع مستقیم در این راهنمای آموزشی ثبت نشده است، اما پیش از مصرف هم‌زمان، غلظت، فاصله زمانی و شرایط کودک را با داروساز یا پزشک چک کنید.",
+      severity = AlertSeverity.CAUTION,
+      titleFa = "این زوج دارویی بررسی جامع نشده است",
+      summaryFa = "نبود قاعده اختصاصی در فهرست محدود مانو به معنی نبود تداخل نیست. ترکیب «${first.nameFa}» و «${second.nameFa}» نیازمند بررسی علمی مستقل توسط داروساز با توجه به سن، وزن، بیماری‌ها و داروهای هم‌زمان است.",
       actionStepsFa =
         listOf(
           "داروها را داخل یک سرنگ یا قاشق با هم مخلوط نکنید؛ هر دارو را با سرنگ mL تمیز و جداگانه بدهید.",

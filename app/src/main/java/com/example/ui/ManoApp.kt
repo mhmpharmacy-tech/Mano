@@ -381,7 +381,7 @@ fun ManoApp(
   val cloudSyrupScansState by cloudVm?.syrupScansState?.collectAsStateWithLifecycle()
     ?: remember { mutableStateOf<CloudDataState<List<com.example.domain.model.SavedSyrupScan>>>(CloudDataState.Success(emptyList())) }
 
-  val effectiveBookmarks = if (currentUser != null) (localBookmarkedSlugs + cloudBookmarks) else localBookmarkedSlugs
+  val effectiveBookmarks = if (currentUser != null) cloudBookmarks else localBookmarkedSlugs
   val effectiveChildProfile =
     if (currentUser != null) (cloudProfileState as? CloudDataState.Success)?.data else localChildProfile
   val effectiveConsultations =
@@ -403,66 +403,52 @@ fun ManoApp(
     if (currentUser != null) (cloudVaccineRecordsState as? CloudDataState.Success)?.data ?: emptyList() else emptyList()
   val activeCloudSyrupScans =
     if (currentUser != null) (cloudSyrupScansState as? CloudDataState.Success)?.data ?: emptyList() else emptyList()
+  // Never combine offline scans from one caregiver with another signed-in account.
   val effectiveSyrupScans =
-    remember(activeCloudSyrupScans, localSyrupScans) {
-      (activeCloudSyrupScans + localSyrupScans)
-        .distinctBy { it.id }
-        .sortedByDescending { it.updatedAtMs }
-    }
-  LaunchedEffect(currentUser?.uid, cloudVaccineRecordsState) {
-    val activeState = cloudVaccineRecordsState
-    if (currentUser != null && activeState is CloudDataState.Success) {
-      viewModel.mirrorCloudVaccineRecords(activeState.data)
-    }
-  }
-  LaunchedEffect(currentUser?.uid, cloudSyrupScansState) {
-    val activeState = cloudSyrupScansState
-    if (currentUser != null && activeState is CloudDataState.Success) {
-      viewModel.mirrorCloudSyrupScans(activeState.data)
-    }
-  }
-  LaunchedEffect(currentUser?.uid, cloudProfileState, localChildProfile, localFeverLogs, localDoseLogs) {
-    val profileState = cloudProfileState
-    val activeCloudVm = cloudVm
-    if (currentUser != null && activeCloudVm != null && profileState is CloudDataState.Success) {
-      activeCloudVm.migrateOfflineDataIfNeeded(
-        localProfile = localChildProfile,
-        localFevers = localFeverLogs,
-        localDoses = localDoseLogs,
-        cloudHasProfile = profileState.data != null,
-        onMigratedSuccess = { viewModel.clearLocalTimelineLogsAfterCloudSync() },
-      )
-    }
-  }
+    if (currentUser != null) activeCloudSyrupScans else localSyrupScans
+
+  // Sensitive offline data MUST NOT be copied to any newly signed-in Google account
+  // without an explicit caregiver-approved migration flow. Global DataStore is not
+  // partitioned by UID. Cloud data is read directly; mirroring is disabled.
+  // A future migration UI must show source profile, destination UID and item counts.
   LaunchedEffect(effectiveChildProfile?.aliasFa) {
     viewModel.setChildAliasFa(effectiveChildProfile?.aliasFa)
   }
+  // Height currently lives in global offline DataStore; never attribute it to a cloud child.
+  val effectiveChildHeightCm = if (currentUser == null) childHeightCm else ""
+  val resolvedChildBirthDateEpochMs = if (currentUser != null) {
+    // Do not reuse a previous offline child's birth date for a different Google UID.
+    com.example.domain.util.VaccinationScheduleEngine.parseFlexibleDateToEpochMs(
+      effectiveChildProfile?.birthDateOrAgeFa.orEmpty()
+    )
+  } else {
+    childBirthDateEpochMs
+      ?: com.example.domain.util.VaccinationScheduleEngine.parseFlexibleDateToEpochMs(
+        effectiveChildProfile?.birthDateOrAgeFa.orEmpty()
+      )
+  }
   val vaccineSummary =
-    remember(activeCloudVaccineRecords, localVaccineRecords, childBirthDateEpochMs, vaccineReminderSettings) {
+    remember(activeCloudVaccineRecords, localVaccineRecords, resolvedChildBirthDateEpochMs, vaccineReminderSettings, currentUser?.uid) {
       VaccinationScheduleEngine.resolveSchedule(
         cloudRecords = activeCloudVaccineRecords,
-        localRecords = localVaccineRecords,
-        birthDateEpochMs = childBirthDateEpochMs,
+        localRecords = if (currentUser == null) localVaccineRecords else emptyList(),
+        birthDateEpochMs = resolvedChildBirthDateEpochMs,
         reminderSettings = vaccineReminderSettings,
       )
     }
   val effectiveSavedVisitDrafts =
-    remember(activeCloudVisitDrafts, localVisitDrafts) {
-      (activeCloudVisitDrafts + localVisitDrafts)
-        .distinctBy { it.id }
-        .sortedByDescending { it.createdAtMs }
-    }
+    if (currentUser != null) activeCloudVisitDrafts else localVisitDrafts
   val activeSymptomFlow =
     remember(uiState.symptomWizard.selectedSymptomId) {
       viewModel.allSymptomFlows.firstOrNull { it.id == uiState.symptomWizard.selectedSymptomId }
     }
   val timelineSnapshot =
-    remember(activeCloudFeverLogs, localFeverLogs, activeCloudDoseLogs, localDoseLogs) {
+    remember(activeCloudFeverLogs, localFeverLogs, activeCloudDoseLogs, localDoseLogs, currentUser?.uid) {
       FeverDoseTimelineEngine.buildSnapshot(
         cloudFeverLogs = activeCloudFeverLogs,
-        localFeverLogs = localFeverLogs,
+        localFeverLogs = if (currentUser == null) localFeverLogs else emptyList(),
         cloudDoseLogs = activeCloudDoseLogs,
-        localDoseLogs = localDoseLogs,
+        localDoseLogs = if (currentUser == null) localDoseLogs else emptyList(),
       )
     }
 
@@ -1268,7 +1254,7 @@ fun ManoApp(
                   selectedCategory = uiState.medicineCategory,
                   onCategorySelect = viewModel::setMedicineCategory,
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   currentUser = currentUser,
                   doseLogsState = cloudDoseLogsState,
                   timelineSnapshot = timelineSnapshot,
@@ -1345,7 +1331,7 @@ fun ManoApp(
                   onOpenGrowthArticle = { navController.navigate(TopicDetailRoute("growth-and-development")) },
                   onOpen3DWeighingGuide = { navController.navigate(Pediatric3DStudioRoute("weighing")) },
                   childProfile = effectiveChildProfile,
-                  savedHeightCm = childHeightCm,
+                  savedHeightCm = effectiveChildHeightCm,
                   savedNutritionPlansCount = savedNutritionPlans.size,
                   onOpenNutritionAdvisor = { navController.navigate(NutritionRoute) { launchSingleTop = true } },
                   vaccineProgressSummaryFa =
@@ -1359,7 +1345,7 @@ fun ManoApp(
               composable<VaccinesRoute> {
                 VaccinesScreen(
                   summary = vaccineSummary,
-                  birthDateEpochMs = childBirthDateEpochMs,
+                  birthDateEpochMs = resolvedChildBirthDateEpochMs,
                   reminderSettings = vaccineReminderSettings,
                   childProfile = effectiveChildProfile,
                   hasNotificationPermission = hasNotificationPermission,
@@ -1409,7 +1395,7 @@ fun ManoApp(
                   savedPlans = savedNutritionPlans,
                   childProfile = effectiveChildProfile,
                   selectedAgeBand = selectedAgeBand,
-                  savedHeightCm = childHeightCm,
+                  savedHeightCm = effectiveChildHeightCm,
                   checkedMilestones = viewModel.checkedMilestonesList(),
                   timelineSnapshot = timelineSnapshot,
                   onSaveHeightCm = viewModel::setChildHeightCm,
@@ -1458,7 +1444,7 @@ fun ManoApp(
                   guides = viewModel.allDeviceGuides,
                   onNavigateSymptoms = { navController.navigate(SymptomsRoute()) },
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   onNavigate3DStudio = { navController.navigate(Pediatric3DStudioRoute("workbench")) },
                   onOpen3DWithDose = { recommendedMl ->
                     val hasFever = (timelineSnapshot.latestTempCelsius ?: 0f) >= 38.0f
@@ -1482,7 +1468,7 @@ fun ManoApp(
                   prefillFormulationId = args.prefillFormulationId,
                   prefillScannedDrugFa = args.prefillScannedDrugFa,
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   latestTempCelsius = timelineSnapshot.latestTempCelsius,
                   hapticIntensity = hapticIntensity,
                   webGlQuality = webGlQuality,
@@ -1495,21 +1481,21 @@ fun ManoApp(
                   scannerUiState = syrupScannerUiState,
                   savedScans = effectiveSyrupScans,
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   isCloudSignedIn = currentUser != null,
-                  onAnalyzeBitmap = { bmp -> syrupScannerVm.analyzeBitmap(bmp, effectiveChildProfile, childBirthDateEpochMs) },
-                  onStartManualFallback = { syrupScannerVm.startManualFallback(effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
-                  onEditDrugName = { name -> syrupScannerVm.editExtraction(drugNameFa = name, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
-                  onEditIngredient = { ing -> syrupScannerVm.editExtraction(ingredientKey = ing, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
-                  onEditDosageForm = { form -> syrupScannerVm.editExtraction(dosageForm = form, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
+                  onAnalyzeBitmap = { bmp -> syrupScannerVm.analyzeBitmap(bmp, effectiveChildProfile, resolvedChildBirthDateEpochMs) },
+                  onStartManualFallback = { syrupScannerVm.startManualFallback(effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
+                  onEditDrugName = { name -> syrupScannerVm.editExtraction(drugNameFa = name, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
+                  onEditIngredient = { ing -> syrupScannerVm.editExtraction(ingredientKey = ing, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
+                  onEditDosageForm = { form -> syrupScannerVm.editExtraction(dosageForm = form, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
                   onAdjustStrength = { mg, perMl ->
-                    syrupScannerVm.editExtraction(mgAmount = mg, perMlAmount = perMl, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs)
+                    syrupScannerVm.editExtraction(mgAmount = mg, perMlAmount = perMl, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs)
                   },
                   onSelectCalibratedPreset = { preset ->
-                    syrupScannerVm.selectCalibratedPreset(preset, effectiveChildProfile, childBirthDateEpochMs)
+                    syrupScannerVm.selectCalibratedPreset(preset, effectiveChildProfile, resolvedChildBirthDateEpochMs)
                   },
                   onSetParentVerified = syrupScannerVm::setParentVerified,
-                  onRefreshChildContext = { syrupScannerVm.refreshChildContext(effectiveChildProfile, childBirthDateEpochMs) },
+                  onRefreshChildContext = { syrupScannerVm.refreshChildContext(effectiveChildProfile, resolvedChildBirthDateEpochMs) },
                   onConfirmSaveAndOpen3D = { formulationId, drugNameFa, targetMl ->
                     val confirmedScan = syrupScannerVm.buildConfirmedSavedScan()
                     if (confirmedScan != null) {
@@ -1542,7 +1528,7 @@ fun ManoApp(
                       }
                     }
                   },
-                  onLoadSavedScan = { scan -> syrupScannerVm.loadSavedScan(scan, effectiveChildProfile, childBirthDateEpochMs) },
+                  onLoadSavedScan = { scan -> syrupScannerVm.loadSavedScan(scan, effectiveChildProfile, resolvedChildBirthDateEpochMs) },
                   onDeleteSavedScan = { scan ->
                     viewModel.deleteLocalSyrupScan(scan.id)
                     cloudVm?.deleteSyrupScan(scan.id)
@@ -1702,7 +1688,7 @@ fun ManoApp(
                   onDeleteProfile = {
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
-                      activeCloudVm.deleteChildProfile()
+                      activeCloudVm.deleteChildProfile(onDeleted = { viewModel.deleteChildProfileDemo() })
                     } else {
                       viewModel.deleteChildProfileDemo()
                     }
@@ -1741,8 +1727,8 @@ fun ManoApp(
       if (shouldShowFirstRunOnboarding) {
         ManoOnboardingOverlay(
           existingProfile = effectiveChildProfile,
-          existingBirthDateEpochMs = childBirthDateEpochMs,
-          existingHeightCm = childHeightCm,
+          existingBirthDateEpochMs = resolvedChildBirthDateEpochMs,
+          existingHeightCm = effectiveChildHeightCm,
           onComplete = { alias, birthMs, band, weightKg, heightCm ->
             manualOnboardingOpen = false
             dismissedAutoOnboarding = true

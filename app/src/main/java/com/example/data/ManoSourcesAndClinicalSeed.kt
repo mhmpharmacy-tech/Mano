@@ -76,13 +76,15 @@ object ManoSourcesAndClinicalSeed {
   const val CLINICAL_REVIEWER_REG_ID = "د۳۴۳۶۱"
   const val CLINICAL_REVIEWER_IDENTITY_FA = "دکتر محمدحسین محمدی — داروساز (کد نظام د۳۴۳۶۱)"
 
+  // Historical seed alias retained for source compatibility; it is NOT a verified sign-off.
+  // Each clinical content item needs separately verifiable human approval before public use.
   val approvedReviewMeta =
     ClinicalReviewMeta(
-      status = ReviewStatus.APPROVED,
-      lastReviewedDate = "تأیید‌شده با امضای مسئول علمی",
-      nextReviewDate = "بازبینی دوره‌ای سالانه",
-      reviewerIdentity = CLINICAL_REVIEWER_IDENTITY_FA,
-      notes = "این محتوای آموزشی توسط $CLINICAL_REVIEWER_IDENTITY_FA بررسی و تأیید علمی شده است؛ مانو همچنان جایگزین معاینه پزشکی یا تشخیص بالینی نیست.",
+      status = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+      lastReviewedDate = "تأیید محتوایی مستقل ثبت نشده است",
+      nextReviewDate = "پیش از انتشار بالینی",
+      reviewerIdentity = null,
+      notes = "ارجاع به منابع علمی به معنی تأیید فردی این متن نیست. بررسی و امضای موردبه‌مورد داروساز/متخصص اطفال لازم است.",
     )
 
   // Honest fallback metadata when an unreviewed item exists

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Clinical child data must not be exported to Android Auto Backup. -->
 <full-backup-content>
-    <include domain="file" path="datastore" />
-    <include domain="sharedpref" path="mano_fever_timeline_widget.xml" />
+    <exclude domain="file" path="datastore" />
+    <exclude domain="sharedpref" path="mano_fever_timeline_widget.xml" />
 </full-backup-content>

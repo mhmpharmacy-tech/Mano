@@ -16,6 +16,7 @@ import com.example.domain.model.StaffConsultationCase
 import com.example.domain.model.VaccineRecord
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
+import com.example.domain.util.VaccinationScheduleEngine
 import com.example.domain.util.TimelineDosePoint
 import com.example.domain.util.TimelineTempPoint
 import com.google.firebase.Firebase
@@ -75,7 +76,10 @@ class ManoCloudRepository(
               allergiesFa = cloud.allergiesFa,
               currentMedsFa = cloud.currentMedsFa,
               consentGranted = cloud.consentGranted,
-              ageMonthsExact = LiquidDoseVisualizerEngine.parseAgeMonthsFromText(cloud.birthDateOrAgeFa),
+              ageMonthsExact = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(
+                profile = null,
+                birthDateEpochMs = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(cloud.birthDateOrAgeFa),
+              ) ?: LiquidDoseVisualizerEngine.parseAgeMonthsFromText(cloud.birthDateOrAgeFa),
             )
           }
         }
@@ -181,6 +185,7 @@ class ManoCloudRepository(
     volumeMlText: String,
     givenAtLabelFa: String,
     noteFa: String,
+    administeredAtMs: Long? = null,
   ): Result<String> {
     val uid = requireUserId()
     val docRef = db.collection("users").document(uid).collection("doseLogs").document()
@@ -193,6 +198,9 @@ class ManoCloudRepository(
         "volumeMlText" to volumeMlText.take(30),
         "givenAtLabelFa" to givenAtLabelFa.take(60),
         "noteFa" to noteFa.take(300),
+        "administeredAtMs" to (administeredAtMs?.takeIf { it > 0 && it <= System.currentTimeMillis() + 60_000L }
+          ?: FeverDoseTimelineEngine.resolveDoseTimeMs(givenAtLabelFa)
+          ?: System.currentTimeMillis()),
         "createdAt" to FieldValue.serverTimestamp(),
         "updatedAt" to FieldValue.serverTimestamp(),
       )
@@ -937,6 +945,7 @@ class ManoCloudRepository(
           volumeMlText = dose.volumeMlText.ifBlank { "-" },
           givenAtLabelFa = dose.givenAtLabelFa.ifBlank { "هم‌اکنون" },
           noteFa = dose.noteFa,
+          administeredAtMs = dose.timestampMs,
         ).isFailure
       ) {
         allSucceeded = false

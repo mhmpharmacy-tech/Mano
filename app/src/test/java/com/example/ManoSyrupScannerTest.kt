@@ -70,6 +70,87 @@ class ManoSyrupScannerTest {
   }
 
   @Test
+  fun scanner_wrongDrugWrongStrengthUnknownFormLowConfidenceAndMissingOcr_cannotAutoFill() {
+    val child = ChildProfileDemo(
+      aliasFa = "کودک",
+      birthDateOrAgeFa = "۸ ماه",
+      ageBand = AgeBand.INFANT_3_12M,
+      weightKgText = "8.0",
+      weightDateFa = "امروز",
+      allergiesFa = "",
+      currentMedsFa = "",
+      consentGranted = true,
+      ageMonthsExact = 8,
+    )
+    val correct = GeminiSyrupScanPayload(
+      detectedDrugNameFa = "شربت استامینوفن ۱۲۰/۵",
+      activeIngredientKey = "ACETAMINOPHEN",
+      dosageForm = "SYRUP",
+      mgAmount = 120.0,
+      perMlAmount = 5.0,
+      mgPerMl = 24.0,
+      matchedFormulationId = "acetaminophen_syrup_120_5",
+      confidenceLevel = "HIGH",
+      isPediatricFeverOrAllergyLiquid = true,
+    )
+    assertTrue(SyrupConcentrationMatcher.reconcileFromAi(correct, child).canAutoFillSyringe)
+
+    val otherDrug = SyrupConcentrationMatcher.reconcileFromAi(
+      correct.copy(matchedFormulationId = "ibuprofen_syrup_100_5"), child)
+    assertNull(otherDrug.matchedFormulation)
+    assertFalse(otherDrug.canAutoFillSyringe)
+
+    val lowConfidence = SyrupConcentrationMatcher.reconcileFromAi(
+      correct.copy(confidenceLevel = "LOW"), child)
+    assertFalse(lowConfidence.canAutoFillSyringe)
+
+    val missingDose = SyrupConcentrationMatcher.reconcileFromAi(
+      correct.copy(mgAmount = 0.0, perMlAmount = 0.0, mgPerMl = 0.0), child)
+    assertNull(missingDose.matchedFormulation)
+    assertFalse(missingDose.canAutoFillSyringe)
+
+    val unknownForm = SyrupConcentrationMatcher.reconcileFromAi(
+      correct.copy(dosageForm = "UNKNOWN"), child)
+    assertNull(unknownForm.matchedFormulation)
+    assertFalse(unknownForm.canAutoFillSyringe)
+
+    val contradictoryOcr = SyrupConcentrationMatcher.reconcileFromAi(
+      correct.copy(mgPerMl = 32.0), child)
+    assertFalse(contradictoryOcr.canAutoFillSyringe)
+
+    val ibuprofen18Not20 = SyrupConcentrationMatcher.reconcileEditable(
+      drugNameFa = "ایبوپروفن ۹۰/۵",
+      ingredientKey = SyrupIngredientKey.IBUPROFEN,
+      dosageForm = SyrupDosageForm.SUSPENSION,
+      mgAmount = 90.0,
+      perMlAmount = 5.0,
+      childProfile = child,
+    )
+    assertNull(ibuprofen18Not20.matchedFormulation)
+    assertFalse(ibuprofen18Not20.canAutoFillSyringe)
+  }
+
+  @Test
+  fun scanner_savedBottleRequiresNewVerificationBeforeDoseIsReused() {
+    val vm = ManoSyrupScannerViewModel()
+    vm.loadSavedScan(
+      com.example.domain.model.SavedSyrupScan(
+        id = "saved_1",
+        drugNameFa = "استامینوفن",
+        activeIngredientKey = "ACETAMINOPHEN",
+        dosageForm = "SYRUP",
+        mgAmount = 120.0,
+        perMlAmount = 5.0,
+        matchedFormulationId = "acetaminophen_syrup_120_5",
+        confidenceLevel = "HIGH",
+      ),
+      childProfile = null,
+    )
+    assertFalse((vm.uiState.value as SyrupScannerUiState.Review).parentVerified)
+    assertNull(vm.buildConfirmedSavedScan())
+  }
+
+  @Test
   fun matcher_acetaminophenDrops100_triggersMixUpWarningAndSafeDropVolume() {
     val payload =
       GeminiSyrupScanPayload(

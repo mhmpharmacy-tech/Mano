@@ -46,25 +46,16 @@ object SyrupConcentrationMatcher {
       SyrupScanConfidence.entries.firstOrNull { it.name == payload.confidenceLevel.uppercase(Locale.US) }
         ?: SyrupScanConfidence.LOW
 
-    val safePerMl = payload.perMlAmount.takeIf { it > 0.0 && it <= 100.0 } ?: 5.0
-    val safeMg = payload.mgAmount.takeIf { it > 0.0 && it <= 2000.0 }
-      ?: (payload.mgPerMl.takeIf { it > 0.0 }?.let { it * safePerMl } ?: 0.0)
-
-    val presetHint =
-      LiquidFormulationId.entries.firstOrNull { it.id == payload.matchedFormulationId }
-
-    val effectiveMg =
-      when {
-        safeMg > 0.0 -> safeMg
-        presetHint != null -> defaultNumeratorMg(presetHint)
-        else -> 120.0
-      }
-    val effectivePerMl =
-      when {
-        safeMg > 0.0 -> safePerMl
-        presetHint != null -> defaultDenominatorMl(presetHint)
-        else -> 5.0
-      }
+    // Missing OCR fields must never turn into a plausible concentration via a preset or a default.
+    val effectiveMg = payload.mgAmount.takeIf { it.isFinite() && it in 0.000001..2000.0 } ?: 0.0
+    val effectivePerMl = payload.perMlAmount.takeIf { it.isFinite() && it in 0.000001..100.0 } ?: 0.0
+    val measuredRatio = if (effectiveMg > 0.0 && effectivePerMl > 0.0) effectiveMg / effectivePerMl else 0.0
+    val separatelyReadRatio = payload.mgPerMl.takeIf { it.isFinite() && it > 0.0 }
+    val inconsistentOcr = separatelyReadRatio != null &&
+      (measuredRatio <= 0.0 ||
+        kotlin.math.abs(separatelyReadRatio - measuredRatio) >
+          maxOf(0.02, measuredRatio * 0.005))
+    val presetHint = LiquidFormulationId.entries.firstOrNull { it.id == payload.matchedFormulationId }
 
     return reconcileEditable(
       drugNameFa = payload.detectedDrugNameFa.trim().ifBlank { "داروی مایع اسکن‌شده" },
@@ -72,8 +63,10 @@ object SyrupConcentrationMatcher {
       dosageForm = form,
       mgAmount = effectiveMg,
       perMlAmount = effectivePerMl,
-      confidence = confidence,
-      aiSafetyNoteFa = payload.safetyNoteFa,
+      confidence = if (inconsistentOcr) SyrupScanConfidence.LOW else confidence,
+      aiSafetyNoteFa = if (inconsistentOcr) {
+        "دو عدد غلظت خوانده‌شده از برچسب با هم تناقض دارند؛ ورود دستی و بررسی داروساز لازم است."
+      } else payload.safetyNoteFa,
       presetOverride = presetHint,
       isPediatricFeverOrAllergyLiquid = payload.isPediatricFeverOrAllergyLiquid || presetHint != null,
       childProfile = childProfile,
@@ -94,17 +87,20 @@ object SyrupConcentrationMatcher {
     childProfile: ChildProfileDemo? = null,
     birthDateEpochMs: Long? = null,
   ): ReconciledSyrupExtraction {
-    val cleanMg = mgAmount.coerceIn(1.0, 2000.0)
-    val cleanPerMl = perMlAmount.coerceIn(0.5, 100.0)
-    val computedMgPerMl = ((cleanMg / cleanPerMl) * 100.0).toInt() / 100.0
+    // Reject invalid data rather than clamping it into a believable (and potentially dangerous) dose.
+    val validConcentration = mgAmount.isFinite() && perMlAmount.isFinite() &&
+      mgAmount > 0.0 && mgAmount <= 2000.0 && perMlAmount > 0.0 && perMlAmount <= 100.0
+    val cleanMg = if (validConcentration) mgAmount else 0.0
+    val cleanPerMl = if (validConcentration) perMlAmount else 0.0
+    val computedMgPerMl = if (validConcentration) cleanMg / cleanPerMl else 0.0
 
-    val matchedFormulation =
-      presetOverride
-        ?: matchCalibratedFormulation(
-          ingredientKey = ingredientKey,
-          dosageForm = dosageForm,
-          mgPerMl = computedMgPerMl,
-        )
+    val independentlyMatched = if (validConcentration) {
+      matchCalibratedFormulation(ingredientKey, dosageForm, computedMgPerMl)
+    } else null
+    // OCR and persisted preset IDs are untrusted hints: they must agree with drug, form and strength.
+    val matchedFormulation = independentlyMatched?.takeIf {
+      presetOverride == null || presetOverride == it
+    }
 
     val ageMonths = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile, birthDateEpochMs)
     val weightKg = LiquidDoseVisualizerEngine.initialWeightKgFromProfile(childProfile)
@@ -128,7 +124,7 @@ object SyrupConcentrationMatcher {
         matchedFormulation == LiquidFormulationId.ACETAMINOPHEN_SYRUP_160_5 ->
           "توجه به غلظت دوگانه: این بطری ۱۶۰ mg / 5 mL است (غلیظ‌تر از شربت متداول ۱۲۰/۵)؛ حجم سرنگ دقیقاً بر پایه ۱۶۰/۵ تنظیم می‌شود."
         matchedFormulation == null || !isPediatricFeverOrAllergyLiquid ->
-          "دارو یا غلظت خارج از کاتالوگ کالیبره‌شده مانو است؛ محاسبه خودکار سرنگ (mg/kg) غیرفعال شده است. پیش از خوراندن با پزشک یا داروساز مشورت کنید."
+          "ماده مؤثره، شکل دارویی یا غلظت با فهرست کالیبره مانو تطابق قطعی ندارد؛ محاسبه و پرکردن خودکار سرنگ مسدود است. برچسب را بررسی و با داروساز مشورت کنید."
         dosageForm == SyrupDosageForm.SUSPENSION ->
           "سوسپانسیون خوراکی: پیش از کشیدن دارو با سرنگ، بطری را حداقل ۲۰ ثانیه کامل تکان دهید."
         else -> null
@@ -154,6 +150,8 @@ object SyrupConcentrationMatcher {
 
     val canAutoFill =
       matchedFormulation != null &&
+        validConcentration &&
+        confidence == SyrupScanConfidence.HIGH &&
         dosePreview != null &&
         !dosePreview.isBlocked &&
         dosePreview.recommendedMl > 0f
@@ -177,25 +175,31 @@ object SyrupConcentrationMatcher {
     )
   }
 
+  /**
+   * A recognized dose is usable only for the same ingredient, oral form and label strength.
+   * Tight 0.5% numeric tolerance accommodates OCR decimal noise without approving 18 vs 20 mg/mL.
+   */
   fun matchCalibratedFormulation(
     ingredientKey: SyrupIngredientKey,
     dosageForm: SyrupDosageForm,
     mgPerMl: Double,
   ): LiquidFormulationId? {
-    return when (ingredientKey) {
-      SyrupIngredientKey.ACETAMINOPHEN ->
-        when {
-          abs(mgPerMl - 100.0) <= 5.0 -> LiquidFormulationId.ACETAMINOPHEN_DROPS_100
-          abs(mgPerMl - 24.0) <= 2.0 -> LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5
-          abs(mgPerMl - 32.0) <= 2.0 -> LiquidFormulationId.ACETAMINOPHEN_SYRUP_160_5
-          dosageForm == SyrupDosageForm.DROPS && mgPerMl >= 80.0 -> LiquidFormulationId.ACETAMINOPHEN_DROPS_100
-          else -> null
-        }
-      SyrupIngredientKey.IBUPROFEN ->
-        if (abs(mgPerMl - 20.0) <= 2.0) LiquidFormulationId.IBUPROFEN_SYRUP_100_5 else null
-      SyrupIngredientKey.CETIRIZINE ->
-        if (abs(mgPerMl - 1.0) <= 0.25) LiquidFormulationId.CETIRIZINE_SYRUP_5_5 else null
-      SyrupIngredientKey.UNKNOWN -> null
+    if (!mgPerMl.isFinite() || mgPerMl <= 0.0 || dosageForm == SyrupDosageForm.UNKNOWN) return null
+    return LiquidFormulationId.entries.firstOrNull { formulation ->
+      val expectedIngredient = when (formulation) {
+        LiquidFormulationId.ACETAMINOPHEN_DROPS_100,
+        LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5,
+        LiquidFormulationId.ACETAMINOPHEN_SYRUP_160_5 -> SyrupIngredientKey.ACETAMINOPHEN
+        LiquidFormulationId.IBUPROFEN_SYRUP_100_5 -> SyrupIngredientKey.IBUPROFEN
+        LiquidFormulationId.CETIRIZINE_SYRUP_5_5 -> SyrupIngredientKey.CETIRIZINE
+      }
+      val matchingForm = when (formulation) {
+        LiquidFormulationId.ACETAMINOPHEN_DROPS_100 -> dosageForm == SyrupDosageForm.DROPS
+        LiquidFormulationId.CETIRIZINE_SYRUP_5_5 -> dosageForm == SyrupDosageForm.SYRUP
+        else -> dosageForm == SyrupDosageForm.SYRUP || dosageForm == SyrupDosageForm.SUSPENSION
+      }
+      ingredientKey == expectedIngredient && matchingForm &&
+        abs(mgPerMl - formulation.mgPerMl) <= maxOf(0.02, formulation.mgPerMl * 0.005)
     }
   }
 

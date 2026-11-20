@@ -31,6 +31,7 @@ data class MedicationDoseLogCloud(
   val volumeMlText: String = "",
   val givenAtLabelFa: String = "",
   val noteFa: String = "",
+  val administeredAtMs: Long? = null,
   @ServerTimestamp val createdAt: Timestamp? = null,
   @ServerTimestamp val updatedAt: Timestamp? = null,
 )
