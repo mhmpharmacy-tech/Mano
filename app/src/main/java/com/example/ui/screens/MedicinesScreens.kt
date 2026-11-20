@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -245,7 +246,7 @@ fun MedicinesScreen(
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("medicines_list"),
+      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("medicines_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -641,14 +642,14 @@ fun MedicinesScreen(
                   onValueChange = { dosageFormInput = it },
                   label = { Text("شکل دارو") },
                   singleLine = true,
-                  modifier = Modifier.weight(1f),
+                  modifier = Modifier.weight(1f).testTag("dose_log_form_input"),
                 )
                 OutlinedTextField(
                   value = timeLabelInput,
                   onValueChange = { timeLabelInput = it },
                   label = { Text("ساعت مصرف") },
                   singleLine = true,
-                  modifier = Modifier.weight(1f),
+                  modifier = Modifier.weight(1f).testTag("dose_log_time_input"),
                 )
               }
 
@@ -657,7 +658,7 @@ fun MedicinesScreen(
                 onValueChange = { logNoteInput = it },
                 label = { Text("توضیح کوتاه یا نام والد (مثلاً با هماهنگی مادر)") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("dose_log_note_input"),
               )
 
               if (logFormError != null) {

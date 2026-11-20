@@ -91,6 +91,8 @@ import com.example.ui.theme.DarkCoral
 import com.example.ui.theme.DarkGold
 import com.example.ui.theme.DarkSage
 import com.example.ui.theme.DarkSurface
+import com.example.ui.theme.GlassLightDock
+import com.example.ui.theme.GlassLightOverlay
 import com.example.ui.theme.LocalManoDarkTheme
 import com.example.ui.theme.SuccessEmerald
 import com.example.ui.theme.SuccessSurface
@@ -489,7 +491,7 @@ fun Pediatric3DStudioScreen(
           .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
       Surface(
-        color = if (isDark) DarkSurface.copy(alpha = 0.94f) else Color(0xF0FFFFFF),
+        color = if (isDark) DarkSurface.copy(alpha = 0.94f) else GlassLightOverlay,
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, borderColor),
         shadowElevation = 6.dp,
@@ -577,7 +579,7 @@ fun Pediatric3DStudioScreen(
 
     // Collapsible floating RGBA control dock (compact <= 15% collapsed height)
     Surface(
-      color = if (isDark) DarkSurface.copy(alpha = 0.95f) else Color(0xF2FFFFFF),
+      color = if (isDark) DarkSurface.copy(alpha = 0.95f) else GlassLightDock,
       shape = RoundedCornerShape(22.dp),
       border = BorderStroke(1.dp, borderColor),
       shadowElevation = 8.dp,

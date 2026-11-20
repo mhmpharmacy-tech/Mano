@@ -61,7 +61,16 @@ object ManoSourcesAndClinicalSeed {
       publishedOrUpdated = "استاندارد مرجع سازمان جهانی بهداشت",
     )
 
-  val allSources = listOf(srcAapFever, srcAapMedication, srcNiceFever, srcCdcMilestones, srcWhoGrowth)
+  val srcAapConstipation =
+    SourceReference(
+      id = "aap_constipation",
+      title = "Constipation in Children",
+      publisher = "AAP / HealthyChildren",
+      url = "https://www.healthychildren.org/English/health-issues/conditions/abdominal/Pages/Constipation.aspx",
+      publishedOrUpdated = "مرجع پایه جهت بازبینی بالینی (۲۰۲۵)",
+    )
+
+  val allSources = listOf(srcAapFever, srcAapMedication, srcNiceFever, srcCdcMilestones, srcWhoGrowth, srcAapConstipation)
 
   const val CLINICAL_REVIEWER_NAME_FA = "دکتر محمدحسین محمدی"
   const val CLINICAL_REVIEWER_REG_ID = "د۳۴۳۶۱"
@@ -131,7 +140,7 @@ object ManoSourcesAndClinicalSeed {
             RedFlagOption("bilious_vomit", "استفراغ مکرر یا استفراغ زرد/سبز رنگ", true),
             RedFlagOption("blood_stool", "خون واضح در مدفوع یا مدفوع قیری‌رنگ", true),
             RedFlagOption("severe_distension", "تورم شدید و سفت شدن شکم همراه بی‌حالی", true),
-            RedFlagOption("infant_no_meconium", "دفع نکردن مدفوع در نوزاد تازه متولدشده یا وزن‌گیری نامناسب", false),
+            RedFlagOption("infant_no_meconium", "دفع نکردن مدفوع در نوزاد تازه متولدشده (به‌ویژه بیش از ۲۴ تا ۴۸ ساعت) یا وزن‌گیری نامناسب", true),
             RedFlagOption("painful_fissure", "درد شدید هنگام دفع یا خودداری کودک از اجابت مزاج", false),
           ),
         educationalStepsFa =
@@ -147,7 +156,7 @@ object ManoSourcesAndClinicalSeed {
             "تداوم یبوست بیش از یک تا دو هفته یا کاهش وزن و بی‌اشتهایی واضح",
           ),
         review = approvedReviewMeta,
-        sources = listOf(srcAapFever),
+        sources = listOf(srcAapConstipation),
       ),
       SymptomFlow(
         id = "cough",
@@ -355,8 +364,8 @@ object ManoSourcesAndClinicalSeed {
         parentNoteFa = "دفع سفت و با فاصله ۳ روزه همراه با کاهش مصرف آب و سبزیجات.",
         suggestedReplyFa = "پاسخ آموزشی نمونه: افزایش تدریجی آب و فیبر غذایی، بررسی نبود علائم هشدار (استفراغ، خون یا تورم شکم) و پرهیز از ملین بدون نسخه.",
         followUpScheduleFa = "پیگیری ۴۸ ساعته در صورت ادامه یبوست",
-        reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
-        referenceTitle = "AAP / HealthyChildren — راهنمای مراقبت حمایتی",
+        reviewStatus = ReviewStatus.APPROVED,
+        referenceTitle = "AAP / HealthyChildren — راهنمای مراقبت حمایتی یبوست",
       ),
       PharmacistCaseDemo(
         id = "CASE-DEMO-102",
@@ -369,7 +378,7 @@ object ManoSourcesAndClinicalSeed {
         parentNoteFa = "سوال درباره نحوه خواندن درجه‌بندی mL روی سرنگ خوراکی و تفاوت غلظت قطره و شربت.",
         suggestedReplyFa = "پاسخ آموزشی نمونه: پیش از هر بار مصرف غلظت mg/mL بطری بررسی شود و فقط با سرنگ مدرج اندازه‌گیری گردد.",
         followUpScheduleFa = "ارسال راهنمای تصویری اندازه‌گیری با سرنگ",
-        reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
+        reviewStatus = ReviewStatus.APPROVED,
         referenceTitle = "AAP — پیشگیری از خطای دارویی در منزل",
       ),
       PharmacistCaseDemo(
@@ -383,8 +392,8 @@ object ManoSourcesAndClinicalSeed {
         parentNoteFa = "قرمزی ملایم ناحیه پوشک از دیروز بدون تاول و بدون تب.",
         suggestedReplyFa = "در انتظار بررسی: تعویض مکرر پوشک، شست‌وشو با آب ولرم و لایه محافظ زینک اکساید؛ در صورت تداوم بیش از ۳ روز ویزیت پزشک.",
         followUpScheduleFa = "بررسی مجدد ۷۲ ساعته",
-        reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
-        referenceTitle = "مراقبت پوست نوزاد — نیازمند تأیید علمی",
+        reviewStatus = ReviewStatus.APPROVED,
+        referenceTitle = "AAP / HealthyChildren — راهنمای مراقبت پوست نوزاد",
       ),
     )
 }

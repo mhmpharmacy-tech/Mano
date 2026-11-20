@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,14 +13,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -60,6 +63,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.ManoHapticIntensity
@@ -79,6 +83,8 @@ import com.example.domain.util.AssetLinksCheckSeverity
 import com.example.domain.util.AssetLinksDomainReport
 import com.example.domain.util.AssetLinksVerifier
 import com.example.domain.util.ManoDomainLinks
+import com.example.domain.util.PersianNormalizer
+import com.example.domain.util.VaccinationScheduleEngine
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.ConsentBox
 import com.example.ui.components.LtrText
@@ -201,12 +207,28 @@ fun AskPharmacistScreen(
           }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Checkbox(checked = state.hasUrgentFlags, onCheckedChange = onUrgentFlagChange)
-          Text(
-            text = "کودک دارای علائم فوری (تب زیر ۳ ماه، تنگی نفس، بی‌حالی یا تشنج) است",
-            style = MaterialTheme.typography.bodySmall,
-          )
+        Surface(
+          color = if (state.hasUrgentFlags) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface,
+          shape = RoundedCornerShape(12.dp),
+          border = BorderStroke(1.dp, if (state.hasUrgentFlags) MaterialTheme.colorScheme.error else manoBorderColor()),
+          modifier =
+            Modifier
+              .fillMaxWidth()
+              .clickable { onUrgentFlagChange(!state.hasUrgentFlags) }
+              .minimumInteractiveComponentSize()
+              .testTag("ask_pharmacist_urgent_row"),
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+          ) {
+            Checkbox(checked = state.hasUrgentFlags, onCheckedChange = onUrgentFlagChange)
+            Text(
+              text = "کودک دارای علائم فوری (تب زیر ۳ ماه، تنگی نفس، بی‌حالی یا تشنج) است",
+              style = MaterialTheme.typography.bodySmall,
+              modifier = Modifier.weight(1f),
+            )
+          }
         }
 
         OutlinedTextField(
@@ -454,7 +476,7 @@ fun AskPharmacistScreen(
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("ask_pharmacist_list"),
+      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("ask_pharmacist_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -597,10 +619,13 @@ fun MyChildScreen(
   var allergies by remember(profile) { mutableStateOf(profile?.allergiesFa ?: "") }
   var currentMeds by remember(profile) { mutableStateOf(profile?.currentMedsFa ?: "") }
   var consent by remember(profile) { mutableStateOf(profile?.consentGranted ?: false) }
+  var weightErrorFa by remember(profile) { mutableStateOf<String?>(null) }
+  val parsedBirthEpochMs =
+    remember(birthOrAge) { VaccinationScheduleEngine.parseFlexibleDateToEpochMs(birthOrAge) }
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
+      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("my_child_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -661,37 +686,53 @@ fun MyChildScreen(
           OutlinedTextField(
             value = birthOrAge,
             onValueChange = { birthOrAge = it },
-            label = { Text("سن دقیق یا تاریخ تولد تقریبی (مثلاً ۳ سال و ۲ ماه)") },
+            label = { Text("سن دقیق یا تاریخ تولد (مثلاً ۱۴۰۳/۰۵/۱۲ یا ۱۴ ماهه)") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            supportingText =
+              parsedBirthEpochMs?.let { epoch ->
+                {
+                  Text(
+                    text = "تاریخ تولد معتبر (${VaccinationScheduleEngine.formatPersianDate(epoch)}) — با تقویم واکسن و سرنگ mL همگام می‌شود.",
+                    color = MaterialTheme.colorScheme.primary,
+                  )
+                }
+              },
+            modifier = Modifier.fillMaxWidth().testTag("child_birth_or_age_input"),
           )
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
               value = weightKg,
-              onValueChange = { weightKg = it },
+              onValueChange = { raw ->
+                weightKg = PersianNormalizer.toAsciiDigits(raw).replace("٫", ".").replace(",", ".").filter { ch -> ch.isDigit() || ch == '.' }.take(5)
+                weightErrorFa = null
+              },
               label = { Text("وزن (kg)") },
+              placeholder = { Text("مثلاً 11.5") },
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+              isError = weightErrorFa != null,
+              supportingText = weightErrorFa?.let { err -> { Text(err, color = MaterialTheme.colorScheme.error) } },
               singleLine = true,
-              modifier = Modifier.weight(1f),
+              modifier = Modifier.weight(1f).testTag("child_weight_input"),
             )
             OutlinedTextField(
               value = weightDate,
               onValueChange = { weightDate = it },
               label = { Text("تاریخ ثبت وزن") },
               singleLine = true,
-              modifier = Modifier.weight(1f),
+              modifier = Modifier.weight(1f).testTag("child_weight_date_input"),
             )
           }
           OutlinedTextField(
             value = allergies,
             onValueChange = { allergies = it },
             label = { Text("حساسیت‌های شناخته‌شده (اختیاری)") },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("child_allergies_input"),
           )
           OutlinedTextField(
             value = currentMeds,
             onValueChange = { currentMeds = it },
             label = { Text("داروهای فعلی (اختیاری)") },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("child_meds_input"),
           )
 
           ConsentBox(
@@ -702,7 +743,18 @@ fun MyChildScreen(
           )
 
           Button(
-            onClick = { onSaveProfile(alias, birthOrAge, ageBand, weightKg, weightDate, allergies, currentMeds, consent) },
+            onClick = {
+              val trimmedWeight = weightKg.trim()
+              if (trimmedWeight.isNotEmpty()) {
+                val parsedKg = PersianNormalizer.normalize(trimmedWeight).replace("٫", ".").replace(",", ".").toDoubleOrNull()
+                if (parsedKg == null || parsedKg !in 1.5..60.0) {
+                  weightErrorFa = "وزن معتبر بین ۱.۵ تا ۶۰ کیلوگرم وارد کنید."
+                  return@Button
+                }
+              }
+              weightErrorFa = null
+              onSaveProfile(alias, birthOrAge, ageBand, trimmedWeight, weightDate, allergies, currentMeds, consent)
+            },
             modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("save_child_profile_btn"),
           ) {
             Text("ذخیره پروفایل کودک")

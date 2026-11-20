@@ -517,7 +517,65 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  // --- Consent-Gated My Child Profile (DataStore) ---
+  // --- Consent-Gated My Child Profile (DataStore & Cloud Parity) ---
+  fun resolveValidatedChildProfile(
+    aliasFa: String,
+    birthDateOrAgeFa: String,
+    ageBand: AgeBand,
+    weightKgText: String,
+    weightDateFa: String,
+    allergiesFa: String,
+    currentMedsFa: String,
+    consentGranted: Boolean,
+  ): Pair<ChildProfileDemo, Long?>? {
+    if (!consentGranted) {
+      showToast("ذخیره پروفایل کودک فقط پس از تأیید رضایت والد امکان‌پذیر است.")
+      return null
+    }
+    if (aliasFa.isBlank()) {
+      showToast("لطفاً یک نام مستعار یا نام کوچک وارد کنید.")
+      return null
+    }
+    val cleanWeight =
+      PersianNormalizer.normalize(weightKgText).replace("٫", ".").replace(",", ".").trim()
+    if (cleanWeight.isNotEmpty()) {
+      val parsedKg = cleanWeight.toDoubleOrNull()
+      if (parsedKg == null || parsedKg !in 1.5..60.0) {
+        showToast("وزن کودک باید عددی بین ۱.۵ تا ۶۰ کیلوگرم باشد.")
+        return null
+      }
+    }
+    val cleanedBirthOrAge = birthDateOrAgeFa.trim().ifEmpty { ageBand.labelFa }
+    val parsedBirthEpochMs = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(cleanedBirthOrAge)
+    val computedAgeMonths =
+      parsedBirthEpochMs?.let { bMs ->
+        val days = VaccinationScheduleEngine.diffDays(bMs, System.currentTimeMillis()).coerceAtLeast(0)
+        (days / 30.4375).toInt().coerceIn(0, 144)
+      } ?: LiquidDoseVisualizerEngine.parseAgeMonthsFromText(cleanedBirthOrAge)
+    val profile =
+      ChildProfileDemo(
+        aliasFa = aliasFa.trim(),
+        birthDateOrAgeFa = cleanedBirthOrAge,
+        ageBand = ageBand,
+        weightKgText = cleanWeight,
+        weightDateFa = weightDateFa.trim(),
+        allergiesFa = allergiesFa.trim().ifEmpty { "ثبت نشده" },
+        currentMedsFa = currentMedsFa.trim().ifEmpty { "ثبت نشده" },
+        consentGranted = true,
+        ageMonthsExact = computedAgeMonths,
+      )
+    return profile to parsedBirthEpochMs
+  }
+
+  fun syncChildMetadataFromProfile(ageBand: AgeBand, parsedBirthEpochMs: Long?) {
+    viewModelScope.launch {
+      prefs.setSelectedAgeBand(ageBand)
+      if (parsedBirthEpochMs != null && parsedBirthEpochMs > 0L) {
+        prefs.setChildBirthDateEpochMs(parsedBirthEpochMs)
+      }
+    }
+  }
+
   fun saveChildProfileDemo(
     aliasFa: String,
     birthDateOrAgeFa: String,
@@ -528,33 +586,28 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     currentMedsFa: String,
     consentGranted: Boolean,
   ) {
-    if (!consentGranted) {
-      showToast("ذخیره پروفایل کودک فقط پس از تأیید رضایت والد امکان‌پذیر است.")
-      return
-    }
-    if (aliasFa.isBlank()) {
-      showToast("لطفاً یک نام مستعار یا نام کوچک وارد کنید.")
-      return
-    }
-    val cleanedBirthOrAge = birthDateOrAgeFa.trim().ifEmpty { ageBand.labelFa }
-    val profile =
-      ChildProfileDemo(
-        aliasFa = aliasFa.trim(),
-        birthDateOrAgeFa = cleanedBirthOrAge,
+    val resolved =
+      resolveValidatedChildProfile(
+        aliasFa = aliasFa,
+        birthDateOrAgeFa = birthDateOrAgeFa,
         ageBand = ageBand,
-        weightKgText = weightKgText.trim(),
-        weightDateFa = weightDateFa.trim(),
-        allergiesFa = allergiesFa.trim().ifEmpty { "ثبت نشده" },
-        currentMedsFa = currentMedsFa.trim().ifEmpty { "ثبت نشده" },
-        consentGranted = true,
-        ageMonthsExact = LiquidDoseVisualizerEngine.parseAgeMonthsFromText(cleanedBirthOrAge),
-      )
+        weightKgText = weightKgText,
+        weightDateFa = weightDateFa,
+        allergiesFa = allergiesFa,
+        currentMedsFa = currentMedsFa,
+        consentGranted = consentGranted,
+      ) ?: return
+    val (profile, parsedBirthEpochMs) = resolved
     viewModelScope.launch {
       prefs.setLocalChildProfile(profile)
+      prefs.setSelectedAgeBand(ageBand)
+      if (parsedBirthEpochMs != null && parsedBirthEpochMs > 0L) {
+        prefs.setChildBirthDateEpochMs(parsedBirthEpochMs)
+      }
       _uiState.update {
         it.copy(
           exportedProfileJson = null,
-          toastMessageFa = "پروفایل کودک با موفقیت در حافظه دستگاه ذخیره شد.",
+          toastMessageFa = "پروفایل کودک با موفقیت ذخیره و با تقویم واکسن و سرنگ mL همگام شد.",
         )
       }
     }

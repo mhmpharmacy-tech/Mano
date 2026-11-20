@@ -129,10 +129,21 @@ import com.example.ui.components.TopicAccentRole
 import com.example.ui.components.resolveAccentColor
 import com.example.ui.theme.CalmAquaSurface
 import com.example.ui.theme.CleanWhite
+import com.example.ui.theme.ConciergeDarkMid
+import com.example.ui.theme.ConciergeDarkStart
+import com.example.ui.theme.ConciergeLightMid
 import com.example.ui.theme.DarkAqua
 import com.example.ui.theme.DarkInk
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceHigh
+import com.example.ui.theme.HeroDarkMid
+import com.example.ui.theme.HeroLightMid
+import com.example.ui.theme.MascotOrbDarkEdge
+import com.example.ui.theme.MascotOrbDarkMid
+import com.example.ui.theme.MutedSlate
+import com.example.ui.theme.OrbLabelDarkScrim
+import com.example.ui.theme.ParticleTealTint
+import com.example.ui.theme.WarmIvory
 import com.example.ui.theme.DarkTextMuted
 import com.example.ui.theme.DarkTextPrimary
 import com.example.ui.theme.DeepScreen
@@ -418,12 +429,12 @@ fun HomeScreen(
     ) {
       // 1. Unified Edge-to-Edge Hero: Official MANO Kid Brand Lockup + Golden-Ratio OrbitalMenu around Spring-Breathing MANO Robot
       item {
-        val secondaryInk = if (isDark) DarkTextMuted else Color(0xFF294354)
+        val secondaryInk = if (isDark) DarkTextMuted else MutedSlate
         val sanctuaryAtmosphere =
           if (isDark) {
-            Brush.verticalGradient(listOf(DeepScreen, Color(0xFF0E1B2F), DeepScreen))
+            Brush.verticalGradient(listOf(DeepScreen, HeroDarkMid, DeepScreen))
           } else {
-            Brush.verticalGradient(listOf(CleanWhite, Color(0xFFF1F9FA), Color(0xFFF6FBFC)))
+            Brush.verticalGradient(listOf(CleanWhite, HeroLightMid, WarmIvory))
           }
 
         Column(
@@ -754,7 +765,7 @@ fun OrbitalMenu(
             if (isDark) {
               listOf(TealGlow, DarkAqua, SkyCare)
             } else {
-              listOf(SeaGreen, SkyCare, Color(0xFF42C7B8))
+              listOf(SeaGreen, SkyCare, ParticleTealTint)
             }
           ambientParticles.forEach { particle ->
             val twinkle = 0.68f + 0.32f * sin(particlePhaseRad.toDouble() * 2.0 + particle.phaseOffsetRad).toFloat()
@@ -937,8 +948,8 @@ fun OrbitalMenu(
                 Brush.radialGradient(
                   listOf(
                     PureWhite,
-                    if (isDark) Color(0xFF1A434F) else CalmAquaSurface.copy(alpha = 0.88f),
-                    if (isDark) Color(0xFF102A34) else SkySurface.copy(alpha = 0.84f),
+                    if (isDark) MascotOrbDarkMid else CalmAquaSurface.copy(alpha = 0.88f),
+                    if (isDark) MascotOrbDarkEdge else SkySurface.copy(alpha = 0.84f),
                   )
                 )
               )
@@ -1141,7 +1152,7 @@ private fun OrbitalCareNode(
         modifier =
           Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isDark) Color(0xFF0A1F26).copy(alpha = 0.68f) else PureWhite.copy(alpha = 0.72f))
+            .background(if (isDark) OrbLabelDarkScrim.copy(alpha = 0.68f) else PureWhite.copy(alpha = 0.72f))
             .padding(horizontal = 5.dp, vertical = 1.dp),
       )
     }
@@ -1154,12 +1165,12 @@ private fun PharmacistConciergeDock(
   onNavigateAskPharmacist: () -> Unit,
   onNavigateFollowUp: () -> Unit,
 ) {
-  val dockBackdrop = if (isDark) DeepScreen else Color(0xFFF6FBFC)
+  val dockBackdrop = if (isDark) DeepScreen else WarmIvory
   val conciergeGradient =
     if (isDark) {
-      Brush.linearGradient(listOf(Color(0xFF0E2538), Color(0xFF0B1C2D), DeepScreen))
+      Brush.linearGradient(listOf(ConciergeDarkStart, ConciergeDarkMid, DeepScreen))
     } else {
-      Brush.linearGradient(listOf(DeepScreen, Color(0xFF092A3D), DeepTealGlass))
+      Brush.linearGradient(listOf(DeepScreen, ConciergeLightMid, DeepTealGlass))
     }
   val specularRim =
     Brush.horizontalGradient(

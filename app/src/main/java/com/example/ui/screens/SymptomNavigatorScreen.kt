@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -136,7 +137,7 @@ fun SymptomNavigatorScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(modifier = Modifier.fillMaxSize().widthIn(max = 840.dp)) {
       LazyColumn(
-        modifier = Modifier.weight(1f).fillMaxWidth().testTag("symptom_navigator_list"),
+        modifier = Modifier.weight(1f).fillMaxWidth().imePadding().testTag("symptom_navigator_list"),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
       ) {
@@ -445,7 +446,7 @@ fun SymptomNavigatorScreen(
                     listOf(
                       "شناسه قاعده فعال: ${result.triggeredRule.id}",
                       "توضیح قاعده: ${result.triggeredRule.descriptionFa}",
-                      "مانو تشخیص بیماری صادر نمی‌کند و دوز عددی دارو محاسبه نمی‌نماید.",
+                      "مانو تشخیص بیماری صادر نمی‌کند و ابزار آموزشی سرنگ mL جایگزین نسخه پزشک یا داروساز نیست.",
                     ),
                   sources = currentFlow.sources,
                   reviewStatus = currentFlow.review.status,

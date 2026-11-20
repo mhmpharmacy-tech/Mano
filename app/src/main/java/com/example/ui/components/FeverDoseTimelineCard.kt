@@ -674,14 +674,14 @@ fun FeverDoseTimelineCard(
             onValueChange = { timeLabelInput = it },
             label = { Text("ساعت (اختیاری)") },
             singleLine = true,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).testTag("timeline_time_input"),
           )
           OutlinedTextField(
             value = noteInput,
             onValueChange = { noteInput = it },
             label = { Text("وضعیت کودک") },
             singleLine = true,
-            modifier = Modifier.weight(1.4f),
+            modifier = Modifier.weight(1.4f).testTag("timeline_note_input"),
           )
         }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -129,6 +130,7 @@ fun VaccinesScreen(
   var birthDateInput by remember(birthDateEpochMs) {
     mutableStateOf(birthDateEpochMs?.let { VaccinationScheduleEngine.formatPersianDate(it) } ?: "")
   }
+  var birthDateErrorFa by remember(birthDateEpochMs) { mutableStateOf<String?>(null) }
   var showBirthDatePicker by remember { mutableStateOf(false) }
   var editingItem by remember { mutableStateOf<VaccineResolvedItem?>(null) }
 
@@ -151,7 +153,7 @@ fun VaccinesScreen(
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("vaccines_list"),
+      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("vaccines_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -322,10 +324,18 @@ fun VaccinesScreen(
 
           OutlinedTextField(
             value = birthDateInput,
-            onValueChange = { birthDateInput = it },
+            onValueChange = {
+              birthDateInput = it
+              birthDateErrorFa = null
+            },
             label = { Text("تاریخ تولد (شمسی YYYY/MM/DD یا میلادی)") },
             placeholder = { Text("۱۴۰۴/۰۵/۱۲") },
             singleLine = true,
+            isError = birthDateErrorFa != null,
+            supportingText =
+              birthDateErrorFa?.let { err ->
+                { Text(err, color = MaterialTheme.colorScheme.error) }
+              },
             leadingIcon = { Icon(Icons.Rounded.CalendarMonth, contentDescription = null) },
             modifier = Modifier.fillMaxWidth().testTag("vaccine_birthdate_input"),
           )
@@ -338,8 +348,11 @@ fun VaccinesScreen(
               onClick = {
                 val parsed = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(birthDateInput)
                 if (parsed == null) {
-                  onFeedback("فرمت تاریخ معتبر نیست؛ نمونه شمسی: ۱۴۰۴/۰۵/۱۲ یا میلادی: 2025/08/03")
+                  val msg = "فرمت تاریخ معتبر نیست؛ نمونه شمسی: ۱۴۰۴/۰۵/۱۲ یا میلادی: 2025/08/03"
+                  birthDateErrorFa = msg
+                  onFeedback(msg)
                 } else {
+                  birthDateErrorFa = null
                   onSaveBirthDate(parsed)
                 }
               },

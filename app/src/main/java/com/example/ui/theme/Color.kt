@@ -109,3 +109,18 @@ val DarkAqua = Color(0xFF69EBF0)
 val DarkSage = Color(0xFF5CECD0)
 val DarkPlum = Color(0xFFC9B3FF)
 val DarkGold = Color(0xFFEBD698)
+
+// Atmosphere, Orbital, Concierge Dock & Frosted Overlay Tokens (Zero inline hex in UI composables)
+val HeroDarkMid = Color(0xFF0E1B2F)
+val HeroLightMid = Color(0xFFF1F9FA)
+val ParticleTealTint = Color(0xFF42C7B8)
+val MascotOrbDarkMid = Color(0xFF1A434F)
+val MascotOrbDarkEdge = Color(0xFF102A34)
+val OrbLabelDarkScrim = Color(0xFF0A1F26)
+val ConciergeDarkStart = Color(0xFF0E2538)
+val ConciergeDarkMid = Color(0xFF0B1C2D)
+val ConciergeLightMid = Color(0xFF092A3D)
+val GlassLightOverlay = Color(0xF0FFFFFF)
+val GlassLightDock = Color(0xF2FFFFFF)
+val ChartGridLight = HairlineBorder
+

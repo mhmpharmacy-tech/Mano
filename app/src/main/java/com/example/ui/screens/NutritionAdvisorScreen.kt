@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -89,9 +90,11 @@ import com.example.ui.theme.AquaSurface
 import com.example.ui.theme.DarkGold
 import com.example.ui.theme.DarkSage
 import com.example.ui.theme.DarkSky
+import com.example.ui.theme.DeepScreen
 import com.example.ui.theme.GoldSurface
 import com.example.ui.theme.InfoBlue
 import com.example.ui.theme.InfoSurface
+import com.example.ui.theme.LocalManoDarkTheme
 import com.example.ui.theme.MangoCare
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SuccessEmerald
@@ -187,9 +190,14 @@ fun NutritionGrowthEntryCard(
         color = MaterialTheme.colorScheme.primary,
       )
 
+      val isDark = LocalManoDarkTheme.current
       Button(
         onClick = onOpenNutritionAdvisor,
-        colors = ButtonDefaults.buttonColors(containerColor = MangoCare, contentColor = PureWhite),
+        colors =
+          ButtonDefaults.buttonColors(
+            containerColor = mangoAccent,
+            contentColor = if (isDark) DeepScreen else PureWhite,
+          ),
         modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("growth_open_nutrition_btn"),
       ) {
         Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -282,7 +290,7 @@ fun NutritionAdvisorScreen(
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("nutrition_advisor_list"),
+      modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("nutrition_advisor_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {

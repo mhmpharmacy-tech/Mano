@@ -132,7 +132,7 @@ fun manoTintedSurface(
 
 @Composable
 fun manoChartGridColor(): Color =
-  if (LocalManoDarkTheme.current) DarkBorder else Color(0xFFC5E1E8)
+  if (LocalManoDarkTheme.current) DarkBorder else ChartGridLight
 
 @Composable
 fun manoChartAxisHex(): Int =
