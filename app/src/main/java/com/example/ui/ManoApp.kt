@@ -414,12 +414,16 @@ fun ManoApp(
   LaunchedEffect(effectiveChildProfile?.aliasFa) {
     viewModel.setChildAliasFa(effectiveChildProfile?.aliasFa)
   }
+  val resolvedChildBirthDateEpochMs = childBirthDateEpochMs
+    ?: com.example.domain.util.VaccinationScheduleEngine.parseFlexibleDateToEpochMs(
+      effectiveChildProfile?.birthDateOrAgeFa.orEmpty()
+    )
   val vaccineSummary =
-    remember(activeCloudVaccineRecords, localVaccineRecords, childBirthDateEpochMs, vaccineReminderSettings) {
+    remember(activeCloudVaccineRecords, localVaccineRecords, resolvedChildBirthDateEpochMs, vaccineReminderSettings, currentUser?.uid) {
       VaccinationScheduleEngine.resolveSchedule(
         cloudRecords = activeCloudVaccineRecords,
         localRecords = if (currentUser == null) localVaccineRecords else emptyList(),
-        birthDateEpochMs = childBirthDateEpochMs,
+        birthDateEpochMs = resolvedChildBirthDateEpochMs,
         reminderSettings = vaccineReminderSettings,
       )
     }
