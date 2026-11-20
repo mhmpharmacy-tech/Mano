@@ -649,6 +649,8 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
   fun deleteChildProfileDemo() {
     viewModelScope.launch {
       prefs.setLocalChildProfile(null)
+      prefs.setChildBirthDateEpochMs(null)
+      prefs.setChildHeightCm("")
       _uiState.update {
         it.copy(
           exportedProfileJson = null,
