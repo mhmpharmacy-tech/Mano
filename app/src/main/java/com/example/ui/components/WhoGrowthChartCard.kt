@@ -110,12 +110,12 @@ fun WhoGrowthChartCard(
   val initialWeightStr =
     remember(childProfile) {
       val parsed = PersianNormalizer.toAsciiDigits(childProfile?.weightKgText.orEmpty()).toDoubleOrNull()
-      if (parsed != null && parsed in 1.5..35.0) String.format(Locale.US, "%.1f", parsed) else "9.6"
+      if (parsed != null && parsed in 1.5..35.0) String.format(Locale.US, "%.1f", parsed) else "" // Never fabricate a child measurement when profile data is missing.
     }
   val initialHeightStr =
     remember(savedHeightCm) {
       val parsed = PersianNormalizer.toAsciiDigits(savedHeightCm).toDoubleOrNull()
-      if (parsed != null && parsed in 40.0..130.0) String.format(Locale.US, "%.1f", parsed) else "75.7"
+      if (parsed != null && parsed in 40.0..130.0) String.format(Locale.US, "%.1f", parsed) else "" // Prompt for a measured value instead of showing a sample as real data.
     }
 
   var metric by rememberSaveable { mutableStateOf(GrowthMetric.WEIGHT_FOR_AGE) }
