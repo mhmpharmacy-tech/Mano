@@ -23,3 +23,28 @@
 - [ ] Verify Iranian formulation labels and intended operating context
 
 Passing CI is necessary but **not equivalent to clinical sign-off**. Merging source code into `main` does not approve a clinical release. No production deployment or real patient intake is authorized by this merge. External deployment configuration must be separately verified.
+
+## Hardening merged from PR #13 (2026-11-21)
+
+- [x] Merged CI-verified clinical/privacy hardening at `f7465401ccae0af2bc607f5cbd72c40f867fd94d` (PR #13).
+- [x] Exact-head CI: 127/127 Android Robolectric/Firebase emulator tests and 16/16 Functions tests succeeded in GitHub Actions run #44822786422.
+- [x] Syrup scanner refuses missing/inconsistent strengths, mismatched AI formulation hints, unrecognized oral forms and LOW/MEDIUM confidence for automatic syringe filling; saved scans must be reverified in current child context.
+- [x] Uncertain 3–12 month age or under-six-month infants cannot receive generated solid-food plans; registered allergies block model-generated plans pending individual review.
+- [x] Dose log distinguishes caregiver-administered time from entry time, including backwards-compatible legacy Firestore records.
+- [x] Correct newborn fever >=38°C timeline escalation and server pass symptom-flow binding.
+- [x] No automatic copying of unscoped offline child data into another Google account; profile deletion clears local birth/height metadata after cloud deletion succeeds. Cloud and local timelines / visit drafts / syrup scans / vaccines no longer co-display.
+- [x] Disable Android Auto Backup and device-to-device extraction for child health data.
+- [x] Old direct Firestore consultations cannot be created or marked reviewed by caregiver clients; authoritative consultation remains behind disabled-by-default Firebase Functions.
+- [x] Unreviewed interaction pairs show CAUTION rather than a green success; legacy content no longer assumes item-level human approval.
+- [x] Main push/pull request tests include `firestore.rules` and may be started manually via GitHub Actions.
+
+### Remaining release blockers
+
+- [ ] Individual, auditable clinical approval for every pediatric red flag, medication dose, nutrition policy, contraindication, interaction, WHO method and citation.
+- [ ] Review behavior for offline-only/shared-device use, complete account deletion, data retention and migration authorization.
+- [ ] Validate actual child age and birth-date input against verified date of birth; verify dose formulations and strengths against Iranian labels.
+- [ ] Real-device UX/security: right-to-left navigation, 360dp, 200% font/TalkBack, backend staging settings, Firebase App Check and Firestore policy consistency.
+- [ ] Confirm deployed Cloud Functions, database rules and client distribution status independently; repository CI does not attest production configuration.
+- [ ] Final manual go/no-go and explicit production deployment authorization.
+
+**Release decision: NO-GO.** Merging these audited *source-code changes* into `main` is not an instruction to deploy, activate clinical endpoints, or accept real patient cases.
