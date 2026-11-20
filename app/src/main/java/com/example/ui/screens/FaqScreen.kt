@@ -123,16 +123,17 @@ fun FaqScreen(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
           SectionCard {
             ManoBannerFrame(
-              resId = R.drawable.img_faq_banner,
-              contentDescription = "ربات جدید مانو کید در بخش پرسش و پاسخ مستند والدین",
-              aspectRatio = 16f / 9f,
+              resId = R.drawable.mano_questions_orbit,
+              contentDescription = "مانو و کتابخانه پرسش‌های پرتکرار والدین",
+              aspectRatio = 1.8f,
+              contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
               ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 56.dp)
               Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("پرسش‌های پرتکرار والدین (FAQ)", style = MaterialTheme.typography.headlineMedium)
                 Text(
-                  text = "جست‌وجوی فارسی با نرمال‌سازی نیم‌فاصله و حروف به همراه دستیار پرسش و پاسخ مستند.",
+                  text = "موضوع یا پرسش خود را جست‌وجو کنید.",
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -162,7 +163,7 @@ fun FaqScreen(
         }
       }
 
-      // دستیار پرسش و پاسخ مستند (MANO Documented Q&A Assistant)
+      // دستیار آموزشی؛ پاسخ هوش مصنوعی (MANO Documented Q&A Assistant)
       item {
         val sageAccent = manoSemanticAccent(SageCare, DarkSage)
         val dangerAccent = manoSemanticAccent(DangerCrimson, DarkCoral)
@@ -188,7 +189,7 @@ fun FaqScreen(
               Column {
                 LtrText(text = "MANO Evidence Assistant", color = sageAccent)
                 Text(
-                  text = "دستیار پرسش و پاسخ مستند",
+                  text = "دستیار آموزشی؛ پاسخ هوش مصنوعی",
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
                 )
@@ -203,7 +204,7 @@ fun FaqScreen(
           }
 
           Text(
-            text = "پرسش مراقبتی خود را بنویسید یا از نمونه‌ها انتخاب کنید تا پاسخ غیرتشخیصی به همراه استناد علمی مستقیم به راهنماهای AAP، WHO و NICE دریافت کنید.",
+            text = "پرسش خود را بنویسید. پاسخ تولیدشده با هوش مصنوعی تأیید علمی مستقل ندارد؛ پاسخ‌های کتاب‌محور و نشانی منابع در فهرست پایین صفحه قرار دارند.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
@@ -234,7 +235,7 @@ fun FaqScreen(
 
           Button(
             onClick = { onAskDocumentedQuestion(assistantQuestionInput.ifBlank { query }) },
-            enabled = documentedQaState !is DocumentedQaUiState.Loading,
+            enabled = documentedQaState !is DocumentedQaUiState.Loading && assistantQuestionInput.ifBlank { query }.trim().length >= 4,
             modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("documented_qa_submit_btn"),
           ) {
             if (documentedQaState is DocumentedQaUiState.Loading) {
@@ -244,11 +245,11 @@ fun FaqScreen(
                 color = MaterialTheme.colorScheme.onPrimary,
               )
               Spacer(Modifier.width(8.dp))
-              Text("در حال بررسی منابع علمی و تدوین پاسخ مستند...")
+              Text("در حال تولید پاسخ آموزشی...")
             } else {
               Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
               Spacer(Modifier.width(8.dp))
-              Text("دریافت پاسخ علمی و مستند")
+              Text("دریافت پاسخ آموزشی")
             }
           }
 
@@ -273,10 +274,14 @@ fun FaqScreen(
               val payload = documentedQaState.payload
               HorizontalDivider(color = manoBorderColor())
               Text(
-                text = "پاسخ مستند برای: «${documentedQaState.questionFa}»",
+                text = "پاسخ تولیدشده برای: «${documentedQaState.questionFa}»",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
+              )
+              SeverityAlert(
+                severity = AlertSeverity.CAUTION, title = "پاسخ هوش مصنوعی؛ تأییدنشده",
+                body = "این پاسخ ممکن است خطا داشته باشد. برای تصمیم دارویی با داروساز گفت‌وگو کنید و در علائم خطر منتظر پیام آنلاین نمانید.",
               )
               Text(
                 text = payload.directAnswerFa,
@@ -285,7 +290,7 @@ fun FaqScreen(
 
               if (payload.actionableStepsFa.isNotEmpty()) {
                 Text(
-                  text = "گام‌های ایمن و مستند مراقبتی:",
+                  text = "پیشنهادهای تولیدشده؛ نیازمند بررسی:",
                   style = MaterialTheme.typography.labelLarge,
                   fontWeight = FontWeight.Bold,
                   color = sageAccent,
@@ -322,8 +327,8 @@ fun FaqScreen(
               ) {
                 Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                   Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Rounded.VerifiedUser, contentDescription = null, tint = sageAccent, modifier = Modifier.size(16.dp))
-                    Text("منابع علمی مستند:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = sageAccent)
+                    Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, tint = sageAccent, modifier = Modifier.size(16.dp))
+                    Text("منابع زمینهٔ پاسخ؛ تطبیق ادعاها تأیید نشده:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = sageAccent)
                   }
                   payload.citedSourcesFa.forEach { src ->
                     Text("• $src", style = MaterialTheme.typography.labelSmall)
@@ -391,7 +396,7 @@ fun FaqScreen(
         item {
           EmptyState(
             title = "پرسش منطبقی پیدا نشد",
-            subtitle = "فیلتر سن یا دسته را تغییر دهید یا از دستیار پرسش و پاسخ مستند در بالای صفحه استفاده کنید.",
+            subtitle = "فیلتر سن یا دسته را تغییر دهید، یا پرسش خود را در بالای صفحه بنویسید.",
             pose = MascotPose.WAIT,
             actionLabel = "پاک کردن فیلترهای پرسش",
             onAction = {
@@ -469,7 +474,7 @@ fun FaqScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                   )
-                  LtrText(text = faq.source.url, color = manoSemanticAccent(InfoBlue, DarkSky))
+                  if (faq.source.url.isNotBlank()) LtrText(text = faq.source.url, color = manoSemanticAccent(InfoBlue, DarkSky))
                 }
               }
             }

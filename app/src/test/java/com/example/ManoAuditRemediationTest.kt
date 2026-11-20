@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
@@ -85,7 +86,7 @@ class ManoAuditRemediationTest {
       )
 
     val conservativeMonths = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(unspecificInfant)
-    assertEquals(3, conservativeMonths)
+    assertNull(conservativeMonths)
 
     val conservativeIbuprofen =
       LiquidDoseVisualizerEngine.evaluate(
@@ -100,7 +101,7 @@ class ManoAuditRemediationTest {
     assertEquals(7, parsedMonths)
 
     val nowMs = 1_750_000_000_000L
-    val sevenMonthsAgoMs = nowMs - (7.0 * 30.4375 * 86_400_000.0).toLong()
+    val sevenMonthsAgoMs = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = nowMs; add(java.util.Calendar.MONTH, -7) }.timeInMillis
     val fromBirthDate =
       LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(
         profile = unspecificInfant,
@@ -329,6 +330,7 @@ class ManoAuditRemediationTest {
 
     val qaReady = vm.qaState.value as com.example.ui.viewmodel.DocumentedQaUiState.Ready
     assertTrue(qaReady.payload.directAnswerFa.contains("غلظت"))
+    assertFalse("Generated source must not masquerade as reviewed", qaReady.payload.citedSourcesFa.contains("AAP — Safe Liquid Medication Dosing"))
 
     composeTestRule.setContent {
       ManoKidsTheme(darkTheme = false) {
@@ -351,6 +353,57 @@ class ManoAuditRemediationTest {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("comparison_option_card_antipyretic_forms_0").performScrollTo().assertIsDisplayed()
   }
+  @Test
+  fun ecosystemPillars_haveDistinctBrandedIconKinds() {
+    val pillars = com.example.ui.components.ManoEcosystemPillar.entries
+    assertEquals(6, pillars.size)
+    assertEquals("Every pillar should have a visually distinct branded symbol", 6, pillars.map { it.iconKind }.distinct().size)
+    assertEquals(
+      PediatricIconKind.FAMILY,
+      com.example.ui.components.ManoEcosystemPillar.MANO_CONNECT.iconKind,
+    )
+  }
+
+  @Test
+  fun growthChart_withoutChildMeasurements_doesNotSuggestSyntheticPercentile() {
+    composeTestRule.setContent {
+      ManoKidsTheme(darkTheme = false) {
+        com.example.ui.components.WhoGrowthChartCard(
+          childProfile = null,
+          savedHeightCm = "",
+          selectedAgeBand = null,
+          onOpen3DWeighingGuide = {},
+        )
+      }
+    }
+    composeTestRule.waitForIdle()
+    composeTestRule
+      .onNodeWithTag("who_percentile_result").assertDoesNotExist()
+  }
+
+
+  @Test
+  fun allSixEcosystemCards_dispatchTheCorrectClickCallback() {
+    val clicked = mutableListOf<com.example.ui.components.ManoEcosystemPillar>()
+    composeTestRule.setContent {
+      ManoKidsTheme(darkTheme = false) {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+          com.example.ui.components.ManoSpecializedEcosystemSection(
+            onSelectPillar = { clicked.add(it) },
+          )
+        }
+      }
+    }
+
+    com.example.ui.components.ManoEcosystemPillar.entries.forEach { pillar ->
+      composeTestRule
+        .onNodeWithTag("mano_pillar_${pillar.id}")
+        .performScrollTo()
+        .performClick()
+    }
+    assertEquals(com.example.ui.components.ManoEcosystemPillar.entries.toList(), clicked)
+  }
+
 
   @Test
   fun review20261120_scienceAndFormsRemediation_verified() {
@@ -402,4 +455,3 @@ class ManoAuditRemediationTest {
     assertTrue("Exact age in months must be derived from birth date", valid.first.ageMonthsExact != null)
   }
 }
-

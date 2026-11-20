@@ -191,12 +191,9 @@ class ManoJourneysUnitTest {
     assertFalse(toddlerIbuprofen.isBlocked)
     assertEquals(4.0f, toddlerIbuprofen.recommendedMl, 0.01f)
 
-    val draggedKg =
-      LiquidDoseVisualizerEngine.estimateWeightFromDraggedMl(
-        formulation = LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5,
-        ageMonths = 24,
-        draggedMl = 5.0f,
-      )
-    assertEquals(9.5f, draggedKg!!, 0.01f)
+    assertTrue(LiquidDoseVisualizerEngine.evaluate(LiquidFormulationId.ACETAMINOPHEN_DROPS_100, 24, 40f).isBlocked)
+    assertTrue(LiquidDoseVisualizerEngine.evaluate(LiquidFormulationId.ACETAMINOPHEN_DROPS_100, null, 10f).isBlocked)
+    assertTrue(LiquidDoseVisualizerEngine.evaluate(LiquidFormulationId.ACETAMINOPHEN_DROPS_100, 24, Float.NaN).isBlocked)
+
   }
 }

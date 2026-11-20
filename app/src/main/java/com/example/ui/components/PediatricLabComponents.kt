@@ -111,12 +111,15 @@ fun InteractiveOralSyringeLabCard(
   onOpen3DWithDose: ((recommendedMl: Float) -> Unit)? = null,
 ) {
   var selectedFormulation by remember { mutableStateOf(LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5) }
-  var ageMonths by remember(childProfile, childBirthDateEpochMs) {
-    mutableIntStateOf(LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile, childBirthDateEpochMs))
+  var ageText by remember(childProfile, childBirthDateEpochMs) {
+    mutableStateOf(LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile, childBirthDateEpochMs)?.toString().orEmpty())
   }
-  var weightKg by remember(childProfile) {
-    mutableFloatStateOf(LiquidDoseVisualizerEngine.initialWeightKgFromProfile(childProfile))
+  var weightText by remember(childProfile) {
+    mutableStateOf(LiquidDoseVisualizerEngine.initialWeightKgFromProfile(childProfile)?.toString().orEmpty())
   }
+  val ageMonths = com.example.domain.util.ClinicalNumberInput.durationHours(ageText)
+  val weightKg = com.example.domain.util.ClinicalNumberInput.decimal(weightText)?.toFloat()
+  var labelConfirmed by remember(selectedFormulation, ageText, weightText) { mutableStateOf(false) }
 
   val doseResult =
     remember(selectedFormulation, ageMonths, weightKg) {
@@ -154,8 +157,6 @@ fun InteractiveOralSyringeLabCard(
     label = "syringeLiquidTint",
   )
 
-  val ageQuickPresets = remember { listOf(2, 6, 12, 36, 72) }
-  val weightQuickPresets = remember { listOf(6.0f, 10.0f, 12.0f, 16.0f, 24.0f) }
   val shape = RoundedCornerShape(24.dp)
 
   Card(
@@ -191,7 +192,7 @@ fun InteractiveOralSyringeLabCard(
             fontWeight = FontWeight.Bold,
           )
           Text(
-            text = "نوع و غلظت دارو را انتخاب کنید، سپس با کشیدن نشانگر سن و وزن یا خود پیستون سرنگ، مقدار mL متناظر را ببینید.",
+            text = "سن و وزن اندازه‌گیری‌شده را وارد کنید و غلظت را با بطری تطبیق دهید. مقدار آموزشی باید با دستور مصرف کودک بررسی شود.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
@@ -202,7 +203,7 @@ fun InteractiveOralSyringeLabCard(
         SeverityAlert(
           severity = AlertSeverity.CAUTION,
           title = "پروفایل کودک ثبت نشده است",
-          body = "مقادیر سن و وزن زیر روی پیش‌فرض قرار دارند. پیش از بررسی دوز یا مصرف دارو، سن و وزن واقعی کودک خود را با دکمه‌ها یا لغزنده‌ها تنظیم کنید.",
+          body = "برای این کودک سن و وزن ثبت نشده است. هر دو مقدار را وارد کنید.",
           modifier = Modifier.testTag("syringe_missing_profile_caution"),
         )
       }
@@ -243,146 +244,25 @@ fun InteractiveOralSyringeLabCard(
         }
       }
 
-      // 2. Age slider + quick age chips
-      Surface(
-        color = cardSurface,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, borderColor),
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Text("۲. سن کودک:", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-              IconButton(
-                onClick = { ageMonths = (ageMonths - 1).coerceAtLeast(0) },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("syringe_age_minus"),
-              ) {
-                Icon(Icons.Rounded.Remove, contentDescription = "کاهش سن یک ماه")
-              }
-              Text(
-                text = LiquidDoseVisualizerEngine.formatAgeFa(ageMonths),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = primaryAccent,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.testTag("syringe_age_value_label"),
-              )
-              IconButton(
-                onClick = { ageMonths = (ageMonths + 1).coerceAtMost(144) },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("syringe_age_plus"),
-              ) {
-                Icon(Icons.Rounded.Add, contentDescription = "افزایش سن یک ماه")
-              }
-            }
-          }
-          Slider(
-            value = ageMonths.toFloat(),
-            onValueChange = { ageMonths = it.roundToInt().coerceIn(0, 144) },
-            valueRange = 0f..144f,
-            colors = SliderDefaults.colors(thumbColor = primaryAccent, activeTrackColor = primaryAccent),
-            modifier = Modifier.fillMaxWidth().testTag("syringe_age_slider"),
-          )
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-          ) {
-            ageQuickPresets.forEach { presetMonths ->
-              FilterChip(
-                selected = ageMonths == presetMonths,
-                onClick = { ageMonths = presetMonths },
-                label = { Text(LiquidDoseVisualizerEngine.formatAgeFa(presetMonths), style = MaterialTheme.typography.labelSmall) },
-                colors = FilterChipDefaults.filterChipColors(containerColor = cardSurface),
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("syringe_age_chip_$presetMonths"),
-              )
-            }
-          }
-        }
+      androidx.compose.material3.OutlinedTextField(
+        value = ageText, onValueChange = { ageText = it.take(16) },
+        label = { Text("سن به ماه کامل (۰ تا ۱۴۴)") }, singleLine = true,
+        modifier = Modifier.fillMaxWidth().testTag("syringe_age_input"),
+      )
+      androidx.compose.material3.OutlinedTextField(
+        value = weightText, onValueChange = { weightText = it.take(16) },
+        label = { Text("وزن اندازه‌گیری‌شده به کیلوگرم (۳ تا ۴۰)") }, singleLine = true,
+        modifier = Modifier.fillMaxWidth().testTag("syringe_weight_input"),
+      )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.Checkbox(checked = labelConfirmed, onCheckedChange = { labelConfirmed = it },
+          modifier = Modifier.testTag("syringe_confirm_label"))
+        Text("نام و غلظت انتخابی با برچسب بطری مطابقت دارد.")
       }
-
-      // 3. Weight slider + quick weight chips
-      Surface(
-        color = cardSurface,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, borderColor),
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Text("۳. وزن کودک:", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-              IconButton(
-                onClick = {
-                  weightKg =
-                    (((weightKg - 0.5f) * 2f).roundToInt() / 2f).coerceIn(
-                      LiquidDoseVisualizerEngine.MIN_WEIGHT_KG,
-                      LiquidDoseVisualizerEngine.MAX_WEIGHT_KG,
-                    )
-                },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("syringe_weight_minus"),
-              ) {
-                Icon(Icons.Rounded.Remove, contentDescription = "کاهش وزن نیم کیلوگرم")
-              }
-              Text(
-                text = LiquidDoseVisualizerEngine.formatKg(weightKg),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = sageAccent,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.testTag("syringe_weight_value_label"),
-              )
-              IconButton(
-                onClick = {
-                  weightKg =
-                    (((weightKg + 0.5f) * 2f).roundToInt() / 2f).coerceIn(
-                      LiquidDoseVisualizerEngine.MIN_WEIGHT_KG,
-                      LiquidDoseVisualizerEngine.MAX_WEIGHT_KG,
-                    )
-                },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("syringe_weight_plus"),
-              ) {
-                Icon(Icons.Rounded.Add, contentDescription = "افزایش وزن نیم کیلوگرم")
-              }
-            }
-          }
-          Slider(
-            value = weightKg,
-            onValueChange = { raw ->
-              weightKg = ((raw * 2f).roundToInt() / 2f).coerceIn(
-                LiquidDoseVisualizerEngine.MIN_WEIGHT_KG,
-                LiquidDoseVisualizerEngine.MAX_WEIGHT_KG,
-              )
-            },
-            valueRange = LiquidDoseVisualizerEngine.MIN_WEIGHT_KG..LiquidDoseVisualizerEngine.MAX_WEIGHT_KG,
-            steps = 73,
-            colors = SliderDefaults.colors(thumbColor = sageAccent, activeTrackColor = sageAccent),
-            modifier = Modifier.fillMaxWidth().testTag("syringe_weight_slider"),
-          )
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-          ) {
-            weightQuickPresets.forEach { presetKg ->
-              FilterChip(
-                selected = weightKg == presetKg,
-                onClick = { weightKg = presetKg },
-                label = { Text(LiquidDoseVisualizerEngine.formatKg(presetKg), style = MaterialTheme.typography.labelSmall) },
-                colors = FilterChipDefaults.filterChipColors(containerColor = cardSurface),
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("syringe_weight_chip_$presetKg"),
-              )
-            }
-          }
-        }
+      if (doseResult.isBlocked || !labelConfirmed) {
+        if (doseResult.isBlocked) SeverityAlert(severity = doseResult.alertSeverity, title = doseResult.alertTitleFa,
+          body = doseResult.alertBodyFa, modifier = Modifier.testTag("syringe_dose_alert_banner"))
+        return@Column
       }
 
       // 4. Interactive Graduated Syringe Visualizer & Direct Draggable Plunger
@@ -402,7 +282,7 @@ fun InteractiveOralSyringeLabCard(
           ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
               Text(
-                text = if (doseResult.isBlocked) "دوز خانگی قفل‌شده:" else "مقدار دقیق روی سرنگ مدرج:",
+                text = if (doseResult.isBlocked) "دوز خانگی قفل‌شده:" else "حجم آموزشی روی سرنگ:",
                 style = MaterialTheme.typography.labelLarge,
               )
               if (!doseResult.isBlocked) {
@@ -453,25 +333,6 @@ fun InteractiveOralSyringeLabCard(
                 Modifier
                   .fillMaxWidth()
                   .height(106.dp)
-                  .pointerInput(selectedFormulation, ageMonths) {
-                    detectHorizontalDragGestures { change, _ ->
-                      change.consume()
-                      val w = size.width.toFloat().coerceAtLeast(1f)
-                      val barrelLeft = w * 0.08f + 4f
-                      val barrelWidth = w * 0.64f
-                      val frac = ((change.position.x - barrelLeft) / barrelWidth).coerceIn(0f, 1f)
-                      val draggedMl = frac * maxScale
-                      val estimatedKg =
-                        LiquidDoseVisualizerEngine.estimateWeightFromDraggedMl(
-                          formulation = selectedFormulation,
-                          ageMonths = ageMonths,
-                          draggedMl = draggedMl,
-                        )
-                      if (estimatedKg != null) {
-                        weightKg = estimatedKg
-                      }
-                    }
-                  }
                   .testTag("syringe_visual_canvas")
             ) {
               val w = size.width
@@ -614,7 +475,7 @@ fun InteractiveOralSyringeLabCard(
             Text(
               text =
                 if (doseResult.isWeightBased && !doseResult.isBlocked) {
-                  "نکته: می‌توانید نشانگر وزن یا خود پیستون سرنگ را بکشید؛ ${selectedFormulation.intervalFa}"
+                  "فاصله نوبت‌ها را با دستور داروساز تطبیق دهید. ${selectedFormulation.intervalFa}"
                 } else {
                   selectedFormulation.intervalFa
                 },

@@ -63,12 +63,12 @@ enum class PediatricIconKind {
 @DrawableRes
 private fun PediatricIconKind.brandSheetDrawableOrNull(): Int? =
   when (this) {
-    PediatricIconKind.FEVER -> R.drawable.ic_brand_fever
+    PediatricIconKind.FEVER -> R.drawable.mano_symptoms_orbit
     PediatricIconKind.MEDICINE -> R.drawable.ic_brand_medicines
     PediatricIconKind.SCANNER -> R.drawable.ic_brand_scanner
-    PediatricIconKind.GROWTH -> R.drawable.ic_brand_child_health
+    PediatricIconKind.GROWTH -> R.drawable.mano_growth_orbit
     PediatricIconKind.DIAPER -> R.drawable.ic_brand_skin
-    PediatricIconKind.FAQ -> R.drawable.ic_brand_faq
+    PediatricIconKind.FAQ -> R.drawable.mano_questions_orbit
     PediatricIconKind.SAFETY_SHIELD -> R.drawable.ic_brand_safety
     PediatricIconKind.COMPARE_LAB -> R.drawable.ic_brand_labs
     PediatricIconKind.FOLLOW_UP -> R.drawable.ic_brand_followup
@@ -100,7 +100,7 @@ fun Mano3DIconArtwork(
       Image(
         painter = painterResource(id = brandDrawable),
         contentDescription = null,
-        contentScale = ContentScale.Crop,
+        contentScale = ContentScale.Fit,
         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(size * 0.24f)),
       )
     } else {

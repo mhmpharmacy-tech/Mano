@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -48,5 +81,26 @@ const triage_1 = require("../src/triage");
     });
     strict_1.default.equal(result.outcome, "NONURGENT");
     strict_1.default.equal(result.ruleId, "rule_nonurgent_pass_eligible");
+});
+(0, node_test_1.default)("every red flag selectable on Android prevents a nonurgent pass", async () => {
+    const { readFile } = await Promise.resolve().then(() => __importStar(require("node:fs/promises")));
+    const seeds = await readFile("../app/src/main/java/com/example/data/ManoSourcesAndClinicalSeed.kt", "utf8");
+    const flags = [...seeds.matchAll(/RedFlagOption\("([^"]+)",\s*"[^"]+",\s*(true|false)\)/g)];
+    strict_1.default.ok(flags.length >= 20);
+    for (const [, id, critical] of flags) {
+        const decision = (0, triage_1.evaluateServerTriage)({ ageBandId: "toddler_1_3y", selectedRedFlagIds: [id] });
+        strict_1.default.equal(decision.outcome, critical === "true" ? "URGENT_EMERGENCY" : "NEEDS_TIMELY_REVIEW", id);
+    }
+});
+(0, node_test_1.default)("unknown flags and invalid durations cannot authorize an online case", () => {
+    for (const durationHours of [-1, 1.5, Infinity, NaN]) {
+        strict_1.default.throws(() => (0, triage_1.evaluateServerTriage)({ ageBandId: "infant_3_12m", durationHours }));
+    }
+    strict_1.default.throws(() => (0, triage_1.evaluateServerTriage)({ ageBandId: "infant_3_12m", selectedRedFlagIds: ["unknown"] }));
+});
+(0, node_test_1.default)("persistent fever and young infant fever require medical assessment", () => {
+    strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "infant_3_12m", symptomFlowId: "cough", temperatureCelsius: 39 }).outcome, "NEEDS_TIMELY_REVIEW");
+    strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "toddler_1_3y", symptomFlowId: "fever", durationHours: 120 }).outcome, "NEEDS_TIMELY_REVIEW");
+    strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "newborn", symptomFlowId: "cough", temperatureCelsius: 38, durationHours: -1 }).outcome, "URGENT_EMERGENCY");
 });
 //# sourceMappingURL=triage.test.js.map

@@ -169,22 +169,6 @@ fun ManoOnboardingOverlay(
       else VaccinationScheduleEngine.parseFlexibleDateToEpochMs(birthDateInput)
     }
 
-  val effectiveAgeMonths =
-    remember(parsedBirthDateMs, selectedAgeBand) {
-      if (parsedBirthDateMs != null) {
-        val days = VaccinationScheduleEngine.diffDays(parsedBirthDateMs, System.currentTimeMillis()).coerceAtLeast(0)
-        (days / 30.4375).toInt().coerceIn(0, 144)
-      } else {
-        when (selectedAgeBand) {
-          AgeBand.NEWBORN -> 2
-          AgeBand.INFANT_3_12M -> 8
-          AgeBand.TODDLER_1_3Y -> 24
-          AgeBand.PRESCHOOL_3_6Y -> 48
-          AgeBand.SCHOOL_6_PLUS -> 84
-        }
-      }
-    }
-
   val parsedWeightKg = remember(weightKgInput) { parsePositiveDecimal(weightKgInput) }
   val parsedHeightCm = remember(heightCmInput) { parsePositiveDecimal(heightCmInput) }
 
@@ -584,18 +568,6 @@ fun ManoOnboardingOverlay(
                   remember(parsedBirthDateMs) {
                     VaccinationScheduleEngine.resolveSchedule(birthDateEpochMs = parsedBirthDateMs)
                   }
-                val previewSyringeEval =
-                  remember(effectiveAgeMonths, parsedWeightKg) {
-                    val form =
-                      if (effectiveAgeMonths < 12) LiquidFormulationId.ACETAMINOPHEN_DROPS_100
-                      else LiquidFormulationId.ACETAMINOPHEN_SYRUP_120_5
-                    LiquidDoseVisualizerEngine.evaluate(
-                      formulation = form,
-                      ageMonths = effectiveAgeMonths,
-                      weightKg = (parsedWeightKg ?: 10f).coerceIn(3f, 40f),
-                    )
-                  }
-
                 Row(
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -628,15 +600,7 @@ fun ManoOnboardingOverlay(
                   icon = Icons.Rounded.MedicalServices,
                   accent = if (isDark) DarkAqua else SeaGreen,
                   title = "سرنگ مدرج mL و ایمنی دارو",
-                  detail =
-                    when {
-                      previewSyringeEval.isBlocked ->
-                        "قفل ایمنی نوزاد فعال شد: در کودکان زیر ۳ ماه دوز خانگی نمایش داده نمی‌شود و نیاز به نظر پزشک است."
-                      parsedWeightKg != null ->
-                        "بر اساس وزن ${String.format(Locale.US, "%.1f", parsedWeightKg)} kg، خط‌کش سرنگ برای ${previewSyringeEval.formulation.shortLabelFa} (محدوده راهنمای ${String.format(Locale.US, "%.1f", previewSyringeEval.recommendedMl)} mL) آماده شد."
-                      else ->
-                        "سرنگ سه‌بعدی mL بر اساس گروه سنی «${selectedAgeBand.labelFa}» تنظیم شد؛ پس از ثبت وزن، محاسبه دقیق‌تر می‌شود."
-                    },
+                  detail = "برای تمرین خواندن سرنگ، در بخش ابزارها نام و غلظت روی بطری، سن دقیق و وزن کودک را وارد کنید.",
                   testTag = "onboarding_preview_syringe",
                 )
 
@@ -739,7 +703,7 @@ fun ManoOnboardingOverlay(
                   step = 1
                 }
                 1 -> {
-                  if (birthDateInput.isNotBlank() && parsedBirthDateMs == null) {
+                  if (birthDateInput.isNotBlank() && (parsedBirthDateMs == null || parsedBirthDateMs > System.currentTimeMillis())) {
                     validationErrorFa = "فرمت تاریخ تولد معتبر نیست (مثلاً 1403/05/15 وارد کنید یا از دکمه‌های سریع استفاده کنید)."
                     return@Button
                   }

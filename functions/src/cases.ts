@@ -47,7 +47,7 @@ export interface IssueTriagePassRequest {
 }
 
 export interface IssueTriagePassResponse {
-  outcome: "URGENT_EMERGENCY" | "NONURGENT";
+  outcome: "URGENT_EMERGENCY" | "NEEDS_TIMELY_REVIEW" | "NONURGENT";
   eligibleForNonUrgentConsultation: boolean;
   triagePassId: string | null;
   expiresAt: number | null;
@@ -181,7 +181,7 @@ export class ConsultationCaseService {
     const decision = evaluateServerTriage(req);
     if (decision.outcome !== "NONURGENT") {
       return {
-        outcome: "URGENT_EMERGENCY",
+        outcome: decision.outcome,
         eligibleForNonUrgentConsultation: false,
         triagePassId: null,
         expiresAt: null,

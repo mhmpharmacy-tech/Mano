@@ -62,6 +62,7 @@ class ManoSyrupScannerTest {
   fun cleanupDataStore() {
     runBlocking {
       val repo = ManoPreferencesRepository(ApplicationProvider.getApplicationContext())
+      repo.setLocalChildProfile(null)
       repo.setGalacticOrbitSelection("", "")
       val existingScans = repo.savedSyrupScans.first()
       existingScans.forEach { repo.deleteSyrupScan(it.id) }
@@ -93,6 +94,10 @@ class ManoSyrupScannerTest {
         currentMedsFa = "ندارد",
         consentGranted = true,
       )
+
+    val withoutProfile = SyrupConcentrationMatcher.reconcileFromAi(payload, null)
+    assertFalse(withoutProfile.canAutoFillSyringe)
+    assertTrue(withoutProfile.dosePreview!!.isBlocked)
 
     val result = SyrupConcentrationMatcher.reconcileFromAi(payload, child)
 
@@ -252,6 +257,13 @@ class ManoSyrupScannerTest {
 
   @Test
   fun homeAndScannerFlow_manualCalibrationAndParentConfirm_opens3DStudioWithScannedBottle() {
+    runBlocking {
+      ManoPreferencesRepository(ApplicationProvider.getApplicationContext()).setLocalChildProfile(
+        ChildProfileDemo(aliasFa = "نمونه", birthDateOrAgeFa = "۸ ماه", ageBand = AgeBand.INFANT_3_12M,
+          weightKgText = "8", weightDateFa = "امروز", allergiesFa = "", currentMedsFa = "",
+          consentGranted = true, ageMonthsExact = 8),
+      )
+    }
     composeTestRule.waitForIdle()
     // 1. Verify Home Selective Menu syrup scanner card
     composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_menu_scanner"))
