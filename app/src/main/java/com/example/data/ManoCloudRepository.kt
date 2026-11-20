@@ -17,6 +17,7 @@ import com.example.domain.model.VaccineRecord
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
+import com.example.domain.util.VaccinationScheduleEngine
 import com.example.domain.util.TimelineDosePoint
 import com.example.domain.util.TimelineTempPoint
 import com.google.firebase.Firebase
@@ -76,7 +77,10 @@ class ManoCloudRepository(
               allergiesFa = cloud.allergiesFa,
               currentMedsFa = cloud.currentMedsFa,
               consentGranted = cloud.consentGranted,
-              ageMonthsExact = LiquidDoseVisualizerEngine.parseAgeMonthsFromText(cloud.birthDateOrAgeFa),
+              ageMonthsExact = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(
+                profile = null,
+                birthDateEpochMs = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(cloud.birthDateOrAgeFa),
+              ) ?: LiquidDoseVisualizerEngine.parseAgeMonthsFromText(cloud.birthDateOrAgeFa),
             )
           }
         }
