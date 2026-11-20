@@ -77,7 +77,8 @@ class ManoTimelineAnd3DWalkthroughTest {
 
   @Test
   fun doseTimeResolver_usesActualClockTimeAndRejectsMalformedEntries() {
-    val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+    // The caregiver enters local wall time. Anchor the fixture in the same device zone.
+    val cal = java.util.Calendar.getInstance().apply {
       clear()
       set(2026, java.util.Calendar.NOVEMBER, 21, 18, 0, 0)
     }

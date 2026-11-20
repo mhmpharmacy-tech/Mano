@@ -17,7 +17,7 @@ import {
   VALID_SYMPTOM_FLOWS,
 } from "./config";
 import { consumeRateLimit } from "./rateLimit";
-import { evaluateServerTriage } from "./triage";
+import { evaluateServerTriage, TriageEvaluationInput } from "./triage";
 import {
   AgeBandId,
   AuditEventDoc,
@@ -36,15 +36,7 @@ import {
   TriagePassDoc,
 } from "./types";
 
-export interface IssueTriagePassRequest {
-  ageBandId: string;
-  symptomFlowId?: string;
-  temperatureCelsius?: number | null;
-  durationHours?: number | null;
-  selectedRedFlagIds?: string[];
-  questionSummaryFa?: string;
-  hasUrgentFlag?: boolean;
-}
+export type IssueTriagePassRequest = TriageEvaluationInput;
 
 export interface IssueTriagePassResponse {
   outcome: "URGENT_EMERGENCY" | "NEEDS_TIMELY_REVIEW" | "NONURGENT";
@@ -57,12 +49,10 @@ export interface IssueTriagePassResponse {
   emergencyActionsFa: string[];
 }
 
-export interface SubmitConsultationCaseRequest {
+export interface SubmitConsultationCaseRequest extends TriageEvaluationInput {
   pharmacyId: string;
   triagePassId: string;
   categoryName: string;
-  ageBandId: string;
-  symptomFlowId?: string;
   questionSummaryFa: string;
   hasUrgentFlag: boolean;
   consentAccepted: boolean;
@@ -281,6 +271,7 @@ export class ConsultationCaseService {
 
     // Re-evaluate submitted question text so unsafe keywords cannot bypass triage pass issuance
     const textTriageCheck = evaluateServerTriage({
+      ...req,
       ageBandId,
       symptomFlowId,
       questionSummaryFa,

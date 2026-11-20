@@ -63,10 +63,10 @@ const CRITICAL_RED_FLAG_IDS = new Set([
     "breathing", "lips", "lethargy", "dehydration", "rash_nonblanch",
     "bilious_vomit", "blood_stool", "severe_distension", "breathing_effort",
     "stridor_rest", "choking_history", "fever_blisters", "severe_dehyd",
-    "green_vomit", "unable_fluids",
+    "green_vomit", "unable_fluids", "infant_no_meconium",
 ]);
 const REVIEW_RED_FLAG_IDS = new Set([
-    "ear_pain_or_crying", "infant_no_meconium", "painful_fissure", "prolonged_2w",
+    "ear_pain_or_crying", "painful_fissure", "prolonged_2w",
     "spreading_severe", "no_improve_3d", "bloody_diarrhea",
 ]);
 const HIGH_RISK_COMPACT_KEYWORDS = [
@@ -205,17 +205,22 @@ function evaluateServerTriage(rawInput) {
         (!Number.isInteger(duration) || duration < 0 || duration > 8760)) {
         throw new config_1.AppError("invalid-argument", "durationHours must be a non-negative whole number up to 8760.");
     }
-    const infantHighFever = ageBandId === "infant_3_12m" && tempC !== null && tempC >= 39;
+    const months = rawInput.ageMonthsExact;
+    if (months != null && (ageBandId !== "infant_3_12m" || !Number.isInteger(months) || months < 3 || months > 11)) {
+        throw new config_1.AppError("invalid-argument", "ageMonthsExact must be 3–11 completed months in the infant band.");
+    }
+    const infantHighFever = ageBandId === "infant_3_12m" && (months == null || months <= 6) &&
+        tempC !== null && tempC >= 39;
     const prolonged = (symptomFlowId === "fever" && (duration ?? 0) >= 72) ||
         (symptomFlowId === "cough" && (duration ?? 0) >= 336);
     if (redFlags.some((id) => REVIEW_RED_FLAG_IDS.has(id)) || infantHighFever || prolonged) {
         return {
             outcome: "NEEDS_TIMELY_REVIEW",
             ageBandId, symptomFlowId,
-            ruleId: infantHighFever ? "rule_infant_high_fever_unknown_exact_age" : "rule_timely_clinical_review",
+            ruleId: infantHighFever && months == null ? "rule_infant_high_fever_unknown_exact_age" : "rule_timely_clinical_review",
             titleFa: "نیاز به ارزیابی پزشک؛ پرسش غیرفوری کافی نیست",
             summaryFa: infantHighFever
-                ? "در شیرخوار ۳ تا ۶ ماهه دمای ۳۹ درجه نیازمند ارزیابی فوری پزشک است؛ چون سن دقیق این فرم مشخص نیست، مسیر احتیاطی انتخاب شد."
+                ? "دمای ۳۹ درجه یا بیشتر ثبت شده و سن شیرخوار در بازهٔ ۳ تا ۶ ماه است یا سن دقیق مشخص نیست. برای ارزیابی سریع با پزشک تماس بگیرید."
                 : "علامت هشدار یا طول مدت علائم نیازمند ارزیابی به‌موقع پزشک است. گذرنامه مشاوره غیرفوری صادر نمی‌شود.",
             emergencyActionsFa: ["برای ارزیابی با پزشک تماس بگیرید؛ در صورت تنگی نفس، کبودی، تشنج یا کاهش هوشیاری با ۱۱۵ تماس بگیرید."],
         };

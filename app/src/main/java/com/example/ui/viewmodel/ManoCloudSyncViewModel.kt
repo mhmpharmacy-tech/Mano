@@ -8,6 +8,7 @@ import com.example.data.ManoCloudRepository
 import com.example.data.MedicationDoseLogCloud
 import com.example.data.UrgentTriageBlockedException
 import com.example.domain.model.AgeBand
+import com.example.domain.model.SymptomReferral
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.ConsultationRequestDemo
@@ -422,6 +423,7 @@ class ManoCloudSyncViewModel(
     questionSummaryFa: String,
     hasUrgentFlag: Boolean,
     consentAccepted: Boolean,
+    referral: SymptomReferral? = null,
     onSuccess: () -> Unit = {},
   ) {
     if (_isSubmittingConsultation.value) return
@@ -437,6 +439,7 @@ class ManoCloudSyncViewModel(
             questionSummaryFa = questionSummaryFa,
             hasUrgentFlag = hasUrgentFlag,
             consentAccepted = consentAccepted,
+            referral = referral,
           )
         if (result.isSuccess) {
           val created = result.getOrThrow()

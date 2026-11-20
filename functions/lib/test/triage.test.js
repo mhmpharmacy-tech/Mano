@@ -103,4 +103,17 @@ const triage_1 = require("../src/triage");
     strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "toddler_1_3y", symptomFlowId: "fever", durationHours: 120 }).outcome, "NEEDS_TIMELY_REVIEW");
     strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "newborn", symptomFlowId: "cough", temperatureCelsius: 38, durationHours: -1 }).outcome, "URGENT_EMERGENCY");
 });
+(0, node_test_1.default)("infant screening uses completed months and keeps the cautious default for older clients", () => {
+    const infant = { ageBandId: "infant_3_12m", symptomFlowId: "cough", temperatureCelsius: 39 };
+    for (const ageMonthsExact of [undefined, null, 3, 6]) {
+        strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ...infant, ageMonthsExact }).outcome, "NEEDS_TIMELY_REVIEW");
+    }
+    for (const ageMonthsExact of [7, 11]) {
+        strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ...infant, ageMonthsExact }).outcome, "NONURGENT");
+    }
+    for (const ageMonthsExact of [2, 12, 3.5]) {
+        strict_1.default.throws(() => (0, triage_1.evaluateServerTriage)({ ...infant, ageMonthsExact }));
+    }
+    strict_1.default.throws(() => (0, triage_1.evaluateServerTriage)({ ...infant, ageBandId: "newborn", temperatureCelsius: 37, ageMonthsExact: 3 }));
+});
 //# sourceMappingURL=triage.test.js.map

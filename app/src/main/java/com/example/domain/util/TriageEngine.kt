@@ -13,6 +13,9 @@ import com.example.domain.model.TriageRule
  */
 object TriageEngine {
 
+  fun isExtremeTemperature(celsius: Double?): Boolean =
+    celsius != null && celsius in 34.0..43.0 && (celsius < 35.0 || celsius >= 40.5)
+
   fun evaluate(
     flow: SymptomFlow,
     ageBand: AgeBand,
@@ -85,6 +88,21 @@ object TriageEngine {
       )
     }
 
+    if (isExtremeTemperature(temperatureCelsius)) {
+      return TriageEvaluationResult(
+        outcome = TriageOutcome.URGENT_EMERGENCY,
+        titleFa = "دمای ثبت‌شده نیاز به ارزیابی فوری دارد",
+        summaryFa = "دمای ثبت‌شده $temperatureCelsius درجه است. برای ارزیابی فوری حضوری اقدام کنید.",
+        immediateActionsFa = listOf("کودک را به مرکز درمانی برسانید یا با اورژانس ۱۱۵ تماس بگیرید."),
+        escalationCriteriaFa = flow.escalationCriteriaFa,
+        relatedArticleSlug = flow.relatedArticleSlug,
+        canShowSelfCare = false,
+        triggeredRule = TriageRule("rule_extreme_temperature_emergency", "دمای ثبت‌شده در محدوده هشدار فوری است.",
+          TriageOutcome.URGENT_EMERGENCY, ReviewStatus.NEEDS_CLINICAL_REVIEW),
+        showPharmacistOption = false,
+      )
+    }
+
     val invalidInput =
       (temperatureCelsius != null && (!temperatureCelsius.isFinite() || temperatureCelsius !in 34.0..43.0)) ||
       (durationHours != null && durationHours !in 0..8760) ||
@@ -139,7 +157,7 @@ object TriageEngine {
             outcome = TriageOutcome.NEEDS_TIMELY_REVIEW,
             reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
           ),
-        showPharmacistOption = !youngInfantHighTemp,
+        showPharmacistOption = false,
       )
     }
 

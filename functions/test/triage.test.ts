@@ -75,3 +75,17 @@ test("persistent fever and young infant fever require medical assessment", () =>
   assert.equal(evaluateServerTriage({ageBandId: "toddler_1_3y", symptomFlowId: "fever", durationHours: 120}).outcome, "NEEDS_TIMELY_REVIEW");
   assert.equal(evaluateServerTriage({ageBandId: "newborn", symptomFlowId: "cough", temperatureCelsius: 38, durationHours: -1}).outcome, "URGENT_EMERGENCY");
 });
+
+test("infant screening uses completed months and keeps the cautious default for older clients", () => {
+  const infant = {ageBandId: "infant_3_12m", symptomFlowId: "cough", temperatureCelsius: 39};
+  for (const ageMonthsExact of [undefined, null, 3, 6]) {
+    assert.equal(evaluateServerTriage({...infant, ageMonthsExact}).outcome, "NEEDS_TIMELY_REVIEW");
+  }
+  for (const ageMonthsExact of [7, 11]) {
+    assert.equal(evaluateServerTriage({...infant, ageMonthsExact}).outcome, "NONURGENT");
+  }
+  for (const ageMonthsExact of [2, 12, 3.5]) {
+    assert.throws(() => evaluateServerTriage({...infant, ageMonthsExact}));
+  }
+  assert.throws(() => evaluateServerTriage({...infant, ageBandId: "newborn", temperatureCelsius: 37, ageMonthsExact: 3}));
+});

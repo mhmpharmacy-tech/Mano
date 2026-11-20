@@ -114,6 +114,7 @@ fun SymptomNavigatorScreen(
   onGenerateSafetyChecklist: (primaryFlow: SymptomFlow, coSymptomsFa: List<String>) -> Unit = { _, _ -> },
   onToggleSafetyChecklistItem: (String) -> Unit = {},
   onUpdateAgeMonths: (String) -> Unit = {},
+  onResetChecklist: () -> Unit = {},
 ) {
   val currentFlow = flows.firstOrNull { it.id == wizard.selectedSymptomId } ?: flows.first()
 
@@ -130,6 +131,10 @@ fun SymptomNavigatorScreen(
       )
     }
   var selectedCompanionSymptoms by rememberSaveable { mutableStateOf(emptyList<String>()) }
+
+  androidx.compose.runtime.LaunchedEffect(wizard, selectedCompanionSymptoms) {
+    onResetChecklist()
+  }
 
   BackHandler(enabled = wizard.step > 0) {
     onBack()
@@ -292,7 +297,8 @@ fun SymptomNavigatorScreen(
                     modifier = Modifier.fillMaxWidth().testTag("wizard_exact_age_input"),
                   )
                 }
-                if (currentFlow.asksTemperature || wizard.selectedAgeBand in setOf(AgeBand.NEWBORN, AgeBand.INFANT_3_12M)) {
+                if (currentFlow.asksTemperature || wizard.temperatureText.isNotBlank() ||
+                  wizard.selectedAgeBand in setOf(AgeBand.NEWBORN, AgeBand.INFANT_3_12M)) {
                   OutlinedTextField(
                     value = wizard.temperatureText,
                     onValueChange = onUpdateTemp,
@@ -404,7 +410,7 @@ fun SymptomNavigatorScreen(
                 )
               }
 
-              if (result.canShowSelfCare) item {
+              if (result.showPharmacistOption) item {
                 GeminiPediatricianSafetyChecklistCard(
                   currentFlow = currentFlow,
                   companionSymptoms = selectedCompanionSymptoms,
@@ -469,21 +475,8 @@ fun SymptomNavigatorScreen(
 
         if (wizard.step < 3) {
           item {
-            GeminiPediatricianSafetyChecklistCard(
-              currentFlow = currentFlow,
-              companionSymptoms = selectedCompanionSymptoms,
-              companionOptions = companionSymptomOptions,
-              onToggleCompanionSymptom = { item ->
-                selectedCompanionSymptoms =
-                  if (item in selectedCompanionSymptoms) selectedCompanionSymptoms - item
-                  else selectedCompanionSymptoms + item
-              },
-              checklistState = safetyChecklistState,
-              onGenerate = {
-                onGenerateSafetyChecklist(currentFlow, selectedCompanionSymptoms)
-              },
-              onToggleCheckItem = onToggleSafetyChecklistItem,
-            )
+            Text("برای دسترسی به چک‌لیست آموزشی، ابتدا سن کودک و علائم هشدار را در غربالگری ثبت کنید.",
+              style = MaterialTheme.typography.bodySmall)
           }
 
           item {
