@@ -19,7 +19,13 @@ import {
 } from "./firestoreStore";
 import { CallerContext, StaffClaims } from "./types";
 
-const ENFORCE_APP_CHECK = process.env.MANO_ENFORCE_APP_CHECK !== "false";
+// Clinical endpoints remain unavailable until independent release gates are satisfied.
+const ENFORCE_APP_CHECK = true;
+function requireClinicalRelease(): void {
+  if (process.env.MANO_CLINICAL_SERVICE_ENABLED !== "true") {
+    throw new HttpsError("failed-precondition", "Clinical service is not enabled.");
+  }
+}
 
 function extractCaller(request: CallableRequest<unknown>): CallerContext | null {
   if (!request.auth) {
@@ -61,6 +67,7 @@ export const listAcceptingPharmacies = onCall(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
+      requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.listAcceptingPharmacies(extractCaller(request));
     } catch (err) {
@@ -73,6 +80,7 @@ export const issueConsultationTriagePass = onCall<IssueTriagePassRequest>(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
+      requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.issueConsultationTriagePass(
         extractCaller(request),
@@ -88,6 +96,7 @@ export const submitConsultationCase = onCall<SubmitConsultationCaseRequest>(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
+      requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.submitConsultationCase(
         extractCaller(request),
@@ -103,6 +112,7 @@ export const getParentConsultation = onCall<GetParentConsultationRequest>(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
+      requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.getParentConsultation(
         extractCaller(request),
@@ -118,6 +128,7 @@ export const listParentConsultations = onCall<ListParentConsultationsRequest>(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
+      requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.listParentConsultations(
         extractCaller(request),
@@ -133,6 +144,7 @@ export const getPharmacyInbox = onCall<GetPharmacyInboxRequest>(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
+      requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.getPharmacyInbox(
         extractCaller(request),
@@ -148,6 +160,7 @@ export const reviewConsultationCase = onCall<ReviewConsultationCaseRequest>(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
+      requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.reviewConsultationCase(
         extractCaller(request),
