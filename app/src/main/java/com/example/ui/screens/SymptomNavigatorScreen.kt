@@ -291,7 +291,7 @@ fun SymptomNavigatorScreen(
                     modifier = Modifier.fillMaxWidth().testTag("wizard_exact_age_input"),
                   )
                 }
-                if (currentFlow.asksTemperature) {
+                if (currentFlow.asksTemperature || wizard.selectedAgeBand in setOf(AgeBand.NEWBORN, AgeBand.INFANT_3_12M)) {
                   OutlinedTextField(
                     value = wizard.temperatureText,
                     onValueChange = onUpdateTemp,
