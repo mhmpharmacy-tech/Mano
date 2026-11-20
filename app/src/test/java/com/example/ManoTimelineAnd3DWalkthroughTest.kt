@@ -43,6 +43,25 @@ class ManoTimelineAnd3DWalkthroughTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   @Test
+  fun doseTimeResolver_usesActualClockTimeAndRejectsMalformedEntries() {
+    val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+      clear()
+      set(2026, java.util.Calendar.NOVEMBER, 21, 18, 0, 0)
+    }
+    val now = cal.timeInMillis
+    val afternoon = FeverDoseTimelineEngine.resolveDoseTimeMs("۱۴:۰۰", now)
+    assertNotNull(afternoon)
+    assertEquals(4 * 3_600_000L, now - afternoon!!)
+
+    val nextMorning = now + 12 * 3_600_000L // 06:00 following day
+    val lastNight = FeverDoseTimelineEngine.resolveDoseTimeMs("23:00", nextMorning)
+    assertNotNull(lastNight)
+    assertEquals(7 * 3_600_000L, nextMorning - lastNight!!)
+    assertNull(FeverDoseTimelineEngine.resolveDoseTimeMs("25:00", now))
+    assertNull(FeverDoseTimelineEngine.resolveDoseTimeMs("دیروز", now))
+  }
+
+  @Test
   fun feverDoseTimelineEngine_detectsShortIntervalAndMergesChronologicalFeed() {
     val now = 1_750_000_000_000L
     val hourMs = 3_600_000L
