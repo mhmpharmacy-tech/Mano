@@ -207,42 +207,11 @@ service cloud.firestore {
     }
 
     match /users/{userId}/consultations/{consultationId} {
+      // Legacy direct-to-client consultation state is read-only. Only verified
+      // pharmacist Cloud Functions may transition the separate authoritative case.
       allow list: if isOwner(userId);
       allow get: if isOwner(userId) && isValidId(consultationId);
-
-      allow create: if isOwner(userId) &&
-                       isValidId(consultationId) &&
-                       incoming().userId == request.auth.uid &&
-                       incoming().status == 'PENDING' &&
-                       incoming().keys().hasAll([
-                         'userId', 'categoryName', 'ageBandId', 'questionSummaryFa',
-                         'hasUrgentFlag', 'consentAccepted', 'status', 'createdAt', 'updatedAt'
-                       ]) &&
-                       incoming().keys().hasOnly([
-                         'userId', 'categoryName', 'ageBandId', 'questionSummaryFa',
-                         'hasUrgentFlag', 'consentAccepted', 'status', 'createdAt', 'updatedAt'
-                       ]) &&
-                       incoming().createdAt is timestamp &&
-                       incoming().createdAt <= request.time &&
-                       incoming().updatedAt is timestamp &&
-                       incoming().updatedAt <= request.time &&
-                       isValidConsultation(incoming());
-
-      allow update: if isOwner(userId) &&
-                       isValidId(consultationId) &&
-                       isValidConsultation(incoming()) &&
-                       incoming().userId == existing().userId &&
-                       incoming().createdAt == existing().createdAt &&
-                       existing().status != 'REVIEWED' &&
-                       (
-                         (existing().status == 'PENDING' && incoming().status == 'RECEIVED') ||
-                         (existing().status == 'RECEIVED' && incoming().status == 'REVIEWED')
-                       ) &&
-                       incoming().updatedAt is timestamp &&
-                       incoming().updatedAt <= request.time &&
-                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
-
-      allow delete: if isOwner(userId) && isValidId(consultationId);
+      allow create, update, delete: if false;
     }
 
     match /users/{userId}/bookmarks/{bookmarkId} {
