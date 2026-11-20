@@ -50,6 +50,9 @@ class ManoTimelineAnd3DWalkthroughTest {
       birthDateOrAgeFa = "۲ ماه",
       ageBand = AgeBand.NEWBORN,
       weightKgText = "4",
+      weightDateFa = "امروز",
+      allergiesFa = "",
+      currentMedsFa = "",
       consentGranted = true,
       ageMonthsExact = 2,
     )
