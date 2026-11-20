@@ -43,6 +43,36 @@ class ManoTimelineAnd3DWalkthroughTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   @Test
+  fun newbornAt38C_hasImmediateTimelineAlert_evenBelowGeneral39Threshold() {
+    val now = 1_750_000_000_000L
+    val newborn = ChildProfileDemo(
+      aliasFa = "شیرخوار",
+      birthDateOrAgeFa = "۲ ماه",
+      ageBand = AgeBand.NEWBORN,
+      weightKgText = "4",
+      consentGranted = true,
+      ageMonthsExact = 2,
+    )
+    val fever = TimelineTempPoint(
+      id = "fever_38",
+      tempCelsius = 38.0f,
+      timestampMs = now - 60_000L,
+      timeLabelFa = "۱۴:۰۰",
+      siteFa = "زیربغلی",
+      caregiverFa = "مادر",
+      noteFa = "",
+      isSyncedCloud = false,
+    )
+    val snapshot = FeverDoseTimelineEngine.buildSnapshot(
+      emptyList(), listOf(fever), emptyList(), emptyList(), nowMs = now
+    )
+    val result = FeverDoseTimelineEngine.evaluateHighFeverAlert(snapshot, newborn)
+    assertNotNull(result)
+    assertTrue(result!!.titleFa.contains("زیر ۳ ماه"))
+    assertTrue(result.bodyFa.contains("فوری"))
+  }
+
+  @Test
   fun doseTimeResolver_usesActualClockTimeAndRejectsMalformedEntries() {
     val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
       clear()
