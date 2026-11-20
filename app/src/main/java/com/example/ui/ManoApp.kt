@@ -403,37 +403,14 @@ fun ManoApp(
     if (currentUser != null) (cloudVaccineRecordsState as? CloudDataState.Success)?.data ?: emptyList() else emptyList()
   val activeCloudSyrupScans =
     if (currentUser != null) (cloudSyrupScansState as? CloudDataState.Success)?.data ?: emptyList() else emptyList()
+  // Never combine offline scans from one caregiver with another signed-in account.
   val effectiveSyrupScans =
-    remember(activeCloudSyrupScans, localSyrupScans) {
-      (activeCloudSyrupScans + localSyrupScans)
-        .distinctBy { it.id }
-        .sortedByDescending { it.updatedAtMs }
-    }
-  LaunchedEffect(currentUser?.uid, cloudVaccineRecordsState) {
-    val activeState = cloudVaccineRecordsState
-    if (currentUser != null && activeState is CloudDataState.Success) {
-      viewModel.mirrorCloudVaccineRecords(activeState.data)
-    }
-  }
-  LaunchedEffect(currentUser?.uid, cloudSyrupScansState) {
-    val activeState = cloudSyrupScansState
-    if (currentUser != null && activeState is CloudDataState.Success) {
-      viewModel.mirrorCloudSyrupScans(activeState.data)
-    }
-  }
-  LaunchedEffect(currentUser?.uid, cloudProfileState, localChildProfile, localFeverLogs, localDoseLogs) {
-    val profileState = cloudProfileState
-    val activeCloudVm = cloudVm
-    if (currentUser != null && activeCloudVm != null && profileState is CloudDataState.Success) {
-      activeCloudVm.migrateOfflineDataIfNeeded(
-        localProfile = localChildProfile,
-        localFevers = localFeverLogs,
-        localDoses = localDoseLogs,
-        cloudHasProfile = profileState.data != null,
-        onMigratedSuccess = { viewModel.clearLocalTimelineLogsAfterCloudSync() },
-      )
-    }
-  }
+    if (currentUser != null) activeCloudSyrupScans else localSyrupScans
+
+  // Sensitive offline data MUST NOT be copied to any newly signed-in Google account
+  // without an explicit caregiver-approved migration flow. Global DataStore is not
+  // partitioned by UID. Cloud data is read directly; mirroring is disabled.
+  // A future migration UI must show source profile, destination UID and item counts.
   LaunchedEffect(effectiveChildProfile?.aliasFa) {
     viewModel.setChildAliasFa(effectiveChildProfile?.aliasFa)
   }
@@ -441,7 +418,7 @@ fun ManoApp(
     remember(activeCloudVaccineRecords, localVaccineRecords, childBirthDateEpochMs, vaccineReminderSettings) {
       VaccinationScheduleEngine.resolveSchedule(
         cloudRecords = activeCloudVaccineRecords,
-        localRecords = localVaccineRecords,
+        localRecords = if (currentUser == null) localVaccineRecords else emptyList(),
         birthDateEpochMs = childBirthDateEpochMs,
         reminderSettings = vaccineReminderSettings,
       )
@@ -1702,7 +1679,7 @@ fun ManoApp(
                   onDeleteProfile = {
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
-                      activeCloudVm.deleteChildProfile()
+                      activeCloudVm.deleteChildProfile(onDeleted = { viewModel.deleteChildProfileDemo() })
                     } else {
                       viewModel.deleteChildProfileDemo()
                     }
