@@ -70,4 +70,20 @@ class ManoClinicalReferenceTest {
     }
     assertFalse(assess(AgeBand.SCHOOL_6_PLUS, 37.0, null, setOf("unknown")).canShowSelfCare)
   }
+
+  @Test fun extremeTemperaturesOverrideDurationAndBlockRoutineCareInEveryFlow() {
+    for (flow in ManoContentRepository().symptomFlows) {
+      fun evaluate(temp: Double, duration: Int = 1) =
+        TriageEngine.evaluate(flow, AgeBand.PRESCHOOL_3_6Y, temp, duration, emptySet())
+      for (temp in listOf(34.0, 34.5, 34.99, 40.5, 43.0)) {
+        val result = evaluate(temp, 336)
+        assertEquals("rule_extreme_temperature_emergency", result.triggeredRule.id)
+        assertFalse(result.canShowSelfCare)
+        assertFalse(result.showPharmacistOption)
+      }
+      for (temp in listOf(35.0, 37.0, 40.49)) {
+        assertEquals(TriageOutcome.GENERAL_EDUCATIONAL, evaluate(temp).outcome)
+      }
+    }
+  }
 }

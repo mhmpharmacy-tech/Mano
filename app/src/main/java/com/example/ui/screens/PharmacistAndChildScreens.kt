@@ -173,25 +173,30 @@ fun AskPharmacistScreen(
       SectionCard(modifier = Modifier.testTag("mano_connect_intake_section")) {
         LtrText(text = "MANO Connect • Secure Family Intake", color = MaterialTheme.colorScheme.primary)
         Text("ثبت پرسش غیرفوری از داروساز", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("۱. موضوع پرسش", style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          ConsultationCategory.entries.forEach { cat ->
-            SymptomChip(
-              label = cat.labelFa,
-              selected = state.category == cat,
-              onClick = { onSelectCategory(cat) },
-            )
+        if (state.referral != null) {
+          Text("خلاصه‌ای که همراه پرسش ثبت می‌شود", style = MaterialTheme.typography.titleSmall)
+          Text(state.referral.summaryFa)
+        } else {
+          Text("۱. موضوع پرسش", style = MaterialTheme.typography.titleSmall)
+          FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ConsultationCategory.entries.forEach { cat ->
+              SymptomChip(
+                label = cat.labelFa,
+                selected = state.category == cat,
+                onClick = { onSelectCategory(cat) },
+              )
+            }
           }
-        }
 
-        Text("۲. رده سنی کودک", style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          AgeBand.entries.forEach { band ->
-            SymptomChip(
-              label = band.labelFa,
-              selected = state.ageBand == band,
-              onClick = { onSelectAgeBand(band) },
-            )
+          Text("۲. رده سنی کودک", style = MaterialTheme.typography.titleSmall)
+          FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AgeBand.entries.forEach { band ->
+              SymptomChip(
+                label = band.labelFa,
+                selected = state.ageBand == band,
+                onClick = { onSelectAgeBand(band) },
+              )
+            }
           }
         }
 

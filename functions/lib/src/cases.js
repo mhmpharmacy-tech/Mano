@@ -178,6 +178,7 @@ class ConsultationCaseService {
         }
         // Re-evaluate submitted question text so unsafe keywords cannot bypass triage pass issuance
         const textTriageCheck = (0, triage_1.evaluateServerTriage)({
+            ...req,
             ageBandId,
             symptomFlowId,
             questionSummaryFa,
@@ -211,6 +212,9 @@ class ConsultationCaseService {
             }
             if (passDoc.ageBandId !== ageBandId) {
                 throw new config_1.AppError("invalid-argument", "Triage pass ageBandId does not match submitted consultation.");
+            }
+            if (passDoc.symptomFlowId !== symptomFlowId) {
+                throw new config_1.AppError("invalid-argument", "Triage pass symptomFlowId does not match submitted consultation. Repeat triage for the new concern.");
             }
             const newCase = {
                 caseId,

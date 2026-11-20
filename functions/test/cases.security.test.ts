@@ -601,3 +601,18 @@ test("Gate 7: Public pharmacy discovery, out-of-band bootstrap, and expired doc 
   assert.ok(summary.deletedRateLimits >= 1);
 });
 
+
+test("case intake re-evaluates structured measurements after a nonurgent screening", async () => {
+  const {caseService} = await setupEnv();
+  const parent = makeParent();
+  const screening = {ageBandId: "newborn", symptomFlowId: "fever", temperatureCelsius: 37.1,
+    durationHours: 2, selectedRedFlagIds: [], questionSummaryFa: "پرسش درباره پیگیری دمای کودک"};
+  const pass = await caseService.issueConsultationTriagePass(parent, screening);
+  assert.ok(pass.triagePassId);
+  const request = {...screening, pharmacyId: "pharm_a", triagePassId: pass.triagePassId,
+    categoryName: "SYMPTOMS", hasUrgentFlag: false, consentAccepted: true, consentVersion: "v1"};
+  await assert.rejects(caseService.submitConsultationCase(parent, {...request, temperatureCelsius: 38}),
+    (error: unknown) => error instanceof AppError && error.code === "failed-precondition");
+  const result = await caseService.submitConsultationCase(parent, request);
+  assert.equal(result.questionSummaryFa, screening.questionSummaryFa);
+});

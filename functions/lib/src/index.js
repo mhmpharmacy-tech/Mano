@@ -8,7 +8,13 @@ const cases_1 = require("./cases");
 const cleanup_1 = require("./cleanup");
 const config_1 = require("./config");
 const firestoreStore_1 = require("./firestoreStore");
-const ENFORCE_APP_CHECK = process.env.MANO_ENFORCE_APP_CHECK !== "false";
+// Clinical endpoints remain unavailable until independent release gates are satisfied.
+const ENFORCE_APP_CHECK = true;
+function requireClinicalRelease() {
+    if (process.env.MANO_CLINICAL_SERVICE_ENABLED !== "true") {
+        throw new https_1.HttpsError("failed-precondition", "Clinical service is not enabled.");
+    }
+}
 function extractCaller(request) {
     if (!request.auth) {
         return null;
@@ -43,6 +49,7 @@ const CALLABLE_OPTIONS = {
 };
 exports.listAcceptingPharmacies = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
+        requireClinicalRelease();
         const { caseService } = createServices();
         return await caseService.listAcceptingPharmacies(extractCaller(request));
     }
@@ -52,6 +59,7 @@ exports.listAcceptingPharmacies = (0, https_1.onCall)(CALLABLE_OPTIONS, async (r
 });
 exports.issueConsultationTriagePass = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
+        requireClinicalRelease();
         const { caseService } = createServices();
         return await caseService.issueConsultationTriagePass(extractCaller(request), request.data ?? {});
     }
@@ -61,6 +69,7 @@ exports.issueConsultationTriagePass = (0, https_1.onCall)(CALLABLE_OPTIONS, asyn
 });
 exports.submitConsultationCase = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
+        requireClinicalRelease();
         const { caseService } = createServices();
         return await caseService.submitConsultationCase(extractCaller(request), request.data ?? {});
     }
@@ -70,6 +79,7 @@ exports.submitConsultationCase = (0, https_1.onCall)(CALLABLE_OPTIONS, async (re
 });
 exports.getParentConsultation = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
+        requireClinicalRelease();
         const { caseService } = createServices();
         return await caseService.getParentConsultation(extractCaller(request), request.data ?? {});
     }
@@ -79,6 +89,7 @@ exports.getParentConsultation = (0, https_1.onCall)(CALLABLE_OPTIONS, async (req
 });
 exports.listParentConsultations = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
+        requireClinicalRelease();
         const { caseService } = createServices();
         return await caseService.listParentConsultations(extractCaller(request), request.data ?? {});
     }
@@ -88,6 +99,7 @@ exports.listParentConsultations = (0, https_1.onCall)(CALLABLE_OPTIONS, async (r
 });
 exports.getPharmacyInbox = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
+        requireClinicalRelease();
         const { caseService } = createServices();
         return await caseService.getPharmacyInbox(extractCaller(request), request.data ?? {});
     }
@@ -97,6 +109,7 @@ exports.getPharmacyInbox = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request)
 });
 exports.reviewConsultationCase = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
+        requireClinicalRelease();
         const { caseService } = createServices();
         return await caseService.reviewConsultationCase(extractCaller(request), request.data ?? {});
     }

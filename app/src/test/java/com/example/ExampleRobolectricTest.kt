@@ -165,6 +165,23 @@ class ExampleRobolectricTest {
   }
 
   @Test
+  fun nonurgentSymptomJourneyPreviewsScreeningInThePharmacistForm() {
+    composeTestRule.onNodeWithTag("nav_symptoms").performClick()
+    composeTestRule.onNodeWithTag("wizard_next_btn").performClick()
+    composeTestRule.onNodeWithTag("wizard_age_preschool_3_6y").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("wizard_temp_input").performScrollTo().performTextInput("37.2")
+    composeTestRule.onNodeWithTag("wizard_duration_input").performScrollTo().performTextInput("6")
+    composeTestRule.onNodeWithTag("wizard_next_btn").performClick()
+    composeTestRule.onNodeWithTag("wizard_next_btn").performClick()
+    composeTestRule.onNodeWithTag("symptom_navigator_list")
+      .performScrollToNode(hasTestTag("pharmacist_cta_button"))
+    composeTestRule.onNodeWithTag("pharmacist_cta_button").performClick()
+    val measurement = "دما: 37.2 درجه، مدت: 6 ساعت"
+    composeTestRule.onNodeWithTag("ask_pharmacist_list").performScrollToNode(hasText(measurement, substring = true))
+    composeTestRule.onNodeWithText(measurement, substring = true).performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
   fun journeyF_faqSearch_findsFormulaFaqWithSpaceOrCompact() {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("nav_faq").performClick()

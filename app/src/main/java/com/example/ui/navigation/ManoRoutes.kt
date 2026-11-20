@@ -41,6 +41,7 @@ data class Pediatric3DStudioRoute(
 data class AskPharmacistRoute(
   val categoryId: String? = null,
   val initialMode: String = "parent",
+  val referralId: String? = null,
 )
 
 @Serializable data object MyChildRoute

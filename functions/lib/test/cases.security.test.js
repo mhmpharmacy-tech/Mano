@@ -181,6 +181,7 @@ async function setupEnv() {
         triagePassId: "fake_pass_123",
         categoryName: "OTC",
         ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
         questionSummaryFa: "تلاش برای ارسال بدون گذرنامه واقعی سرور",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -198,17 +199,31 @@ async function setupEnv() {
         triagePassId: alicePass.triagePassId,
         categoryName: "SKIN",
         ageBandId: "preschool_3_6y",
+        symptomFlowId: "rash",
         questionSummaryFa: "استفاده غیرمجاز از گذرنامه کاربر دیگر",
         hasUrgentFlag: false,
         consentAccepted: true,
         consentVersion: "v1",
     }), (err) => err instanceof config_1.AppError && err.code === "permission-denied");
+    // Single-use pass is tied to the evaluated symptom, not just the child's age.
+    await strict_1.default.rejects(() => caseService.submitConsultationCase(alice, {
+        pharmacyId: "pharm_a",
+        triagePassId: alicePass.triagePassId,
+        categoryName: "SKIN",
+        ageBandId: "preschool_3_6y",
+        symptomFlowId: "constipation",
+        questionSummaryFa: "پرسش درباره مشکل شکمی جدید و متفاوت از تریاژ پوستی",
+        hasUrgentFlag: false,
+        consentAccepted: true,
+        consentVersion: "v1",
+    }), (err) => err instanceof config_1.AppError && err.code === "invalid-argument");
     // First legitimate submission succeeds and consumes the pass
     await caseService.submitConsultationCase(alice, {
         pharmacyId: "pharm_a",
         triagePassId: alicePass.triagePassId,
         categoryName: "SKIN",
         ageBandId: "preschool_3_6y",
+        symptomFlowId: "rash",
         questionSummaryFa: "قرمزی خفیف پوست پس از تعویض پودر لباسشویی کودک پنج ساله",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -220,6 +235,7 @@ async function setupEnv() {
         triagePassId: alicePass.triagePassId,
         categoryName: "SKIN",
         ageBandId: "preschool_3_6y",
+        symptomFlowId: "rash",
         questionSummaryFa: "تلاش مجدد با گذرنامه مصرف‌شده برای ارسال تکراری",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -237,6 +253,7 @@ async function setupEnv() {
         triagePassId: expiringPass.triagePassId,
         categoryName: "SUPPLEMENT",
         ageBandId: "toddler_1_3y",
+        symptomFlowId: "otc_question",
         questionSummaryFa: "پرسش درباره قطره ویتامین آد پس از انقضای گذرنامه",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -359,6 +376,7 @@ async function setupEnv() {
             triagePassId: pass.triagePassId,
             categoryName: "OTC",
             ageBandId: "toddler_1_3y",
+            symptomFlowId: "constipation",
             questionSummaryFa: `سوال عادی شماره ${i + 1} درباره تغذیه و مصرف آب کودک`,
             hasUrgentFlag: false,
             consentAccepted: true,
@@ -375,6 +393,7 @@ async function setupEnv() {
         triagePassId: extraPass.triagePassId,
         categoryName: "OTC",
         ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
         questionSummaryFa: "سوال ششم که باید توسط محدودیت نرخ مسدود شود",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -392,6 +411,7 @@ async function setupEnv() {
         triagePassId: recoveredPass.triagePassId,
         categoryName: "OTC",
         ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
         questionSummaryFa: "سوال جدید پس از سپری شدن زمان محدودیت نرخ ارسال",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -425,5 +445,18 @@ async function setupEnv() {
     const summary = await cleanup.purgeExpiredOperationalDocs(50);
     strict_1.default.ok(summary.deletedTriagePasses >= 1);
     strict_1.default.ok(summary.deletedRateLimits >= 1);
+});
+(0, node_test_1.default)("case intake re-evaluates structured measurements after a nonurgent screening", async () => {
+    const { caseService } = await setupEnv();
+    const parent = makeParent();
+    const screening = { ageBandId: "newborn", symptomFlowId: "fever", temperatureCelsius: 37.1,
+        durationHours: 2, selectedRedFlagIds: [], questionSummaryFa: "پرسش درباره پیگیری دمای کودک" };
+    const pass = await caseService.issueConsultationTriagePass(parent, screening);
+    strict_1.default.ok(pass.triagePassId);
+    const request = { ...screening, pharmacyId: "pharm_a", triagePassId: pass.triagePassId,
+        categoryName: "SYMPTOMS", hasUrgentFlag: false, consentAccepted: true, consentVersion: "v1" };
+    await strict_1.default.rejects(caseService.submitConsultationCase(parent, { ...request, temperatureCelsius: 38 }), (error) => error instanceof config_1.AppError && error.code === "failed-precondition");
+    const result = await caseService.submitConsultationCase(parent, request);
+    strict_1.default.equal(result.questionSummaryFa, screening.questionSummaryFa);
 });
 //# sourceMappingURL=cases.security.test.js.map

@@ -378,6 +378,56 @@ class ManoAuditRemediationTest {
   }
 
   @Test
+  fun screeningReferralPreservesConsentBoundaryAndMeasurementsThroughSubmission() {
+    val vm = com.example.ui.viewmodel.ManoViewModel(ApplicationProvider.getApplicationContext())
+    vm.setAskQuestion("پرسش درباره مراقبت کودک")
+    vm.setAskConsent(true)
+    assertNull(vm.validateAskPharmacistForm())
+    assertNull(vm.beginSymptomReferral())
+
+    vm.selectWizardSymptom("diarrhea_vomiting")
+    vm.wizardNextStep()
+    vm.selectWizardAgeBand(AgeBand.INFANT_3_12M)
+    vm.updateWizardAgeMonths("۸")
+    vm.updateWizardTemperature("۳۷٫۲")
+    vm.updateWizardDurationHours("۶")
+    vm.wizardNextStep()
+    vm.wizardNextStep()
+    val id = vm.beginSymptomReferral()
+    val form = vm.uiState.value.askPharmacist
+    val referral = requireNotNull(form.referral)
+    assertEquals(referral.id, id)
+    assertEquals(AgeBand.INFANT_3_12M, form.ageBand)
+    assertFalse(form.consentAccepted)
+    vm.setAskQuestion("پرسش درباره مراقبت کودک")
+    assertNull(vm.validateAskPharmacistForm())
+    vm.setAskConsent(true)
+    val question = requireNotNull(vm.validateAskPharmacistForm()).third
+    assertTrue(question.contains(referral.summaryFa))
+    val payload = com.example.data.ConsultationPayloadMapper.triagePayload(
+      form.category, referral.ageBand, question, false, referral,
+    )
+    assertEquals("diarrhea", payload["symptomFlowId"])
+    assertEquals(8, payload["ageMonthsExact"])
+    assertEquals(37.2, payload["temperatureCelsius"])
+    assertEquals(6, payload["durationHours"])
+    assertEquals(emptyList<String>(), payload["selectedRedFlagIds"])
+    assertTrue(vm.submitAskPharmacistDemo())
+    assertEquals(question, vm.uiState.value.askPharmacist.requests.first().questionSummaryFa)
+    vm.clearSymptomReferral()
+    assertNull(vm.uiState.value.askPharmacist.referral)
+    assertFalse(vm.uiState.value.askPharmacist.consentAccepted)
+    vm.resetWizard()
+    vm.selectWizardSymptom("cough")
+    vm.wizardNextStep()
+    vm.selectWizardAgeBand(AgeBand.PRESCHOOL_3_6Y)
+    vm.updateWizardTemperature("۴۰٫۵")
+    vm.wizardNextStep()
+    assertEquals(3, vm.uiState.value.symptomWizard.step)
+    assertNull(vm.beginSymptomReferral())
+  }
+
+  @Test
   fun safetyTriageAiViewModel_generatesPediatricianChecklistAndDocumentedQa_andRendersProductComparison() {
     val fakeEngine =
       object : com.example.ui.viewmodel.SafetyTriageAiEngine {
@@ -409,11 +459,19 @@ class ManoAuditRemediationTest {
     val vm = com.example.ui.viewmodel.ManoSafetyTriageAiViewModel(fakeEngine)
     val feverFlow = com.example.data.ManoSourcesAndClinicalSeed.symptomFlows.first { it.id == "fever" }
 
+    val wizardVm = com.example.ui.viewmodel.ManoViewModel(ApplicationProvider.getApplicationContext())
+    vm.generatePediatricianSafetyChecklist(feverFlow, emptyList(), wizardVm.uiState.value.symptomWizard)
+    composeTestRule.waitForIdle()
+    assertTrue(vm.checklistState.value is com.example.ui.viewmodel.SafetyChecklistUiState.Error)
+    wizardVm.wizardNextStep()
+    wizardVm.selectWizardAgeBand(AgeBand.TODDLER_1_3Y)
+    wizardVm.updateWizardTemperature("38.6")
+    wizardVm.wizardNextStep()
+    wizardVm.wizardNextStep()
     vm.generatePediatricianSafetyChecklist(
       primaryFlow = feverFlow,
       coSelectedSymptomsFa = listOf("بی‌قراری یا گریه مداوم"),
-      wizard = com.example.ui.viewmodel.SymptomWizardState(selectedSymptomId = "fever", temperatureText = "38.6"),
-      childProfile = null,
+      wizard = wizardVm.uiState.value.symptomWizard,
     )
     composeTestRule.waitForIdle()
 

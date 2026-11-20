@@ -3,6 +3,7 @@ package com.example.data
 import android.content.Context
 import com.example.R
 import com.example.domain.model.AgeBand
+import com.example.domain.model.SymptomReferral
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.ConsultationRequestDemo
@@ -373,6 +374,7 @@ class ManoCloudRepository(
     questionSummaryFa: String,
     hasUrgentFlag: Boolean,
     consentAccepted: Boolean,
+    referral: SymptomReferral? = null,
   ): Result<ConsultationRequestDemo> {
     requireUserId()
     val gateway = requireFunctionsGateway()
@@ -397,6 +399,7 @@ class ManoCloudRepository(
       questionSummaryFa = questionSummaryFa,
       hasUrgentFlag = hasUrgentFlag,
       consentAccepted = consentAccepted,
+      referral = referral,
     )
   }
 

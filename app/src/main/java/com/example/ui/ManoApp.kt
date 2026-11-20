@@ -1236,7 +1236,12 @@ fun ManoApp(
                   onBack = viewModel::wizardPreviousStep,
                   onReset = { viewModel.resetWizard(); safetyTriageAiVm.resetChecklist() },
                   onOpenArticle = { slug -> navController.navigate(TopicDetailRoute(slug)) },
-                  onNavigateAskPharmacist = { navController.navigate(AskPharmacistRoute()) },
+                  onNavigateAskPharmacist = {
+                    viewModel.beginSymptomReferral()?.let { id ->
+                      navController.navigate(AskPharmacistRoute(referralId = id))
+                    }
+                  },
+                  onResetChecklist = safetyTriageAiVm::resetChecklist,
                   timelineSnapshot = timelineSnapshot,
                   savedVisitDraftsCount = effectiveSavedVisitDrafts.size,
                   onOpenVisitDraftStudio = { showVisitDraftSheet = true },
@@ -1246,7 +1251,6 @@ fun ManoApp(
                       primaryFlow = primaryFlow,
                       coSelectedSymptomsFa = coSymptomsFa,
                       wizard = uiState.symptomWizard,
-                      childProfile = effectiveChildProfile,
                     )
                   },
                   onToggleSafetyChecklistItem = safetyTriageAiVm::toggleChecklistItem,
@@ -1584,7 +1588,16 @@ fun ManoApp(
 
               composable<AskPharmacistRoute> { entry ->
                 val args = entry.toRoute<AskPharmacistRoute>()
-                LaunchedEffect(args.categoryId) {
+                if (args.referralId != null && args.referralId != uiState.askPharmacist.referral?.id) {
+                  LaunchedEffect(entry) {
+                    if (navController.currentBackStackEntry != entry) return@LaunchedEffect
+                    viewModel.showToast("برای ثبت پرسش از این مسیر، غربالگری علائم را دوباره کامل کنید.")
+                    navController.navigate(SymptomsRoute()) { popUpTo(entry.destination.id) { inclusive = true } }
+                  }
+                  return@composable
+                }
+                LaunchedEffect(entry) {
+                  if (args.referralId == null) viewModel.clearSymptomReferral()
                   val mappedCategory =
                     when (args.categoryId?.trim()?.lowercase()) {
                       "otc", "medicines", "drug" -> ConsultationCategory.OTC
@@ -1614,7 +1627,16 @@ fun ManoApp(
                     cloudVm?.clearServerConsultationError()
                     viewModel.setAskConsent(accepted)
                   },
-                  onSubmit = {
+                  onSubmit = submit@{
+                    val form = viewModel.uiState.value.askPharmacist
+                    if (form.referral?.id != args.referralId) return@submit
+                    fun finishReferral() {
+                      if (args.referralId != null && navController.currentBackStackEntry == entry) {
+                        navController.navigate(AskPharmacistRoute(initialMode = "followup")) {
+                          popUpTo(entry.destination.id) { inclusive = true }
+                        }
+                      }
+                    }
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
                       val validated = viewModel.validateAskPharmacistForm()
@@ -1623,13 +1645,17 @@ fun ManoApp(
                           category = validated.first,
                           ageBand = validated.second,
                           questionSummaryFa = validated.third,
-                          hasUrgentFlag = uiState.askPharmacist.hasUrgentFlags,
-                          consentAccepted = uiState.askPharmacist.consentAccepted,
-                          onSuccess = { viewModel.clearAskPharmacistQuestion() },
+                          hasUrgentFlag = form.hasUrgentFlags,
+                          consentAccepted = form.consentAccepted,
+                          referral = form.referral,
+                          onSuccess = {
+                            if (viewModel.uiState.value.askPharmacist == form) viewModel.clearAskPharmacistQuestion()
+                            finishReferral()
+                          },
                         )
                       }
                     } else {
-                      viewModel.submitAskPharmacistDemo()
+                      if (viewModel.submitAskPharmacistDemo()) finishReferral()
                     }
                   },
                   onAdvanceStatus = { id, _ ->

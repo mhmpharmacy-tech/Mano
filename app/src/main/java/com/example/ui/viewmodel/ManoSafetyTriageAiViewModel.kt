@@ -9,7 +9,6 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.ManoSourcesAndClinicalSeed
 import com.example.domain.util.PersianNormalizer
 import com.example.domain.model.AgeBand
-import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.FaqItem
 import com.example.domain.model.SymptomFlow
 import com.google.firebase.Firebase
@@ -209,9 +208,13 @@ class ManoSafetyTriageAiViewModel(
     primaryFlow: SymptomFlow,
     coSelectedSymptomsFa: List<String>,
     wizard: SymptomWizardState,
-    childProfile: ChildProfileDemo?,
   ) {
-    val ageBand = wizard.selectedAgeBand ?: childProfile?.ageBand ?: AgeBand.TODDLER_1_3Y
+    val ageBand = wizard.selectedAgeBand
+    if (ageBand == null || wizard.evaluation?.showPharmacistOption != true || wizard.step != 3) {
+      resetChecklist()
+      _checklistState.value = SafetyChecklistUiState.Error("ابتدا غربالگری سن و علائم هشدار را کامل کنید.")
+      return
+    }
     val allSymptoms =
       (listOf(primaryFlow.titleFa) + coSelectedSymptomsFa)
         .map { it.trim() }
@@ -242,9 +245,6 @@ class ManoSafetyTriageAiViewModel(
       appendLine("- دمای ثبت‌شده: $tempInfo")
       appendLine("- مدت علائم: $durationInfo")
       appendLine("- علائم هشدار تیک‌خورده: ${if (selectedFlags.isEmpty()) "هیچ موردی تیک نخورده" else selectedFlags.joinToString("؛ ")}")
-      if (childProfile != null) {
-        appendLine("- حساسیت‌های ثبت‌شده در پرونده کودک: ${childProfile.allergiesFa}")
-      }
     }
 
     checklistJob?.cancel()

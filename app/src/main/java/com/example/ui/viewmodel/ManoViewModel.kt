@@ -11,6 +11,7 @@ import com.example.data.ManoPreferencesRepository
 import com.example.data.ManoThemeMode
 import com.example.data.ManoWebGlQuality
 import com.example.domain.model.AgeBand
+import com.example.domain.model.SymptomReferral
 import com.example.domain.model.Article
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
@@ -62,11 +63,12 @@ data class SymptomWizardState(
 
 data class AskPharmacistState(
   val category: ConsultationCategory = ConsultationCategory.SYMPTOMS,
-  val ageBand: AgeBand = AgeBand.TODDLER_1_3Y,
+  val ageBand: AgeBand? = null,
   val questionText: String = "",
   val hasUrgentFlags: Boolean = false,
   val consentAccepted: Boolean = false,
   val validationErrorFa: String? = null,
+  val referral: SymptomReferral? = null,
   val requests: List<ConsultationRequestDemo> = emptyList(),
 )
 
@@ -269,7 +271,6 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
           SymptomWizardState(
             step = 1,
             selectedSymptomId = symptomId,
-            selectedAgeBand = selectedAgeBand.value,
           )
       )
     }
@@ -336,8 +337,9 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
           return
         }
         val parsedTemp = parseTemperature(wiz.temperatureText)
-        // Immediate clinical safety short-circuit: fever >= 38.0 in infant < 3m triggers urgent alert immediately
-        if (age == AgeBand.NEWBORN && ((parsedTemp != null && parsedTemp >= 38.0) || (flow.id == "fever" && parsedTemp == null))) {
+        val newbornFever = age == AgeBand.NEWBORN &&
+          ((parsedTemp != null && parsedTemp >= 38.0) || (flow.id == "fever" && parsedTemp == null))
+        if (newbornFever || TriageEngine.isExtremeTemperature(parsedTemp)) {
           val result =
             TriageEngine.evaluate(
               flow = flow,
@@ -407,6 +409,38 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     _uiState.update { it.copy(symptomWizard = SymptomWizardState()) }
   }
 
+  fun beginSymptomReferral(): String? {
+    val wizard = _uiState.value.symptomWizard
+    val age = wizard.selectedAgeBand ?: return null
+    if (wizard.step != 3 || wizard.evaluation?.showPharmacistOption != true) return null
+    val flow = repository.symptomFlowById(wizard.selectedSymptomId)
+    val referral = SymptomReferral(
+      id = java.util.UUID.randomUUID().toString(),
+      flowId = when (flow.id) {
+        "diaper_rash" -> "rash"
+        "diarrhea_vomiting" -> "diarrhea"
+        else -> flow.id
+      },
+      symptomFa = flow.titleFa,
+      ageBand = age,
+      ageMonthsExact = parseIntOrNull(wizard.ageMonthsText),
+      temperatureCelsius = parseTemperature(wizard.temperatureText),
+      durationHours = parseIntOrNull(wizard.durationHoursText),
+      selectedRedFlagIds = wizard.selectedRedFlagIds.toSet(),
+    )
+    _uiState.update { it.copy(askPharmacist = AskPharmacistState(
+      ageBand = age, referral = referral, requests = it.askPharmacist.requests,
+    )) }
+    return referral.id
+  }
+
+  fun clearSymptomReferral() {
+    _uiState.update {
+      if (it.askPharmacist.referral == null) it
+      else it.copy(askPharmacist = AskPharmacistState(requests = it.askPharmacist.requests))
+    }
+  }
+
   // --- Ask Pharmacist Demo Actions ---
   fun setAskCategory(category: ConsultationCategory) {
     _uiState.update { it.copy(askPharmacist = it.askPharmacist.copy(category = category)) }
@@ -446,6 +480,11 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
       }
       return null
     }
+    val age = form.ageBand
+    if (age == null) {
+      _uiState.update { it.copy(askPharmacist = form.copy(validationErrorFa = "گروه سنی کودک را انتخاب کنید.")) }
+      return null
+    }
     if (!form.consentAccepted) {
       _uiState.update {
         it.copy(askPharmacist = form.copy(validationErrorFa = "لطفاً ابتدا رضایت‌نامه ثبت درخواست را تأیید کنید."))
@@ -458,13 +497,20 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
       }
       return null
     }
+    val question = listOfNotNull(form.questionText.trim(), form.referral?.summaryFa).joinToString("\n")
+    if (question.length > 600) {
+      _uiState.update { it.copy(askPharmacist = form.copy(
+        validationErrorFa = "متن پرسش و خلاصه غربالگری باید در مجموع حداکثر ۶۰۰ نویسه باشد.",
+      )) }
+      return null
+    }
     _uiState.update { it.copy(askPharmacist = it.askPharmacist.copy(validationErrorFa = null)) }
-    return Triple(form.category, form.ageBand, form.questionText.trim())
+    return Triple(form.category, age, question)
   }
 
   fun clearAskPharmacistQuestion() {
     _uiState.update {
-      it.copy(askPharmacist = it.askPharmacist.copy(questionText = "", validationErrorFa = null))
+      it.copy(askPharmacist = it.askPharmacist.copy(questionText = "", consentAccepted = false, validationErrorFa = null))
     }
   }
 
@@ -474,8 +520,8 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     return prepared
   }
 
-  fun submitAskPharmacistDemo() {
-    val validated = validateAskPharmacistForm() ?: return
+  fun submitAskPharmacistDemo(): Boolean {
+    val validated = validateAskPharmacistForm() ?: return false
     val form = _uiState.value.askPharmacist
 
     val newReq =
@@ -500,11 +546,13 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
           form.copy(
             questionText = "",
             validationErrorFa = null,
+            consentAccepted = false,
             requests = listOf(newReq) + form.requests,
           ),
         toastMessageFa = "پرسش پیگیری در حافظه دستگاه ثبت شد.",
       )
     }
+    return true
   }
 
   fun advanceDemoRequestStatus(id: String) {

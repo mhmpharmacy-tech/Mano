@@ -1,6 +1,7 @@
 package com.example.data
 
 import com.example.domain.model.AgeBand
+import com.example.domain.model.SymptomReferral
 import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.ConsultationRequestDemo
 import com.example.domain.model.ConsultationStatus
@@ -30,6 +31,7 @@ interface ConsultationBackendGateway {
     questionSummaryFa: String,
     hasUrgentFlag: Boolean,
     consentAccepted: Boolean,
+    referral: SymptomReferral? = null,
   ): Result<ConsultationRequestDemo>
 
   suspend fun listParentConsultations(limit: Int = 25): Result<List<ConsultationRequestDemo>>
@@ -72,16 +74,11 @@ class FirebaseFunctionsConsultationGateway(
     questionSummaryFa: String,
     hasUrgentFlag: Boolean,
     consentAccepted: Boolean,
+    referral: SymptomReferral?,
   ): Result<ConsultationRequestDemo> {
     return try {
-      val flowId = mapCategoryToSymptomFlow(category)
-      val passPayload =
-        hashMapOf<String, Any>(
-          "ageBandId" to ageBand.id,
-          "symptomFlowId" to flowId,
-          "questionSummaryFa" to questionSummaryFa,
-          "hasUrgentFlag" to hasUrgentFlag,
-        )
+      require(consentAccepted) { "برای ارسال پرسش، تأیید رضایت لازم است." }
+      val passPayload = ConsultationPayloadMapper.triagePayload(category, ageBand, questionSummaryFa, hasUrgentFlag, referral)
       val passResult = functions.getHttpsCallable("issueConsultationTriagePass").call(passPayload).await()
       val passMap = (passResult.data as? Map<*, *>)
         ?: return Result.failure(IllegalStateException("پاسخ نامعتبر از سرویس تریاژ سرور دریافت شد."))
@@ -102,13 +99,10 @@ class FirebaseFunctionsConsultationGateway(
           "pharmacyId" to pharmacyId,
           "triagePassId" to passId,
           "categoryName" to category.name,
-          "ageBandId" to ageBand.id,
-          "symptomFlowId" to flowId,
-          "questionSummaryFa" to questionSummaryFa,
-          "hasUrgentFlag" to false,
           "consentAccepted" to consentAccepted,
           "consentVersion" to "v1",
         )
+      submitPayload.putAll(passPayload)
       val submitResult = functions.getHttpsCallable("submitConsultationCase").call(submitPayload).await()
       val caseMap = (submitResult.data as? Map<*, *>)
         ?: return Result.failure(IllegalStateException("پاسخ نامعتبر از سرویس ثبت پرونده دریافت شد."))
@@ -222,6 +216,28 @@ class FirebaseFunctionsConsultationGateway(
 }
 
 object ConsultationPayloadMapper {
+  fun triagePayload(
+    category: ConsultationCategory,
+    ageBand: AgeBand,
+    question: String,
+    urgent: Boolean,
+    referral: SymptomReferral?,
+  ): Map<String, Any> {
+    require(referral == null || (referral.ageBand == ageBand && category == ConsultationCategory.SYMPTOMS))
+    return buildMap {
+      put("ageBandId", ageBand.id)
+      put("symptomFlowId", referral?.flowId ?: mapCategoryToSymptomFlow(category))
+      put("questionSummaryFa", question)
+      put("hasUrgentFlag", urgent)
+      if (referral != null) {
+        referral.temperatureCelsius?.let { put("temperatureCelsius", it) }
+        referral.durationHours?.let { put("durationHours", it) }
+        referral.ageMonthsExact?.let { put("ageMonthsExact", it) }
+        put("selectedRedFlagIds", referral.selectedRedFlagIds.toList())
+      }
+    }
+  }
+
   const val MIN_PARENT_REPLY_LENGTH = 10
 
   fun mapCategoryToSymptomFlow(category: ConsultationCategory): String =
