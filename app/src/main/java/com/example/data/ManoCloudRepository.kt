@@ -181,6 +181,7 @@ class ManoCloudRepository(
     volumeMlText: String,
     givenAtLabelFa: String,
     noteFa: String,
+    administeredAtMs: Long? = null,
   ): Result<String> {
     val uid = requireUserId()
     val docRef = db.collection("users").document(uid).collection("doseLogs").document()
@@ -193,6 +194,9 @@ class ManoCloudRepository(
         "volumeMlText" to volumeMlText.take(30),
         "givenAtLabelFa" to givenAtLabelFa.take(60),
         "noteFa" to noteFa.take(300),
+        "administeredAtMs" to (administeredAtMs?.takeIf { it > 0 && it <= System.currentTimeMillis() + 60_000L }
+          ?: FeverDoseTimelineEngine.resolveDoseTimeMs(givenAtLabelFa)
+          ?: System.currentTimeMillis()),
         "createdAt" to FieldValue.serverTimestamp(),
         "updatedAt" to FieldValue.serverTimestamp(),
       )
@@ -937,6 +941,7 @@ class ManoCloudRepository(
           volumeMlText = dose.volumeMlText.ifBlank { "-" },
           givenAtLabelFa = dose.givenAtLabelFa.ifBlank { "هم‌اکنون" },
           noteFa = dose.noteFa,
+          administeredAtMs = dose.timestampMs,
         ).isFailure
       ) {
         allSucceeded = false
