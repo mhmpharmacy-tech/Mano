@@ -89,6 +89,26 @@ object FeverDoseTimelineEngine {
   private const val WINDOW_24H_MS = 24L * HOUR_MS
   const val HIGH_FEVER_ALERT_THRESHOLD_C = 39.0f
 
+  /**
+   * Resolve the caregiver's HH:mm as a real timestamp, today or the previous day.
+   * An invalid label returns null: it must never silently masquerade as a verified dose time.
+   */
+  fun resolveDoseTimeMs(labelFa: String, recordedAtMs: Long = System.currentTimeMillis()): Long? {
+    val ascii = PersianNormalizer.toAsciiDigits(labelFa).trim()
+    val match = Regex("""([01]?\d|2[0-3]):([0-5]\d)""").matchEntire(ascii) ?: return null
+    val hour = match.groupValues[1].toInt()
+    val minute = match.groupValues[2].toInt()
+    val cal = java.util.Calendar.getInstance().apply {
+      timeInMillis = recordedAtMs
+      set(java.util.Calendar.HOUR_OF_DAY, hour)
+      set(java.util.Calendar.MINUTE, minute)
+      set(java.util.Calendar.SECOND, 0)
+      set(java.util.Calendar.MILLISECOND, 0)
+    }
+    if (cal.timeInMillis > recordedAtMs + 60_000L) cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+    return cal.timeInMillis.takeIf { it <= recordedAtMs + 60_000L && recordedAtMs - it < WINDOW_24H_MS }
+  }
+
   fun evaluateHighFeverAlert(
     snapshot: FeverDoseTimelineSnapshot,
     childProfile: ChildProfileDemo? = null,
@@ -158,7 +178,9 @@ object FeverDoseTimelineEngine {
 
     val cloudDosePoints =
       cloudDoseLogs.map { item ->
-        val ts = item.createdAt?.toDate()?.time ?: nowMs
+        val recorded = item.createdAt?.toDate()?.time ?: nowMs
+        val ts = item.administeredAtMs?.takeIf { it > 0 && it <= nowMs + 60_000L }
+          ?: resolveDoseTimeMs(item.givenAtLabelFa, recorded) ?: recorded
         TimelineDosePoint(
           id = item.id,
           medicationSlug = item.medicationSlug,
