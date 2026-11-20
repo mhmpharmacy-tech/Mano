@@ -15,7 +15,6 @@ import com.example.domain.model.StaffAccessStatus
 import com.example.domain.model.StaffConsultationCase
 import com.example.domain.model.VaccineRecord
 import com.example.domain.util.FeverDoseTimelineEngine
-import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
 import com.example.domain.util.VaccinationScheduleEngine
 import com.example.domain.util.TimelineDosePoint
