@@ -19,7 +19,7 @@ Status: **NOT RUN on real devices. NO-GO until every mandatory gate passes.** Al
 8. Dose given 14:00 and entered at 18:00: display interval from 14:00; invalid/future HH:mm is rejected; prior-day time resolves correctly.
 9. Offline caregiver A data → sign in account B → verify no A fever/dose/vaccine/scan/draft/birth date/height is presented to B. Repeat after sign-out and process restart.
 10. Profile deletion: confirmation required, wording explicitly says *profile only*. Check cloud profile absent; other cloud records remain and are not misrepresented as erased.
-11. **Device-local complete health-data erasure:** confirmation required; profile, vaccine, dose, fever, nutrition plans, scan data, drafts, milestone checks and widget summaries absent after restart. Cloud records remain untouched.
+11. **Mano DataStore / widget erasure:** confirmation required; profile, vaccine, dose, fever, nutrition plans, scan data, drafts, milestone checks and widget summaries absent after restart while offline. Cloud records remain untouched; Firebase SDK cache is not guaranteed cleared by this in-app action. Test Android system Clear storage separately.
 12. Account deletion: **NOT IMPLEMENTED**; separate verified server-side deletion and retention process required. Do not claim support.
 13. Firestore emulator and staging: user A cannot access B; owners cannot mark any clinical consultation as reviewed or bypass triage; staff access restricted by pharmacy ID.
 14. App Check: authorized signed build accepted, unauthorized client rejected; verify deployed server setting in Firebase console (repository code alone insufficient).
