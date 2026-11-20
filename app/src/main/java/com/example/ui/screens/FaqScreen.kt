@@ -123,8 +123,8 @@ fun FaqScreen(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
           SectionCard {
             ManoBannerFrame(
-              resId = R.drawable.img_topics_library_banner,
-              contentDescription = "مانو و کتابخانه پرسش‌های پرتکرار والدین",
+              resId = R.drawable.img_faq_banner,
+              contentDescription = "ربات جدید مانو کید در بخش پرسش و پاسخ مستند والدین",
               aspectRatio = 16f / 9f,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
