@@ -11,7 +11,8 @@
 
 ## Release gates (all require explicit verification)
 - [x] Android `assembleDebug` build passed on the integrated PR #11 head (`c7ff9b6b40dcc5cff64dbe85a2ad9a3a782ca439`).
-- [ ] Complete Robolectric / Firebase emulator suite and release-candidate revalidation (see GitHub Actions run #44816409418).
+- [x] Integrated Android Robolectric / Firebase emulator suite succeeded on PR #11 head (GitHub Actions run #44816409418).
+- [ ] Final real-device QA, clinical sign-off, and separately authorized release/deployment verification remain pending.
 - [x] Functions Node/TypeScript build and 16/16 backend/security tests, including compiled clinical-gate regression, passed on PR #11 head.
 - [ ] Human approval of each pediatric/medication source claim and red-flag criteria; no blanket transfer of previous approvals
 - [ ] Measured pediatric weight, exact age and verified concentration before any numerical dose; never use fabricated defaults
