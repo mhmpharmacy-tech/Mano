@@ -59,7 +59,9 @@ service cloud.firestore {
              data.dosageFormFa is string && data.dosageFormFa.size() >= 1 && data.dosageFormFa.size() <= 80 &&
              data.volumeMlText is string && data.volumeMlText.size() >= 1 && data.volumeMlText.size() <= 30 &&
              data.givenAtLabelFa is string && data.givenAtLabelFa.size() >= 1 && data.givenAtLabelFa.size() <= 60 &&
-             data.noteFa is string && data.noteFa.size() <= 300;
+             data.noteFa is string && data.noteFa.size() <= 300 &&
+             (!('administeredAtMs' in data) ||
+              (data.administeredAtMs is int && data.administeredAtMs > 0 && data.administeredAtMs <= 4102444800000));
     }
 
     function isValidConsultation(data) {
@@ -182,7 +184,7 @@ service cloud.firestore {
                        ]) &&
                        incoming().keys().hasOnly([
                          'userId', 'medicationSlug', 'medicationNameFa', 'dosageFormFa',
-                         'volumeMlText', 'givenAtLabelFa', 'noteFa', 'createdAt', 'updatedAt'
+                         'volumeMlText', 'givenAtLabelFa', 'noteFa', 'administeredAtMs', 'createdAt', 'updatedAt'
                        ]) &&
                        incoming().createdAt is timestamp &&
                        incoming().createdAt <= request.time &&
@@ -198,7 +200,7 @@ service cloud.firestore {
                        incoming().updatedAt is timestamp &&
                        incoming().updatedAt <= request.time &&
                        incoming().diff(existing()).affectedKeys().hasOnly([
-                         'dosageFormFa', 'volumeMlText', 'givenAtLabelFa', 'noteFa', 'updatedAt'
+                         'dosageFormFa', 'volumeMlText', 'givenAtLabelFa', 'administeredAtMs', 'noteFa', 'updatedAt'
                        ]);
 
       allow delete: if isOwner(userId) && isValidId(logId);
