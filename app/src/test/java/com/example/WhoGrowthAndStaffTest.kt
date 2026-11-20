@@ -94,13 +94,12 @@ class WhoGrowthAndStaffTest {
   }
 
   @Test
-  fun clinicalSeeds_carryVerifiedPharmacistSignOffDrMohammadi() {
-    assertTrue(ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA.contains("محمدحسین محمدی"))
-    assertTrue(ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA.contains("د۳۴۳۶۱"))
-    assertTrue(ManoArticlesSeed.starterArticles.all { it.review.status == ReviewStatus.APPROVED })
-    assertTrue(ManoFaqSeed.faqs.all { it.review.status == ReviewStatus.APPROVED })
-    assertTrue(ManoMedicationSeed.monographs.all { it.review.status == ReviewStatus.APPROVED })
-    assertTrue(ManoSourcesAndClinicalSeed.symptomFlows.all { it.review.status == ReviewStatus.APPROVED })
+  fun clinicalSeeds_doNotClaimUnverifiedHumanApproval() {
+    assertTrue(ManoArticlesSeed.starterArticles.all { it.review.status == ReviewStatus.NEEDS_CLINICAL_REVIEW })
+    assertTrue(ManoFaqSeed.faqs.all { it.review.status == ReviewStatus.NEEDS_CLINICAL_REVIEW })
+    assertTrue(ManoMedicationSeed.monographs.all { it.review.status == ReviewStatus.NEEDS_CLINICAL_REVIEW })
+    assertTrue(ManoSourcesAndClinicalSeed.symptomFlows.all { it.review.status == ReviewStatus.NEEDS_CLINICAL_REVIEW })
+    assertTrue(ManoMedicationSeed.monographs.all { it.review.reviewerIdentity == null })
   }
 
   @Test
