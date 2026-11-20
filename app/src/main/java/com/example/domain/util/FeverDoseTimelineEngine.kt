@@ -113,19 +113,28 @@ object FeverDoseTimelineEngine {
     snapshot: FeverDoseTimelineSnapshot,
     childProfile: ChildProfileDemo? = null,
   ): HighFeverClinicalAlert? {
-    val latestHigh = snapshot.tempPoints.lastOrNull { it.tempCelsius > HIGH_FEVER_ALERT_THRESHOLD_C }
-      ?: return null
+    val ageMonths = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile)
+    val underThreeMonths = ageMonths != null && ageMonths < 3
+    val latestHigh = snapshot.tempPoints.lastOrNull {
+      it.tempCelsius > HIGH_FEVER_ALERT_THRESHOLD_C ||
+        (underThreeMonths && it.tempCelsius >= 38.0f)
+    } ?: return null
     val tempStr = formatTempC(latestHigh.tempCelsius)
     val childLabel =
       childProfile?.aliasFa?.takeIf { it.isNotBlank() }?.let { "برای $it " } ?: ""
+    val newbornUrgency = underThreeMonths && latestHigh.tempCelsius >= 38.0f
     return HighFeverClinicalAlert(
       triggerTempCelsius = latestHigh.tempCelsius,
       caregiverFa = latestHigh.caregiverFa,
       timeLabelFa = latestHigh.timeLabelFa,
-      isHighFeverOver39 = true,
-      titleFa = "هشدار فوری تب بالای ۳۹ درجه ($tempStr) — مراجعه به پزشک",
-      bodyFa =
-        "دمای ثبت‌شده ${childLabel}در ساعت ${latestHigh.timeLabelFa} (توسط ${latestHigh.caregiverFa}) به $tempStr رسیده و از آستانه ۳۹.۰°C فراتر رفته است. لطفاً وضعیت کودک را فوری بررسی کرده و برای ویزیت به پزشک یا مرکز درمانی مراجعه کنید.",
+      isHighFeverOver39 = latestHigh.tempCelsius > HIGH_FEVER_ALERT_THRESHOLD_C,
+      titleFa = if (newbornUrgency) "هشدار فوری: تب ۳۸ درجه یا بیشتر در شیرخوار زیر ۳ ماه ($tempStr)"
+        else "هشدار فوری تب بالای ۳۹ درجه ($tempStr) — مراجعه به پزشک",
+      bodyFa = if (newbornUrgency) {
+        "دمای ثبت‌شده ${childLabel}به $tempStr رسیده است. تب ۳۸ درجه یا بیشتر در شیرخوار زیر سه ماه نیازمند ارزیابی فوری حضوری توسط پزشک یا اورژانس است. داروی خودسرانه ندهید."
+      } else {
+        "دمای ثبت‌شده ${childLabel}در ساعت ${latestHigh.timeLabelFa} (توسط ${latestHigh.caregiverFa}) به $tempStr رسیده و از آستانه ۳۹.۰°C فراتر رفته است. لطفاً وضعیت کودک را فوری بررسی کرده و برای ویزیت به پزشک یا مرکز درمانی مراجعه کنید."
+      },
       checklistFa =
         listOf(
           "در صورت بی‌حالی شدید، خواب‌آلودگی غیرعادی، تنفس تند یا تشنج فوراً با اورژانس ۱۱۵ تماس بگیرید.",
