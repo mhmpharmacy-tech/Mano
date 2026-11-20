@@ -31,7 +31,7 @@ data class GeminiSyrupScanPayload(
   val activeIngredientKey: String = "UNKNOWN",
   val dosageForm: String = "UNKNOWN",
   val mgAmount: Double = 0.0,
-  val perMlAmount: Double = 5.0,
+  val perMlAmount: Double = 0.0,
   val mgPerMl: Double = 0.0,
   val matchedFormulationId: String = "CUSTOM_UNVERIFIED",
   val confidenceLevel: String = "LOW",
