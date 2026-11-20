@@ -225,7 +225,7 @@ fun SyrupScannerScreen(
       if (childProfile != null) {
         "${childProfile.aliasFa} • ${LiquidDoseVisualizerEngine.formatAgeFa(ageMonths)} • وزن ${LiquidDoseVisualizerEngine.formatKg(weightKg)}"
       } else {
-        "پروفایل کودک ثبت نشده • مقادیر محافظه‌کارانه (${LiquidDoseVisualizerEngine.formatAgeFa(ageMonths)}، ${LiquidDoseVisualizerEngine.formatKg(weightKg)})"
+        "پروفایل کودک ثبت نشده است."
       }
     }
 

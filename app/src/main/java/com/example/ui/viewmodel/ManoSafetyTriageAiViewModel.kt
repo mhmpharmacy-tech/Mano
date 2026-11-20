@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.ManoSourcesAndClinicalSeed
+import com.example.domain.util.PersianNormalizer
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.FaqItem
@@ -270,9 +271,7 @@ class ManoSafetyTriageAiViewModel(
                     "چک‌لیست هوشمند مراجعه به متخصص کودکان (${allSymptoms.firstOrNull() ?: primaryFlow.titleFa})"
                   },
                 clinicalSourceCitationFa =
-                  parsed.clinicalSourceCitationFa.ifBlank {
-                    "مبتنی بر راهنماهای AAP / WHO / NICE • بازبینی علمی: ${ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA}"
-                  },
+                  "چک‌لیست تولیدشده با هوش مصنوعی؛ استناد و تأیید بالینی آن بررسی نشده است.",
               ),
           )
       } catch (e: TimeoutCancellationException) {
@@ -305,16 +304,19 @@ class ManoSafetyTriageAiViewModel(
       return
     }
 
+    val matchedFaqs = relatedFaqs.filter {
+      PersianNormalizer.scoreMatch(trimmed, it.questionFa, it.tags.joinToString(" ")) >= 40
+    }.take(4)
     val groundingContext =
-      relatedFaqs.take(4).joinToString("\n") { faq ->
-        "- پرسش مرجع: ${faq.questionFa} | خلاصه علمی: ${faq.summaryFa} | منبع: ${faq.source.publisher} (${faq.source.title})"
+      matchedFaqs.joinToString("\n") { faq ->
+        "- پرسش مرجع: ${faq.questionFa} | خلاصه علمی: ${faq.summaryFa} | منبع: ${faq.source.publisher} (${faq.source.title}) ${faq.source.url}"
       }
 
     val prompt = buildString {
       appendLine("شما «دستیار پرسش و پاسخ مستند مانو کید (MANO Documented Q&A)» هستید.")
       appendLine("به پرسش والدین درباره سلامت و مراقبت کودک به زبان فارسی روان، علمی، مستند و کاملاً غیرتشخیصی پاسخ دهید.")
       appendLine("قواعد ایمنی بالینی:")
-      appendLine("۱. پاسخ باید مستند به راهنماهای AAP، WHO، NICE، CDC و داده‌های مرجع زیر باشد.")
+      appendLine("۱. فقط از خلاصه‌های مرجع ارائه‌شده استفاده کنید؛ اگر پاسخ در آن‌ها نیست، کافی نبودن اطلاعات را بیان کنید. منبع، صفحه یا تأیید مسئول علمی نسازید.")
       appendLine("۲. از تجویز دارو یا محاسبه دوز عددی خودداری کنید و بر استفاده از سرنگ مدرج mL و مشورت با پزشک/داروساز تأکید نمایید.")
       appendLine("۳. علائم هشدار نیازمند مراجعه به متخصص کودکان یا اورژانس ۱۱۵ را به روشنی بیان کنید.")
       appendLine()
@@ -344,18 +346,9 @@ class ManoSafetyTriageAiViewModel(
             questionFa = trimmed,
             payload =
               parsed.copy(
-                citedSourcesFa =
-                  parsed.citedSourcesFa.ifEmpty {
-                    listOf(
-                      "AAP — HealthyChildren Pediatric Care Guidelines",
-                      "WHO / NICE — Fever & Common Childhood Illness Triage",
-                      ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA,
-                    )
-                  },
-                safetyDisclaimerFa =
-                  parsed.safetyDisclaimerFa.ifBlank {
-                    "این پاسخ صرفاً جنبه آموزشی و مستند دارد و جایگزین معاینه پزشک متخصص کودکان یا اورژانس نیست."
-                  },
+                // These are supplied context references, not verified citations for generated claims.
+                citedSourcesFa = matchedFaqs.map { "${it.source.publisher} — ${it.source.title} ${it.source.url}" }.distinct(),
+                safetyDisclaimerFa = "پاسخ تولیدشده با هوش مصنوعی است و تطبیق ادعاها با منابع یا تأیید داروساز برای این پاسخ ثبت نشده است. در علائم خطر منتظر پاسخ آنلاین نمانید.",
               ),
           )
       } catch (e: TimeoutCancellationException) {

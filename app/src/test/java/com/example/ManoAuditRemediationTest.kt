@@ -86,7 +86,7 @@ class ManoAuditRemediationTest {
       )
 
     val conservativeMonths = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(unspecificInfant)
-    assertEquals(3, conservativeMonths)
+    assertNull(conservativeMonths)
 
     val conservativeIbuprofen =
       LiquidDoseVisualizerEngine.evaluate(
@@ -101,7 +101,7 @@ class ManoAuditRemediationTest {
     assertEquals(7, parsedMonths)
 
     val nowMs = 1_750_000_000_000L
-    val sevenMonthsAgoMs = nowMs - (7.0 * 30.4375 * 86_400_000.0).toLong()
+    val sevenMonthsAgoMs = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = nowMs; add(java.util.Calendar.MONTH, -7) }.timeInMillis
     val fromBirthDate =
       LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(
         profile = unspecificInfant,
@@ -330,6 +330,7 @@ class ManoAuditRemediationTest {
 
     val qaReady = vm.qaState.value as com.example.ui.viewmodel.DocumentedQaUiState.Ready
     assertTrue(qaReady.payload.directAnswerFa.contains("غلظت"))
+    assertFalse("Generated source must not masquerade as reviewed", qaReady.payload.citedSourcesFa.contains("AAP — Safe Liquid Medication Dosing"))
 
     composeTestRule.setContent {
       ManoKidsTheme(darkTheme = false) {
@@ -377,8 +378,7 @@ class ManoAuditRemediationTest {
     }
     composeTestRule.waitForIdle()
     composeTestRule
-      .onNodeWithText("برای مشاهده صدک واقعی WHO، سن (۰ تا ۶۰ ماه) و وزن یا قد معتبر را وارد کنید.")
-      .assertExists()
+      .onNodeWithTag("who_percentile_result").assertDoesNotExist()
   }
 
 

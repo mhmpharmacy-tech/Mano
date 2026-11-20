@@ -38,6 +38,7 @@ import com.example.domain.util.TimelineDosePoint
 import com.example.domain.util.TimelineTempPoint
 import com.example.domain.util.TriageEngine
 import com.example.domain.util.VaccinationScheduleEngine
+import com.example.domain.util.ClinicalNumberInput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +52,7 @@ data class SymptomWizardState(
   val selectedSymptomId: String = "fever",
   val selectedAgeBand: AgeBand? = null,
   val temperatureText: String = "",
+  val ageMonthsText: String = "",
   val durationHoursText: String = "",
   val selectedRedFlagIds: Set<String> = emptySet(),
   val validationErrorFa: String? = null,
@@ -288,19 +290,23 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
 
   fun selectWizardAgeBand(ageBand: AgeBand) {
     _uiState.update {
-      it.copy(symptomWizard = it.symptomWizard.copy(selectedAgeBand = ageBand, validationErrorFa = null))
+      it.copy(symptomWizard = it.symptomWizard.copy(selectedAgeBand = ageBand, ageMonthsText = "", evaluation = null, validationErrorFa = null))
     }
+  }
+
+  fun updateWizardAgeMonths(text: String) {
+    _uiState.update { it.copy(symptomWizard = it.symptomWizard.copy(ageMonthsText = text.take(10), evaluation = null, validationErrorFa = null)) }
   }
 
   fun updateWizardTemperature(text: String) {
     _uiState.update {
-      it.copy(symptomWizard = it.symptomWizard.copy(temperatureText = text, validationErrorFa = null))
+      it.copy(symptomWizard = it.symptomWizard.copy(temperatureText = text.take(20), evaluation = null, validationErrorFa = null))
     }
   }
 
   fun updateWizardDurationHours(text: String) {
     _uiState.update {
-      it.copy(symptomWizard = it.symptomWizard.copy(durationHoursText = text, validationErrorFa = null))
+      it.copy(symptomWizard = it.symptomWizard.copy(durationHoursText = text.take(20), evaluation = null, validationErrorFa = null))
     }
   }
 
@@ -308,7 +314,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     _uiState.update { state ->
       val updated = state.symptomWizard.selectedRedFlagIds.toMutableSet()
       if (!updated.add(flagId)) updated.remove(flagId)
-      state.copy(symptomWizard = state.symptomWizard.copy(selectedRedFlagIds = updated))
+      state.copy(symptomWizard = state.symptomWizard.copy(selectedRedFlagIds = updated, evaluation = null))
     }
   }
 
@@ -329,14 +335,8 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
           return
         }
         val parsedTemp = parseTemperature(wiz.temperatureText)
-        if (flow.asksTemperature && wiz.temperatureText.isNotBlank() && parsedTemp == null) {
-          _uiState.update {
-            it.copy(symptomWizard = wiz.copy(validationErrorFa = "لطفاً دمای معتبر به سانتی‌گراد (مثلاً 38.0) وارد کنید."))
-          }
-          return
-        }
         // Immediate clinical safety short-circuit: fever >= 38.0 in infant < 3m triggers urgent alert immediately
-        if (flow.id == "fever" && age == AgeBand.NEWBORN && parsedTemp != null && parsedTemp >= 38.0) {
+        if (age == AgeBand.NEWBORN && ((parsedTemp != null && parsedTemp >= 38.0) || (flow.id == "fever" && parsedTemp == null))) {
           val result =
             TriageEngine.evaluate(
               flow = flow,
@@ -344,16 +344,32 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
               temperatureCelsius = parsedTemp,
               durationHours = parseIntOrNull(wiz.durationHoursText),
               selectedRedFlagIds = wiz.selectedRedFlagIds,
+              ageMonthsExact = if (age == AgeBand.INFANT_3_12M) ClinicalNumberInput.durationHours(wiz.ageMonthsText) else null,
             )
           _uiState.update {
             it.copy(symptomWizard = wiz.copy(step = 3, evaluation = result, validationErrorFa = null))
           }
           return
         }
+        if (wiz.durationHoursText.isNotBlank() && ClinicalNumberInput.durationHours(wiz.durationHoursText) == null) {
+          _uiState.update { it.copy(symptomWizard = wiz.copy(validationErrorFa = "مدت علائم باید عدد صحیح نامنفی بر حسب ساعت باشد.")) }
+          return
+        }
+        if (age == AgeBand.INFANT_3_12M && wiz.ageMonthsText.isNotBlank() &&
+          ClinicalNumberInput.durationHours(wiz.ageMonthsText) !in 3..11) {
+          _uiState.update { it.copy(symptomWizard = wiz.copy(validationErrorFa = "سن دقیق باید با گروه انتخابی (۳ تا کمتر از ۱۲ ماه) سازگار باشد.")) }
+          return
+        }
+        if (wiz.temperatureText.isNotBlank() && parsedTemp == null) {
+          _uiState.update {
+            it.copy(symptomWizard = wiz.copy(validationErrorFa = "لطفاً دمای معتبر به سانتی‌گراد (مثلاً 38.0) وارد کنید."))
+          }
+          return
+        }
         _uiState.update { it.copy(symptomWizard = wiz.copy(step = 2, validationErrorFa = null)) }
       }
       2 -> {
-        val age = wiz.selectedAgeBand ?: AgeBand.TODDLER_1_3Y
+        val age = wiz.selectedAgeBand ?: return
         val result =
           TriageEngine.evaluate(
             flow = flow,
@@ -361,6 +377,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
             temperatureCelsius = parseTemperature(wiz.temperatureText),
             durationHours = parseIntOrNull(wiz.durationHoursText),
             selectedRedFlagIds = wiz.selectedRedFlagIds,
+              ageMonthsExact = if (age == AgeBand.INFANT_3_12M) ClinicalNumberInput.durationHours(wiz.ageMonthsText) else null,
           )
         _uiState.update {
           it.copy(symptomWizard = wiz.copy(step = 3, evaluation = result, validationErrorFa = null))
@@ -534,6 +551,11 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
     if (aliasFa.isBlank()) {
       showToast("لطفاً یک نام مستعار یا نام کوچک وارد کنید.")
+      return
+    }
+    if (weightKgText.isNotBlank() &&
+        (ClinicalNumberInput.decimal(weightKgText)?.let { it > 0.0 && it <= 250 } != true || weightDateFa.isBlank())) {
+      showToast("وزن معتبر به کیلوگرم و تاریخ اندازه‌گیری را وارد کنید.")
       return
     }
     val cleanedBirthOrAge = birthDateOrAgeFa.trim().ifEmpty { ageBand.labelFa }
@@ -821,11 +843,11 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     val cleanAlias = aliasFa.trim().ifBlank { "فرزند من" }.take(40)
     val cleanWeight = PersianNormalizer.normalize(weightKgText).replace("٫", ".").replace(",", ".").trim()
     val cleanHeight = PersianNormalizer.normalize(heightCmText).replace("٫", ".").replace(",", ".").trim()
-    val ageMonthsExact =
-      birthDateEpochMs?.let { bMs ->
-        val days = VaccinationScheduleEngine.diffDays(bMs, System.currentTimeMillis()).coerceAtLeast(0)
-        (days / 30.4375).toInt().coerceIn(0, 144)
-      }
+    if (birthDateEpochMs != null && birthDateEpochMs > System.currentTimeMillis()) {
+      showToast("تاریخ تولد نمی‌تواند در آینده باشد.")
+      return
+    }
+    val ageMonthsExact = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(null, birthDateEpochMs)
     val birthDateLabel =
       birthDateEpochMs?.let { VaccinationScheduleEngine.formatPersianDate(it) } ?: ageBand.labelFa
     val profile =
@@ -883,11 +905,7 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     _uiState.update { it.copy(toastMessageFa = null) }
   }
 
-  private fun parseTemperature(raw: String): Double? {
-    val norm = PersianNormalizer.normalize(raw).replace("٫", ".").replace(",", ".").trim()
-    val value = norm.toDoubleOrNull() ?: return null
-    return if (value in 34.0..43.0) value else null
-  }
+  private fun parseTemperature(raw: String): Double? = ClinicalNumberInput.temperature(raw)
 
-  private fun parseIntOrNull(raw: String): Int? = PersianNormalizer.normalize(raw).trim().toIntOrNull()
+  private fun parseIntOrNull(raw: String): Int? = ClinicalNumberInput.durationHours(raw)
 }

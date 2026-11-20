@@ -266,16 +266,17 @@ class ExampleRobolectricTest {
 
     composeTestRule.onNodeWithTag("syringe_formulation_row").performScrollTo()
     composeTestRule.onNodeWithTag("syringe_form_ibuprofen_syrup_100_5").performScrollTo().performClick()
-    composeTestRule.onNodeWithTag("syringe_age_chip_12").performScrollTo().performClick()
-    composeTestRule.onNodeWithTag("syringe_weight_chip_16.0").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("syringe_age_input").performScrollTo().performTextReplacement("۱۲")
+    composeTestRule.onNodeWithTag("syringe_weight_input").performScrollTo().performTextReplacement("۱۶")
+    composeTestRule.onNodeWithTag("syringe_confirm_label").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("syringe_selected_ml_label").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("syringe_selected_ml_label").assertTextEquals("6.0 mL")
 
     // Verify newborn (<3 months) locks home dose at 0.0 mL with emergency warning
-    composeTestRule.onNodeWithTag("syringe_age_chip_2").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("syringe_age_input").performScrollTo().performTextReplacement("۲")
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("syringe_selected_ml_label").performScrollTo().assertTextEquals("0.0 mL")
+    composeTestRule.onNodeWithTag("syringe_selected_ml_label").assertDoesNotExist()
     composeTestRule.onNodeWithTag("syringe_dose_alert_banner").performScrollTo().assertIsDisplayed()
 
     composeTestRule.onNodeWithTag("devices_list").performScrollToNode(hasTestTag("interactive_thermometer_lab_card"))

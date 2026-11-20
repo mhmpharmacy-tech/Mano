@@ -90,7 +90,7 @@ fun GrowthScreen(
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoFramedIllustration(
-              resId = R.drawable.img_mano_orbital_mascot,
+              resId = R.drawable.mano_growth_orbit,
               contentDescription = "ربات مهربان مانو کید همراه پایش رشد کودک",
               width = 96.dp,
               aspectRatio = 1.0f,
@@ -103,7 +103,7 @@ fun GrowthScreen(
                 verticalAlignment = Alignment.CenterVertically,
               ) {
                 Text("رشد و تکامل کودک", style = MaterialTheme.typography.headlineSmall)
-                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
+                SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
               }
               Text(
                 text = "پایش نقاط عطف حرکتی، گفتاری و اجتماعی به همراه یادآوری ویزیت‌های دوره‌ای رشد.",
@@ -130,7 +130,7 @@ fun GrowthScreen(
         AgeSelectorRow(selectedAgeBand = selectedAgeBand, onSelect = onSelectAgeBand)
       }
 
-      // Real WHO Child Growth Standards Percentile Curve Canvas (0–60 months)
+      // Educational monthly WHO table interpolation; review pending.
       item {
         WhoGrowthChartCard(
           childProfile = childProfile,

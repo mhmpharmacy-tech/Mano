@@ -51,3 +51,27 @@ test("evaluateServerTriage allows calm non-urgent pediatric OTC/constipation que
   assert.equal(result.outcome, "NONURGENT");
   assert.equal(result.ruleId, "rule_nonurgent_pass_eligible");
 });
+
+test("every red flag selectable on Android prevents a nonurgent pass", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const seeds = await readFile("../app/src/main/java/com/example/data/ManoSourcesAndClinicalSeed.kt", "utf8");
+  const flags = [...seeds.matchAll(/RedFlagOption\("([^"]+)",\s*"[^"]+",\s*(true|false)\)/g)];
+  assert.ok(flags.length >= 20);
+  for (const [, id, critical] of flags) {
+    const decision = evaluateServerTriage({ ageBandId: "toddler_1_3y", selectedRedFlagIds: [id] });
+    assert.equal(decision.outcome, critical === "true" ? "URGENT_EMERGENCY" : "NEEDS_TIMELY_REVIEW", id);
+  }
+});
+
+test("unknown flags and invalid durations cannot authorize an online case", () => {
+  for (const durationHours of [-1, 1.5, Infinity, NaN]) {
+    assert.throws(() => evaluateServerTriage({ageBandId: "infant_3_12m", durationHours}));
+  }
+  assert.throws(() => evaluateServerTriage({ageBandId: "infant_3_12m", selectedRedFlagIds: ["unknown"]}));
+});
+
+test("persistent fever and young infant fever require medical assessment", () => {
+  assert.equal(evaluateServerTriage({ageBandId: "infant_3_12m", symptomFlowId: "cough", temperatureCelsius: 39}).outcome, "NEEDS_TIMELY_REVIEW");
+  assert.equal(evaluateServerTriage({ageBandId: "toddler_1_3y", symptomFlowId: "fever", durationHours: 120}).outcome, "NEEDS_TIMELY_REVIEW");
+  assert.equal(evaluateServerTriage({ageBandId: "newborn", symptomFlowId: "cough", temperatureCelsius: 38, durationHours: -1}).outcome, "URGENT_EMERGENCY");
+});
