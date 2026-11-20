@@ -1252,7 +1252,7 @@ fun ManoApp(
                   selectedCategory = uiState.medicineCategory,
                   onCategorySelect = viewModel::setMedicineCategory,
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   currentUser = currentUser,
                   doseLogsState = cloudDoseLogsState,
                   timelineSnapshot = timelineSnapshot,
@@ -1343,7 +1343,7 @@ fun ManoApp(
               composable<VaccinesRoute> {
                 VaccinesScreen(
                   summary = vaccineSummary,
-                  birthDateEpochMs = childBirthDateEpochMs,
+                  birthDateEpochMs = resolvedChildBirthDateEpochMs,
                   reminderSettings = vaccineReminderSettings,
                   childProfile = effectiveChildProfile,
                   hasNotificationPermission = hasNotificationPermission,
@@ -1442,7 +1442,7 @@ fun ManoApp(
                   guides = viewModel.allDeviceGuides,
                   onNavigateSymptoms = { navController.navigate(SymptomsRoute()) },
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   onNavigate3DStudio = { navController.navigate(Pediatric3DStudioRoute("workbench")) },
                   onOpen3DWithDose = { recommendedMl ->
                     val hasFever = (timelineSnapshot.latestTempCelsius ?: 0f) >= 38.0f
@@ -1466,7 +1466,7 @@ fun ManoApp(
                   prefillFormulationId = args.prefillFormulationId,
                   prefillScannedDrugFa = args.prefillScannedDrugFa,
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   latestTempCelsius = timelineSnapshot.latestTempCelsius,
                   hapticIntensity = hapticIntensity,
                   webGlQuality = webGlQuality,
@@ -1479,21 +1479,21 @@ fun ManoApp(
                   scannerUiState = syrupScannerUiState,
                   savedScans = effectiveSyrupScans,
                   childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = childBirthDateEpochMs,
+                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
                   isCloudSignedIn = currentUser != null,
-                  onAnalyzeBitmap = { bmp -> syrupScannerVm.analyzeBitmap(bmp, effectiveChildProfile, childBirthDateEpochMs) },
-                  onStartManualFallback = { syrupScannerVm.startManualFallback(effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
-                  onEditDrugName = { name -> syrupScannerVm.editExtraction(drugNameFa = name, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
-                  onEditIngredient = { ing -> syrupScannerVm.editExtraction(ingredientKey = ing, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
-                  onEditDosageForm = { form -> syrupScannerVm.editExtraction(dosageForm = form, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs) },
+                  onAnalyzeBitmap = { bmp -> syrupScannerVm.analyzeBitmap(bmp, effectiveChildProfile, resolvedChildBirthDateEpochMs) },
+                  onStartManualFallback = { syrupScannerVm.startManualFallback(effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
+                  onEditDrugName = { name -> syrupScannerVm.editExtraction(drugNameFa = name, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
+                  onEditIngredient = { ing -> syrupScannerVm.editExtraction(ingredientKey = ing, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
+                  onEditDosageForm = { form -> syrupScannerVm.editExtraction(dosageForm = form, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs) },
                   onAdjustStrength = { mg, perMl ->
-                    syrupScannerVm.editExtraction(mgAmount = mg, perMlAmount = perMl, childProfile = effectiveChildProfile, birthDateEpochMs = childBirthDateEpochMs)
+                    syrupScannerVm.editExtraction(mgAmount = mg, perMlAmount = perMl, childProfile = effectiveChildProfile, birthDateEpochMs = resolvedChildBirthDateEpochMs)
                   },
                   onSelectCalibratedPreset = { preset ->
-                    syrupScannerVm.selectCalibratedPreset(preset, effectiveChildProfile, childBirthDateEpochMs)
+                    syrupScannerVm.selectCalibratedPreset(preset, effectiveChildProfile, resolvedChildBirthDateEpochMs)
                   },
                   onSetParentVerified = syrupScannerVm::setParentVerified,
-                  onRefreshChildContext = { syrupScannerVm.refreshChildContext(effectiveChildProfile, childBirthDateEpochMs) },
+                  onRefreshChildContext = { syrupScannerVm.refreshChildContext(effectiveChildProfile, resolvedChildBirthDateEpochMs) },
                   onConfirmSaveAndOpen3D = { formulationId, drugNameFa, targetMl ->
                     val confirmedScan = syrupScannerVm.buildConfirmedSavedScan()
                     if (confirmedScan != null) {
@@ -1526,7 +1526,7 @@ fun ManoApp(
                       }
                     }
                   },
-                  onLoadSavedScan = { scan -> syrupScannerVm.loadSavedScan(scan, effectiveChildProfile, childBirthDateEpochMs) },
+                  onLoadSavedScan = { scan -> syrupScannerVm.loadSavedScan(scan, effectiveChildProfile, resolvedChildBirthDateEpochMs) },
                   onDeleteSavedScan = { scan ->
                     viewModel.deleteLocalSyrupScan(scan.id)
                     cloudVm?.deleteSyrupScan(scan.id)
@@ -1725,7 +1725,7 @@ fun ManoApp(
       if (shouldShowFirstRunOnboarding) {
         ManoOnboardingOverlay(
           existingProfile = effectiveChildProfile,
-          existingBirthDateEpochMs = childBirthDateEpochMs,
+          existingBirthDateEpochMs = resolvedChildBirthDateEpochMs,
           existingHeightCm = childHeightCm,
           onComplete = { alias, birthMs, band, weightKg, heightCm ->
             manualOnboardingOpen = false
