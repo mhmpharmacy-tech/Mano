@@ -1,11 +1,21 @@
 name: Manokid Android and form checks
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "functions/**"
+      - "firestore.rules"
+      - ".github/workflows/manokid-android-review.yml"
   pull_request:
     paths:
       - "app/**"
       - "functions/**"
+      - "firestore.rules"
       - ".github/workflows/manokid-android-review.yml"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
