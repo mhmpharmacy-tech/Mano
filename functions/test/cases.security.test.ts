@@ -246,6 +246,7 @@ test("Gate 4: Intake requires valid unused non-expired NONURGENT triage pass; ur
         triagePassId: "fake_pass_123",
         categoryName: "OTC",
         ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
         questionSummaryFa: "تلاش برای ارسال بدون گذرنامه واقعی سرور",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -270,6 +271,7 @@ test("Gate 4: Intake requires valid unused non-expired NONURGENT triage pass; ur
         triagePassId: alicePass.triagePassId!,
         categoryName: "SKIN",
         ageBandId: "preschool_3_6y",
+        symptomFlowId: "rash",
         questionSummaryFa: "استفاده غیرمجاز از گذرنامه کاربر دیگر",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -279,12 +281,29 @@ test("Gate 4: Intake requires valid unused non-expired NONURGENT triage pass; ur
       err instanceof AppError && err.code === "permission-denied",
   );
 
+  // Single-use pass is tied to the evaluated symptom, not just the child's age.
+  await assert.rejects(
+    () => caseService.submitConsultationCase(alice, {
+      pharmacyId: "pharm_a",
+      triagePassId: alicePass.triagePassId!,
+      categoryName: "SKIN",
+      ageBandId: "preschool_3_6y",
+      symptomFlowId: "constipation",
+      questionSummaryFa: "پرسش درباره مشکل شکمی جدید و متفاوت از تریاژ پوستی",
+      hasUrgentFlag: false,
+      consentAccepted: true,
+      consentVersion: "v1",
+    }),
+    (err: unknown) => err instanceof AppError && err.code === "invalid-argument",
+  );
+
   // First legitimate submission succeeds and consumes the pass
   await caseService.submitConsultationCase(alice, {
     pharmacyId: "pharm_a",
     triagePassId: alicePass.triagePassId!,
     categoryName: "SKIN",
     ageBandId: "preschool_3_6y",
+        symptomFlowId: "rash",
     questionSummaryFa: "قرمزی خفیف پوست پس از تعویض پودر لباسشویی کودک پنج ساله",
     hasUrgentFlag: false,
     consentAccepted: true,
@@ -299,6 +318,7 @@ test("Gate 4: Intake requires valid unused non-expired NONURGENT triage pass; ur
         triagePassId: alicePass.triagePassId!,
         categoryName: "SKIN",
         ageBandId: "preschool_3_6y",
+        symptomFlowId: "rash",
         questionSummaryFa: "تلاش مجدد با گذرنامه مصرف‌شده برای ارسال تکراری",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -322,6 +342,7 @@ test("Gate 4: Intake requires valid unused non-expired NONURGENT triage pass; ur
         triagePassId: expiringPass.triagePassId!,
         categoryName: "SUPPLEMENT",
         ageBandId: "toddler_1_3y",
+        symptomFlowId: "otc_question",
         questionSummaryFa: "پرسش درباره قطره ویتامین آد پس از انقضای گذرنامه",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -496,6 +517,7 @@ test("Gate 6: Rate limiting blocks rapid case intake spam and recovers after win
       triagePassId: pass.triagePassId!,
       categoryName: "OTC",
       ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
       questionSummaryFa: `سوال عادی شماره ${i + 1} درباره تغذیه و مصرف آب کودک`,
       hasUrgentFlag: false,
       consentAccepted: true,
@@ -516,6 +538,7 @@ test("Gate 6: Rate limiting blocks rapid case intake spam and recovers after win
         triagePassId: extraPass.triagePassId!,
         categoryName: "OTC",
         ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
         questionSummaryFa: "سوال ششم که باید توسط محدودیت نرخ مسدود شود",
         hasUrgentFlag: false,
         consentAccepted: true,
@@ -537,6 +560,7 @@ test("Gate 6: Rate limiting blocks rapid case intake spam and recovers after win
     triagePassId: recoveredPass.triagePassId!,
     categoryName: "OTC",
     ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
     questionSummaryFa: "سوال جدید پس از سپری شدن زمان محدودیت نرخ ارسال",
     hasUrgentFlag: false,
     consentAccepted: true,
