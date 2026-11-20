@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Search
@@ -36,6 +37,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
@@ -143,7 +145,18 @@ fun FaqScreen(
             onValueChange = onQueryChange,
             label = { Text("جست‌وجو (تب نوزاد، استامینوفن، شیرخشک، یبوست، پوشک...)") },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+            trailingIcon = {
+              if (query.isNotEmpty()) {
+                IconButton(
+                  onClick = { onQueryChange("") },
+                  modifier = Modifier.minimumInteractiveComponentSize(),
+                ) {
+                  Icon(Icons.Rounded.Close, contentDescription = "پاک کردن جست‌وجو")
+                }
+              }
+            },
             singleLine = true,
+            shape = RoundedCornerShape(18.dp),
             modifier = Modifier.fillMaxWidth().testTag("faq_search_input"),
           )
         }

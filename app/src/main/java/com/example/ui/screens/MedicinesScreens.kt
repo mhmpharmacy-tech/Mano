@@ -71,6 +71,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.MedicationDoseLogCloud
@@ -285,6 +286,7 @@ fun MedicinesScreen(
                   text = "چک‌لیست ایمنی (${checklistProgress.checkedCount}/${checklistProgress.totalCount})",
                   fontWeight = FontWeight.SemiBold,
                   maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
                 )
               }
               OutlinedButton(
@@ -302,6 +304,7 @@ fun MedicinesScreen(
                   text = "مقایسه علمی محصولات",
                   fontWeight = FontWeight.SemiBold,
                   maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
                 )
               }
             }

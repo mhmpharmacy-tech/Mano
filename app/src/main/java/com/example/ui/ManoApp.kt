@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -37,6 +40,7 @@ import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MedicalServices
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.ChildCare
 import androidx.compose.material.icons.rounded.Close
@@ -53,6 +57,7 @@ import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Spa
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Vaccines
 import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material3.DrawerValue
@@ -61,6 +66,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
@@ -73,6 +79,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -126,6 +133,7 @@ import com.example.data.ManoThemeMode
 import com.example.data.MedicationDoseLogCloud
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
+import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.MascotPose
 import com.example.domain.model.TopicCategory
 import com.example.domain.model.VaccineRecord
@@ -147,6 +155,7 @@ import com.example.ui.components.ManoAtmosphericBackdrop
 import com.example.ui.components.ManoBrandCrest
 import com.example.ui.components.ManoIconMedallion
 import com.example.ui.components.ManoKidWordmark
+import com.example.ui.components.ManoOnboardingOverlay
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.TopicAccentRole
@@ -230,7 +239,7 @@ private data class DrawerNavItem(
   val iconKind: PediatricIconKind? = null,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ManoApp(
   viewModel: ManoViewModel = viewModel(),
@@ -240,6 +249,7 @@ fun ManoApp(
   onConsumedVaccinesLaunch: () -> Unit = {},
   pendingDeepLinkUri: String? = null,
   onConsumedDeepLinkUri: () -> Unit = {},
+  forceShowOnboarding: Boolean = false,
 ) {
   val context = LocalContext.current
   val auth =
@@ -274,6 +284,9 @@ fun ManoApp(
   val notifiedVaccineReminderKeys by viewModel.notifiedVaccineReminderKeys.collectAsStateWithLifecycle()
   val savedGalacticSelection by viewModel.savedGalacticSelection.collectAsStateWithLifecycle()
   val localSyrupScans by viewModel.savedSyrupScans.collectAsStateWithLifecycle()
+  val onboardingCompleted by viewModel.onboardingCompleted.collectAsStateWithLifecycle()
+  val hapticIntensity by viewModel.hapticIntensity.collectAsStateWithLifecycle()
+  val webGlQuality by viewModel.webGlQuality.collectAsStateWithLifecycle()
   val visitDraftVm: ManoVisitDraftViewModel = viewModel()
   val visitDraftUiState by visitDraftVm.uiState.collectAsStateWithLifecycle()
   val visitDraftPdfState by visitDraftVm.pdfState.collectAsStateWithLifecycle()
@@ -290,6 +303,9 @@ fun ManoApp(
   val scope = rememberCoroutineScope()
   var showGlobalSearchSheet by remember { mutableStateOf(false) }
   var showVisitDraftSheet by remember { mutableStateOf(false) }
+  var manualOnboardingOpen by remember { mutableStateOf(forceShowOnboarding) }
+  var dismissedAutoOnboarding by remember { mutableStateOf(false) }
+  val isRobolectricRuntime = remember { Build.FINGERPRINT.equals("robolectric", ignoreCase = true) }
 
   LaunchedEffect(auth) {
     if (auth == null) return@LaunchedEffect
@@ -711,9 +727,27 @@ fun ManoApp(
               DrawerNavItem("فرزند من", Icons.Rounded.PersonOutline, MyChildRoute, TopicAccentRole.MANGO, PediatricIconKind.FAMILY),
               DrawerNavItem("منابع علمی و حریم خصوصی", Icons.Rounded.HealthAndSafety, InfoRoute("sources"), TopicAccentRole.GOLD, PediatricIconKind.SAFETY_SHIELD),
               DrawerNavItem("اتصال دامنه (manokid.ir)", Icons.Rounded.Language, InfoRoute("domain"), TopicAccentRole.SKY, PediatricIconKind.FOLLOW_UP),
+              DrawerNavItem("تنظیمات دستگاه و انتشار", Icons.Rounded.Tune, InfoRoute("release"), TopicAccentRole.AQUA, PediatricIconKind.DEVICE),
             )
 
           drawerLinks.forEach { item ->
+            val isItemSelected =
+              when (item.route) {
+                is TopicsRoute -> currentDest?.hasRoute<TopicsRoute>() == true
+                is MedicinesRoute -> currentDest?.hasRoute<MedicinesRoute>() == true
+                is SyrupScannerRoute -> currentDest?.hasRoute<SyrupScannerRoute>() == true
+                is SkinRoute -> currentDest?.hasRoute<SkinRoute>() == true
+                is DevicesRoute -> currentDest?.hasRoute<DevicesRoute>() == true
+                is Pediatric3DStudioRoute -> currentDest?.hasRoute<Pediatric3DStudioRoute>() == true
+                is GrowthRoute -> currentDest?.hasRoute<GrowthRoute>() == true
+                is VaccinesRoute -> currentDest?.hasRoute<VaccinesRoute>() == true
+                is NutritionRoute -> currentDest?.hasRoute<NutritionRoute>() == true
+                is FaqRoute -> currentDest?.hasRoute<FaqRoute>() == true
+                is AskPharmacistRoute -> currentDest?.hasRoute<AskPharmacistRoute>() == true
+                is MyChildRoute -> currentDest?.hasRoute<MyChildRoute>() == true
+                is InfoRoute -> currentDest?.hasRoute<InfoRoute>() == true
+                else -> false
+              }
             NavigationDrawerItem(
               label = { Text(item.label) },
               icon = {
@@ -726,13 +760,33 @@ fun ManoApp(
                   cornerRadius = 12.dp,
                 )
               },
-              selected = false,
+              selected = isItemSelected,
               onClick = {
                 scope.launch { drawerState.close() }
                 navController.navigate(item.route) { launchSingleTop = true }
               },
             )
           }
+
+          NavigationDrawerItem(
+            label = { Text("راه‌اندازی سریع کودک (۳ مرحله)") },
+            icon = {
+              ManoIconMedallion(
+                icon = Icons.Rounded.AutoAwesome,
+                accentColor = TopicAccentRole.TEAL.resolveAccentColor(),
+                iconKind = PediatricIconKind.FAMILY,
+                containerSize = 38.dp,
+                iconSize = 22.dp,
+                cornerRadius = 12.dp,
+              )
+            },
+            selected = false,
+            onClick = {
+              scope.launch { drawerState.close() }
+              manualOnboardingOpen = true
+            },
+            modifier = Modifier.testTag("drawer_onboarding_item"),
+          )
 
           Spacer(Modifier.height(10.dp))
           HorizontalDivider()
@@ -1101,6 +1155,7 @@ fun ManoApp(
                     }
                   },
                   scrollToTopTrigger = homeScrollToTopTrigger,
+                  hapticIntensity = hapticIntensity,
                 )
               }
 
@@ -1428,6 +1483,8 @@ fun ManoApp(
                   childProfile = effectiveChildProfile,
                   childBirthDateEpochMs = childBirthDateEpochMs,
                   latestTempCelsius = timelineSnapshot.latestTempCelsius,
+                  hapticIntensity = hapticIntensity,
+                  webGlQuality = webGlQuality,
                   onBack = { navController.popBackStack() },
                 )
               }
@@ -1529,6 +1586,20 @@ fun ManoApp(
 
               composable<AskPharmacistRoute> { entry ->
                 val args = entry.toRoute<AskPharmacistRoute>()
+                LaunchedEffect(args.categoryId) {
+                  val mappedCategory =
+                    when (args.categoryId?.trim()?.lowercase()) {
+                      "otc", "medicines", "drug" -> ConsultationCategory.OTC
+                      "skin", "diaper" -> ConsultationCategory.SKIN
+                      "scalp", "hair", "scalp_hair" -> ConsultationCategory.SCALP_HAIR
+                      "supplement", "vitamin", "nutrition" -> ConsultationCategory.SUPPLEMENT
+                      "symptoms", "fever" -> ConsultationCategory.SYMPTOMS
+                      else -> null
+                    }
+                  if (mappedCategory != null) {
+                    viewModel.setAskCategory(mappedCategory)
+                  }
+                }
                 AskPharmacistScreen(
                   state = effectiveConsultations,
                   onSelectCategory = viewModel::setAskCategory,
@@ -1653,11 +1724,48 @@ fun ManoApp(
                   sources = viewModel.allSources,
                   onTestDeepLink = ::handleDomainDeepLink,
                   onShowFeedback = viewModel::showToast,
+                  hapticIntensity = hapticIntensity,
+                  webGlQuality = webGlQuality,
+                  onSelectHapticIntensity = viewModel::setHapticIntensity,
+                  onSelectWebGlQuality = viewModel::setWebGlQuality,
+                  onLaunchOnboarding = { manualOnboardingOpen = true },
                 )
               }
             }
           }
         }
+      }
+
+      val shouldShowFirstRunOnboarding =
+        manualOnboardingOpen ||
+          (!isRobolectricRuntime && !dismissedAutoOnboarding && onboardingCompleted == false && effectiveChildProfile == null)
+      if (shouldShowFirstRunOnboarding) {
+        ManoOnboardingOverlay(
+          existingProfile = effectiveChildProfile,
+          existingBirthDateEpochMs = childBirthDateEpochMs,
+          existingHeightCm = childHeightCm,
+          onComplete = { alias, birthMs, band, weightKg, heightCm ->
+            manualOnboardingOpen = false
+            dismissedAutoOnboarding = true
+            viewModel.completeOnboarding(
+              aliasFa = alias,
+              birthDateEpochMs = birthMs,
+              ageBand = band,
+              weightKgText = weightKg,
+              heightCmText = heightCm,
+              onProfileReady = { profile ->
+                if (currentUser != null && cloudVm != null) {
+                  cloudVm.saveChildProfile(profile)
+                }
+              },
+            )
+          },
+          onSkip = {
+            manualOnboardingOpen = false
+            dismissedAutoOnboarding = true
+            viewModel.skipOnboarding()
+          },
+        )
       }
 
       if (activeHighFeverDialog != null) {
@@ -1801,6 +1909,9 @@ fun ManoApp(
       if (showGlobalSearchSheet) {
         val (matchedArticles, matchedFaqs, matchedMeds) = viewModel.globalSearchResults(selectedAgeBand)
         val searchSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val quickQueries = remember { listOf("تب کودک", "استامینوفن", "سرفه", "واکسن", "پوشک") }
+        val resultItemColors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        val resultBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
         ModalBottomSheet(
           onDismissRequest = { showGlobalSearchSheet = false },
           sheetState = searchSheetState,
@@ -1809,6 +1920,8 @@ fun ManoApp(
             modifier =
               Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1818,8 +1931,11 @@ fun ManoApp(
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically,
             ) {
-              Text("جست‌وجوی سریع مانو", style = MaterialTheme.typography.titleLarge)
-              IconButton(onClick = { showGlobalSearchSheet = false }) {
+              Text("جست‌وجوی سریع مانو", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+              IconButton(
+                onClick = { showGlobalSearchSheet = false },
+                modifier = Modifier.minimumInteractiveComponentSize(),
+              ) {
                 Icon(Icons.Rounded.Close, contentDescription = "بستن جست‌وجو")
               }
             }
@@ -1829,7 +1945,18 @@ fun ManoApp(
               onValueChange = viewModel::setGlobalSearchQuery,
               label = { Text("جست‌وجو: تب نوزاد، شیرخشک، استامینوفن، سرفه، یبوست...") },
               leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+              trailingIcon = {
+                if (uiState.globalSearchQuery.isNotEmpty()) {
+                  IconButton(
+                    onClick = { viewModel.setGlobalSearchQuery("") },
+                    modifier = Modifier.minimumInteractiveComponentSize(),
+                  ) {
+                    Icon(Icons.Rounded.Close, contentDescription = "پاک کردن عبارت جست‌وجو")
+                  }
+                }
+              },
               singleLine = true,
+              shape = RoundedCornerShape(18.dp),
               modifier = Modifier.fillMaxWidth().testTag("global_search_input"),
             )
 
@@ -1844,10 +1971,22 @@ fun ManoApp(
 
             if (uiState.globalSearchQuery.isBlank()) {
               Text(
-                text = "عبارت خود را بنویسید تا در مقالات، پرسش‌های پرتکرار و داروهای کودک جست‌وجو شود.",
+                text = "عبارت خود را بنویسید یا یکی از جست‌وجوهای پرتکرار را انتخاب کنید:",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
+              FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+              ) {
+                quickQueries.forEach { sample ->
+                  SuggestionChip(
+                    onClick = { viewModel.setGlobalSearchQuery(sample) },
+                    label = { Text(sample, style = MaterialTheme.typography.labelMedium) },
+                    modifier = Modifier.minimumInteractiveComponentSize(),
+                  )
+                }
+              }
             } else if (matchedArticles.isEmpty() && matchedFaqs.isEmpty() && matchedMeds.isEmpty()) {
               EmptyState(
                 title = "نتیجه‌ای یافت نشد",
@@ -1856,35 +1995,40 @@ fun ManoApp(
               )
             } else {
               if (matchedArticles.isNotEmpty()) {
-                Text("مقالات مرتبط", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text("مقالات مرتبط", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 matchedArticles.forEach { art ->
                   Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                    border = resultBorder,
                     modifier =
                       Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
                         .clickable {
                           showGlobalSearchSheet = false
                           navController.navigate(TopicDetailRoute(art.slug))
                         },
                   ) {
                     ListItem(
-                      headlineContent = { Text(art.titleFa) },
+                      colors = resultItemColors,
+                      headlineContent = { Text(art.titleFa, fontWeight = FontWeight.SemiBold) },
                       supportingContent = { Text(art.category.labelFa) },
                     )
                   }
                 }
               }
               if (matchedFaqs.isNotEmpty()) {
-                Text("پرسش‌های پرتکرار", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text("پرسش‌های پرتکرار", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 matchedFaqs.forEach { faq ->
                   Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                    border = resultBorder,
                     modifier =
                       Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
                         .clickable {
                           showGlobalSearchSheet = false
                           viewModel.setFaqSearchQuery(uiState.globalSearchQuery)
@@ -1892,28 +2036,32 @@ fun ManoApp(
                         },
                   ) {
                     ListItem(
-                      headlineContent = { Text(faq.questionFa) },
-                      supportingContent = { Text(faq.summaryFa, maxLines = 1) },
+                      colors = resultItemColors,
+                      headlineContent = { Text(faq.questionFa, fontWeight = FontWeight.SemiBold) },
+                      supportingContent = { Text(faq.summaryFa, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     )
                   }
                 }
               }
               if (matchedMeds.isNotEmpty()) {
-                Text("داروهای کودک", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text("داروهای کودک", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 matchedMeds.forEach { med ->
                   Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                    border = resultBorder,
                     modifier =
                       Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
                         .clickable {
                           showGlobalSearchSheet = false
                           navController.navigate(MedicineDetailRoute(med.slug))
                         },
                   ) {
                     ListItem(
-                      headlineContent = { Text(med.nameFa) },
+                      colors = resultItemColors,
+                      headlineContent = { Text(med.nameFa, fontWeight = FontWeight.SemiBold) },
                       supportingContent = { Text(med.genericNameEn) },
                     )
                   }

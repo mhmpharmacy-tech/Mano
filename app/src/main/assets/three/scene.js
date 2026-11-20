@@ -66,6 +66,8 @@ controls.maxPolarAngle = Math.PI * 0.475;
 controls.minDistance = 2.0;
 controls.maxDistance = 9.5;
 controls.target.set(0, 0.72, 0);
+controls.autoRotate = false;
+controls.autoRotateSpeed = 0.0;
 
 // 3-Point Soft Studio Lighting Rig (Key + Aqua Fill + Luminous Back Rim + Hemisphere)
 const keyLight = new THREE.DirectionalLight(0xfff8ef, 2.05);
@@ -1437,6 +1439,113 @@ const moteSeeds = Array.from({ length: MOTE_COUNT }, (_, i) => ({
   speed: 0.22 + (i % 4) * 0.08,
 }));
 
+// Serene Background Particle System: Layer 1 (Soft Floating Luminous Light Orbs)
+function createBokehGlowTexture() {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+  g.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+  g.addColorStop(0.28, 'rgba(230, 252, 255, 0.82)');
+  g.addColorStop(0.62, 'rgba(130, 232, 232, 0.28)');
+  g.addColorStop(1.0, 'rgba(130, 232, 232, 0.0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const LIGHT_PARTICLE_COUNT = 96;
+const LIGHT_Y_MIN = 0.22;
+const LIGHT_Y_SPAN = 5.1;
+const lightPositions = new Float32Array(LIGHT_PARTICLE_COUNT * 3);
+const lightColors = new Float32Array(LIGHT_PARTICLE_COUNT * 3);
+const lightPalette = [
+  new THREE.Color(0x00d7c7), // Teal Glow
+  new THREE.Color(0x8fece6), // Mint Whisper
+  new THREE.Color(0xb7e8ff), // Soft Sky
+  new THREE.Color(0xffebc2), // Warm Pearl
+];
+const lightSeeds = Array.from({ length: LIGHT_PARTICLE_COUNT }, (_, i) => {
+  const angle = ((i * 2.399963) % (Math.PI * 2)); // golden-angle distribution
+  const radius = 2.65 + ((i * 0.73) % 6.6);
+  const yOffset = ((i * 0.41) % 1.0) * LIGHT_Y_SPAN;
+  const paletteColor = lightPalette[i % lightPalette.length];
+  lightColors[i * 3] = paletteColor.r;
+  lightColors[i * 3 + 1] = paletteColor.g;
+  lightColors[i * 3 + 2] = paletteColor.b;
+  lightPositions[i * 3] = Math.cos(angle) * radius;
+  lightPositions[i * 3 + 1] = LIGHT_Y_MIN + yOffset;
+  lightPositions[i * 3 + 2] = Math.sin(angle) * radius;
+  return {
+    angle,
+    radius,
+    yOffset,
+    riseSpeed: 0.075 + (i % 6) * 0.024,
+    swayAmp: 0.14 + (i % 4) * 0.06,
+    swayFreq: 0.35 + (i % 5) * 0.11,
+    driftSpeed: (i % 2 === 0 ? 1 : -1) * (0.025 + (i % 4) * 0.012),
+    phase: i * 0.87,
+  };
+});
+
+const lightGeo = new THREE.BufferGeometry();
+lightGeo.setAttribute('position', new THREE.BufferAttribute(lightPositions, 3));
+lightGeo.setAttribute('color', new THREE.BufferAttribute(lightColors, 3));
+const lightGlowTex = createBokehGlowTexture();
+const lightParticleMat = new THREE.PointsMaterial({
+  size: 0.22,
+  map: lightGlowTex,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.56,
+  depthWrite: false,
+  sizeAttenuation: true,
+  blending: THREE.NormalBlending,
+});
+const backgroundLightParticles = new THREE.Points(lightGeo, lightParticleMat);
+backgroundLightParticles.frustumCulled = false;
+scene.add(backgroundLightParticles);
+
+// Serene Background Particle System: Layer 2 (Translucent Rising Micro-Bubbles)
+const BUBBLE_COUNT = 44;
+const BUBBLE_Y_MIN = 0.18;
+const BUBBLE_Y_SPAN = 4.6;
+const bubbleMat = new THREE.MeshPhysicalMaterial({
+  color: 0xdff9fc,
+  emissive: 0x38cfc4,
+  emissiveIntensity: 0.10,
+  roughness: 0.06,
+  metalness: 0.06,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.05,
+  iridescence: 0.65,
+  transparent: true,
+  opacity: 0.36,
+  depthWrite: false,
+});
+const bubbleMesh = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(0.062, 14, 12),
+  bubbleMat,
+  BUBBLE_COUNT
+);
+bubbleMesh.frustumCulled = false;
+scene.add(bubbleMesh);
+
+const bubbleSeeds = Array.from({ length: BUBBLE_COUNT }, (_, i) => ({
+  angle: ((i * 2.399963 + 0.55) % (Math.PI * 2)),
+  radius: 2.85 + ((i * 0.91) % 4.9),
+  yOffset: ((i * 0.29) % 1.0) * BUBBLE_Y_SPAN,
+  riseSpeed: 0.10 + (i % 5) * 0.028,
+  wobbleAmp: 0.12 + (i % 4) * 0.045,
+  wobbleFreq: 0.62 + (i % 5) * 0.16,
+  orbitSpeed: (i % 2 === 0 ? 1 : -1) * (0.03 + (i % 3) * 0.015),
+  baseScale: 0.52 + (i % 5) * 0.18,
+  phase: i * 1.13,
+}));
+
 // Pre-allocated scratch math objects (zero allocations in RAF loop)
 const scratchVec = new THREE.Vector3();
 const scratchTarget = new THREE.Vector3(0, 0.72, 0);
@@ -1457,6 +1566,53 @@ let bottleShakeTimer = 0.0;
 let guidedStep = 0;
 let cameraLerpActive = false;
 
+// Adaptive WebGL performance profile for mid-range vs flagship Android hardware
+let activePerfMode = 'auto';
+let activeMoteCount = 24;
+let activeLightCount = LIGHT_PARTICLE_COUNT;
+let activeBubbleCount = BUBBLE_COUNT;
+let activeFrameIntervalMs = 14;
+let idleFrameIntervalMs = 33;
+
+function detectMidRangeHardware() {
+  const cores = typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 8;
+  const memGb = typeof navigator !== 'undefined' && navigator.deviceMemory ? navigator.deviceMemory : 6;
+  return cores <= 4 || memGb <= 4;
+}
+
+function applyPerformanceProfile(mode) {
+  const normalized = mode === 'balanced' ? 'balanced' : (mode === 'high' ? 'high' : 'auto');
+  activePerfMode = normalized;
+  const effective = normalized === 'auto' ? (detectMidRangeHardware() ? 'balanced' : 'high') : normalized;
+  const dpr = window.devicePixelRatio || 1;
+
+  if (effective === 'balanced') {
+    renderer.setPixelRatio(Math.min(dpr, 1.15));
+    renderer.shadowMap.enabled = false;
+    activeMoteCount = Math.min(MOTE_COUNT, 12);
+    activeLightCount = Math.min(LIGHT_PARTICLE_COUNT, 42);
+    activeBubbleCount = Math.min(BUBBLE_COUNT, 18);
+    activeFrameIntervalMs = 22; // smooth ~45fps during touch/auto-rotate on mid-range GPUs
+    idleFrameIntervalMs = 45;
+  } else {
+    renderer.setPixelRatio(Math.min(dpr, 1.75));
+    renderer.shadowMap.enabled = true;
+    activeMoteCount = MOTE_COUNT;
+    activeLightCount = LIGHT_PARTICLE_COUNT;
+    activeBubbleCount = BUBBLE_COUNT;
+    activeFrameIntervalMs = 14;
+    idleFrameIntervalMs = 33;
+  }
+
+  moteMesh.count = activeMoteCount;
+  bubbleMesh.count = activeBubbleCount;
+  lightGeo.setDrawRange(0, activeLightCount);
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  if (typeof markInteractive === 'function') {
+    markInteractive(800);
+  }
+}
+
 function damp(current, target, k, dt) {
   return current + (target - current) * (1 - Math.exp(-k * dt));
 }
@@ -1465,6 +1621,9 @@ function setCameraFocus(posArr, targetArr) {
   desiredCamPos.set(posArr[0], posArr[1], posArr[2]);
   desiredTarget.set(targetArr[0], targetArr[1], targetArr[2]);
   cameraLerpActive = true;
+  if (typeof noteUserInteraction === 'function') {
+    noteUserInteraction(1600);
+  }
 }
 
 function applyWeighingCameraForStep(step) {
@@ -1527,6 +1686,13 @@ window.Mano3D = {
     manoCoreEmblemMat.emissiveIntensity = dark ? 0.55 : 0.40;
     manoGoldMat.emissiveIntensity = dark ? 0.28 : 0.22;
     moteMat.emissiveIntensity = dark ? 0.42 : 0.16;
+    lightParticleMat.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending;
+    lightParticleMat.opacity = dark ? 0.74 : 0.56;
+    lightParticleMat.size = dark ? 0.24 : 0.21;
+    lightParticleMat.needsUpdate = true;
+    bubbleMat.color.setHex(dark ? 0x9ef4f2 : 0xdff9fc);
+    bubbleMat.emissiveIntensity = dark ? 0.28 : 0.10;
+    bubbleMat.opacity = dark ? 0.30 : 0.36;
     for (let i = 0; i < contactShadowMats.length; i++) {
       contactShadowMats[i].opacity = dark ? 0.90 : 0.80;
     }
@@ -1552,7 +1718,7 @@ window.Mano3D = {
       manoCoreEmblemMat.emissive.setHex(0x8f7239);
       plinthTrimMat.emissive.setHex(0x0e7d70);
     }
-    markInteractive(1600);
+    noteUserInteraction(1600);
   },
   setSyringeMl(ml) {
     const clamped = Math.max(0.5, Math.min(20.0, Number(ml) || 5.0));
@@ -1655,29 +1821,84 @@ window.Mano3D = {
   setPaused(paused) {
     setScenePaused(Boolean(paused));
   },
+  setPerformanceProfile(mode) {
+    applyPerformanceProfile(mode);
+  },
 };
+
+const AUTO_ROTATE_IDLE_MS = 5000;
+const AUTO_ROTATE_TARGET_SPEED = 0.85;
+let lastUserInteractionMs = performance.now();
+let isPointerInteracting = false;
 
 let interactionBoostUntilMs = performance.now() + 1800;
 function markInteractive(durationMs = 1500) {
   interactionBoostUntilMs = Math.max(interactionBoostUntilMs, performance.now() + durationMs);
 }
 
-controls.addEventListener('start', () => markInteractive(2500));
-controls.addEventListener('change', () => markInteractive(1200));
-controls.addEventListener('end', () => markInteractive(1400));
+function noteUserInteraction(durationMs = 1500) {
+  lastUserInteractionMs = performance.now();
+  controls.autoRotate = false;
+  controls.autoRotateSpeed = 0.0;
+  markInteractive(durationMs);
+}
 
-// Tap raycasting to focus / notify Android
+controls.addEventListener('start', () => {
+  isPointerInteracting = true;
+  noteUserInteraction(2500);
+});
+controls.addEventListener('change', () => {
+  if (!controls.autoRotate) {
+    markInteractive(1200);
+  }
+});
+controls.addEventListener('end', () => {
+  isPointerInteracting = false;
+  noteUserInteraction(1400);
+});
+
+// Tap raycasting to focus / trigger character haptic feedback / notify Android
 const raycaster = new THREE.Raycaster();
 const pointerNdc = new THREE.Vector2();
 let downX = 0;
 let downY = 0;
+
+function isCharacterPart(partId) {
+  return partId === 'mano' || squadMeshesById.has(partId) || partId === 'mannequin';
+}
+
+function triggerCharacterHaptic(partId) {
+  if (!isCharacterPart(partId)) return;
+  if (window.AndroidBridge && typeof window.AndroidBridge.onCharacterTapped === 'function') {
+    window.AndroidBridge.onCharacterTapped(partId);
+    return;
+  }
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(partId === 'mano' ? [18, 28, 22] : 14);
+    }
+  } catch (_) {
+    // Ignore vibration errors in restricted browser contexts
+  }
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   downX = e.clientX;
   downY = e.clientY;
   cameraLerpActive = false;
-  markInteractive(2000);
+  isPointerInteracting = true;
+  noteUserInteraction(2000);
 });
+canvas.addEventListener('pointercancel', () => {
+  isPointerInteracting = false;
+  noteUserInteraction(1200);
+});
+canvas.addEventListener('wheel', () => {
+  noteUserInteraction(1500);
+}, { passive: true });
 canvas.addEventListener('pointerup', (e) => {
+  isPointerInteracting = false;
+  noteUserInteraction(1400);
   const dx = e.clientX - downX;
   const dy = e.clientY - downY;
   if (dx * dx + dy * dy > 36) return; // ignore drags
@@ -1695,10 +1916,12 @@ canvas.addEventListener('pointerup', (e) => {
     if (partId) {
       if (partId === 'mano') {
         window.Mano3D.selectSquadMember('default');
+        manoBounce = 1.0;
       } else if (squadMeshesById.has(partId)) {
         window.Mano3D.selectSquadMember(partId);
       }
-      markInteractive(1600);
+      triggerCharacterHaptic(partId);
+      noteUserInteraction(1600);
       if (window.AndroidBridge && typeof window.AndroidBridge.onPartSelected === 'function') {
         window.AndroidBridge.onPartSelected(partId);
       }
@@ -1716,7 +1939,7 @@ window.addEventListener('resize', () => {
   markInteractive(1000);
 });
 
-// Adaptive power-aware Animation Loop (60fps during interaction, ~30fps idle, 0fps paused/hidden)
+// Adaptive power-aware Animation Loop (60fps during interaction/auto-rotate, ~30fps idle, 0fps paused/hidden)
 let lastMs = performance.now();
 let lastRenderMs = 0;
 let rafId = 0;
@@ -1733,7 +1956,7 @@ function setScenePaused(paused) {
   } else {
     lastMs = performance.now();
     lastRenderMs = 0;
-    markInteractive(1200);
+    noteUserInteraction(1200);
     if (!rafId && !document.hidden) {
       rafId = requestAnimationFrame(animate);
     }
@@ -1747,6 +1970,7 @@ document.addEventListener('visibilitychange', () => {
 function isMotionActive(nowMs) {
   return (
     nowMs < interactionBoostUntilMs ||
+    controls.autoRotate ||
     cameraLerpActive ||
     bottleShakeTimer > 0 ||
     manoBounce > 0 ||
@@ -1761,7 +1985,7 @@ function animate(nowMs) {
   }
   rafId = requestAnimationFrame(animate);
 
-  const minIntervalMs = isMotionActive(nowMs) ? 14 : 33;
+  const minIntervalMs = isMotionActive(nowMs) ? activeFrameIntervalMs : idleFrameIntervalMs;
   if (lastRenderMs > 0 && nowMs - lastRenderMs < minIntervalMs) {
     return;
   }
@@ -1891,7 +2115,7 @@ function animate(nowMs) {
   }
 
   // Update ambient floating motes via InstancedMesh without per-frame allocations
-  for (let i = 0; i < MOTE_COUNT; i++) {
+  for (let i = 0; i < activeMoteCount; i++) {
     const s = moteSeeds[i];
     const ang = t * s.speed + s.phase;
     scratchVec.set(
@@ -1905,6 +2129,43 @@ function animate(nowMs) {
   }
   moteMesh.instanceMatrix.needsUpdate = true;
 
+  // Update serene background luminous light orbs (gentle rise + soft horizontal sway)
+  for (let i = 0; i < activeLightCount; i++) {
+    const s = lightSeeds[i];
+    const ang = s.angle + t * s.driftSpeed;
+    const sway = Math.sin(t * s.swayFreq + s.phase) * s.swayAmp;
+    const r = s.radius + sway;
+    const yProgress = (s.yOffset + t * s.riseSpeed) % LIGHT_Y_SPAN;
+    const idx3 = i * 3;
+    lightPositions[idx3] = Math.cos(ang) * r;
+    lightPositions[idx3 + 1] = LIGHT_Y_MIN + yProgress;
+    lightPositions[idx3 + 2] = Math.sin(ang) * r;
+  }
+  lightGeo.attributes.position.needsUpdate = true;
+
+  // Update translucent rising background micro-bubbles with soft spawn/fade envelope
+  for (let i = 0; i < activeBubbleCount; i++) {
+    const s = bubbleSeeds[i];
+    const ang = s.angle + t * s.orbitSpeed;
+    const wobbleX = Math.sin(t * s.wobbleFreq + s.phase) * s.wobbleAmp;
+    const wobbleZ = Math.cos(t * s.wobbleFreq * 0.85 + s.phase) * s.wobbleAmp;
+    const yProgress = (s.yOffset + t * s.riseSpeed) % BUBBLE_Y_SPAN;
+    const normY = yProgress / BUBBLE_Y_SPAN;
+    // Smooth fade-in at bottom and graceful fade-out near top
+    const lifeEnvelope = Math.sin(normY * Math.PI);
+    const breathPulse = 0.90 + 0.12 * Math.sin(t * 1.7 + s.phase);
+    const sc = Math.max(0.001, s.baseScale * Math.pow(lifeEnvelope, 0.45) * breathPulse);
+    scratchVec.set(
+      Math.cos(ang) * s.radius + wobbleX,
+      BUBBLE_Y_MIN + yProgress,
+      Math.sin(ang) * s.radius + wobbleZ
+    );
+    scratchScale.setScalar(sc);
+    scratchMat.compose(scratchVec, scratchQuat, scratchScale);
+    bubbleMesh.setMatrixAt(i, scratchMat);
+  }
+  bubbleMesh.instanceMatrix.needsUpdate = true;
+
   if (cameraLerpActive) {
     camera.position.x = damp(camera.position.x, desiredCamPos.x, 7, dt);
     camera.position.y = damp(camera.position.y, desiredCamPos.y, 7, dt);
@@ -1917,7 +2178,20 @@ function animate(nowMs) {
     }
   }
 
-  controls.update();
+  const shouldAutoRotate =
+    !isPointerInteracting &&
+    !cameraLerpActive &&
+    nowMs - lastUserInteractionMs >= AUTO_ROTATE_IDLE_MS;
+
+  if (shouldAutoRotate) {
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = damp(controls.autoRotateSpeed, AUTO_ROTATE_TARGET_SPEED, 2.2, dt);
+  } else {
+    controls.autoRotate = false;
+    controls.autoRotateSpeed = 0.0;
+  }
+
+  controls.update(dt);
   renderer.render(scene, camera);
   const loaderEl = document.getElementById('stage-loader');
   if (loaderEl && !loaderEl.classList.contains('hidden')) {
@@ -1925,4 +2199,5 @@ function animate(nowMs) {
   }
 }
 
+applyPerformanceProfile('auto');
 rafId = requestAnimationFrame(animate);

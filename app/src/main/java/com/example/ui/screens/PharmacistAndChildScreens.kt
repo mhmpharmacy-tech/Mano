@@ -22,10 +22,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -43,16 +51,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.R
+import com.example.data.ManoHapticIntensity
 import com.example.data.ManoSourcesAndClinicalSeed
+import com.example.data.ManoWebGlQuality
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
@@ -63,6 +75,9 @@ import com.example.domain.model.ReviewStatus
 import com.example.domain.model.SourceReference
 import com.example.domain.model.StaffAccessStatus
 import com.example.domain.model.StaffConsultationCase
+import com.example.domain.util.AssetLinksCheckSeverity
+import com.example.domain.util.AssetLinksDomainReport
+import com.example.domain.util.AssetLinksVerifier
 import com.example.domain.util.ManoDomainLinks
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.ConsentBox
@@ -75,7 +90,10 @@ import com.example.ui.components.SourceBadge
 import com.example.ui.components.SymptomChip
 import com.example.ui.auth.CloudSyncAuthCard
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.CautionAmber
+import com.example.ui.theme.CautionSurface
 import com.example.ui.theme.DangerCrimson
+import com.example.ui.theme.DangerSurface
 import com.example.ui.theme.DarkCoral
 import com.example.ui.theme.DarkGold
 import com.example.ui.theme.DarkSage
@@ -83,13 +101,17 @@ import com.example.ui.theme.DarkSky
 import com.example.ui.theme.PaleWarmSand
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SageCare
+import com.example.ui.theme.SuccessEmerald
+import com.example.ui.theme.SuccessSurface
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
 import com.example.ui.theme.manoSemanticAccent
 import com.example.ui.theme.manoTintedSurface
+import com.example.ui.util.ManoHaptics
 import com.example.ui.util.ManoLinkShareHelper
 import com.example.ui.viewmodel.AskPharmacistState
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -743,9 +765,16 @@ fun InfoScreen(
   sources: List<SourceReference>,
   onTestDeepLink: (String) -> Unit = {},
   onShowFeedback: (String) -> Unit = {},
+  hapticIntensity: ManoHapticIntensity = ManoHapticIntensity.MEDIUM,
+  webGlQuality: ManoWebGlQuality = ManoWebGlQuality.AUTO,
+  onSelectHapticIntensity: (ManoHapticIntensity) -> Unit = {},
+  onSelectWebGlQuality: (ManoWebGlQuality) -> Unit = {},
+  onLaunchOnboarding: () -> Unit = {},
 ) {
   var activeTab by remember(initialSection) { mutableStateOf(initialSection) }
   val context = LocalContext.current
+  val hostView = LocalView.current
+  val scope = rememberCoroutineScope()
   val fingerprints = remember(context) { ManoLinkShareHelper.readAppSigningSha256Fingerprints(context) }
   val assetLinksJson =
     remember(context.packageName, fingerprints) {
@@ -755,6 +784,8 @@ fun InfoScreen(
         includeReleasePlaceholder = true,
       )
     }
+  var isVerifyingDomains by remember { mutableStateOf(false) }
+  var domainReports by remember { mutableStateOf<List<AssetLinksDomainReport>>(emptyList()) }
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
@@ -763,7 +794,7 @@ fun InfoScreen(
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
       item {
-        Text("درباره مانو، منابع علمی و اتصال دامنه", style = MaterialTheme.typography.headlineMedium)
+        Text("درباره مانو، تنظیمات دستگاه و اتصال دامنه", style = MaterialTheme.typography.headlineMedium)
       }
 
       item {
@@ -774,6 +805,7 @@ fun InfoScreen(
         ) {
           listOf(
             "about" to "ماموریت و تحریریه",
+            "release" to "تنظیمات و انتشار",
             "domain" to "دامنه و لینک‌ها",
             "sources" to "منابع علمی",
             "privacy" to "حریم خصوصی و امنیت",
@@ -789,6 +821,127 @@ fun InfoScreen(
       }
 
       when (activeTab) {
+        "release" -> {
+          item {
+            SectionCard(modifier = Modifier.testTag("info_haptic_tuning_card")) {
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Rounded.Vibration, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text("تنظیم شدت بازخورد لرزشی (Haptic)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+              }
+              Text(
+                text = "شدت لرزش هنگام لمس شخصیت مانو در صفحه خانه و آزمایشگاه سه‌بعدی را متناسب با موتور لرزش گوشی فیزیکی خود تنظیم کنید.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+              FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+              ) {
+                ManoHapticIntensity.entries.forEach { level ->
+                  SymptomChip(
+                    label = level.labelFa,
+                    selected = hapticIntensity == level,
+                    onClick = {
+                      onSelectHapticIntensity(level)
+                      ManoHaptics.perform(context, hostView, level, isPrimaryInteraction = true)
+                    },
+                    modifier = Modifier.testTag("haptic_level_${level.id}"),
+                  )
+                }
+              }
+              Text(
+                text = "حالت فعال: ${hapticIntensity.labelFa} — ${hapticIntensity.summaryFa}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+              )
+              OutlinedButton(
+                onClick = {
+                  ManoHaptics.perform(context, hostView, hapticIntensity, isPrimaryInteraction = true)
+                  onShowFeedback(
+                    if (hapticIntensity == ManoHapticIntensity.OFF) "بازخورد لرزشی خاموش است."
+                    else "لرزش با شدت «${hapticIntensity.labelFa}» اجرا شد."
+                  )
+                },
+                modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("test_haptic_btn"),
+              ) {
+                Icon(Icons.Rounded.Vibration, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("تست لرزش روی دستگاه")
+              }
+            }
+          }
+
+          item {
+            SectionCard(modifier = Modifier.testTag("info_webgl_tuning_card")) {
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Rounded.Speed, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text("سرعت و کیفیت موتور سه‌بعدی (WebGL)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+              }
+              Text(
+                text = "در گوشی‌های میان‌رده، انتخاب حالت «میان‌رده / روان» یا «خودکار» تراکم ذرات و وضوح رندر را برای نرخ فریم پایدار و مصرف باتری کمتر بهینه می‌کند.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+              FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+              ) {
+                ManoWebGlQuality.entries.forEach { profile ->
+                  SymptomChip(
+                    label = profile.labelFa,
+                    selected = webGlQuality == profile,
+                    onClick = { onSelectWebGlQuality(profile) },
+                    modifier = Modifier.testTag("webgl_quality_${profile.id}"),
+                  )
+                }
+              }
+              Text(
+                text = "پروفایل فعال: ${webGlQuality.labelFa} — ${webGlQuality.summaryFa}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+              )
+            }
+          }
+
+          item {
+            SectionCard(modifier = Modifier.testTag("info_release_checklist_card")) {
+              val sageAccent = manoSemanticAccent(SageCare, DarkSage)
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Rounded.Tune, contentDescription = null, tint = sageAccent)
+                Text("آماده‌سازی انتشار و تجربه ورود اول", style = MaterialTheme.typography.titleMedium, color = sageAccent)
+              }
+              listOf(
+                "مرور نهایی متن‌های فارسی راهنما، هشدارهای نوزاد زیر ۳ ماه و ارجاع اورژانس ۱۱۵",
+                "بررسی زنده فایل /.well-known/assetlinks.json روی manokid.ir و manokid.com بدون ریدایرکت",
+                "جایگزینی اثر انگشت SHA-256 کلید انتشار (Play App Signing) روی سرور دامنه",
+                "تست شدت لرزش و روانی آزمایشگاه سه‌بعدی WebGL روی یک گوشی میان‌رده فیزیکی",
+              ).forEach { checklistItem ->
+                Text("• $checklistItem", style = MaterialTheme.typography.bodySmall)
+              }
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+              ) {
+                Button(
+                  onClick = onLaunchOnboarding,
+                  modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("info_reopen_onboarding_btn"),
+                ) {
+                  Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                  Spacer(Modifier.width(6.dp))
+                  Text("شروع مجدد معرفی ۳ مرحله‌ای")
+                }
+                OutlinedButton(
+                  onClick = { activeTab = "domain" },
+                  modifier = Modifier.minimumInteractiveComponentSize(),
+                ) {
+                  Text("بررسی دامنه")
+                }
+              }
+            }
+          }
+        }
         "domain" -> {
           item {
             SectionCard(modifier = Modifier.testTag("info_domain_section")) {
@@ -911,6 +1064,94 @@ fun InfoScreen(
                 Spacer(Modifier.width(8.dp))
                 Text("کپی کامل assetlinks.json")
               }
+              OutlinedButton(
+                enabled = !isVerifyingDomains,
+                onClick = {
+                  isVerifyingDomains = true
+                  scope.launch {
+                    val reports =
+                      AssetLinksVerifier.verifyAllPrimaryDomains(
+                        expectedPackageName = context.packageName,
+                        expectedFingerprints = fingerprints,
+                      )
+                    domainReports = reports
+                    isVerifyingDomains = false
+                    val verifiedCount = reports.count { it.severity == AssetLinksCheckSeverity.VERIFIED }
+                    onShowFeedback(
+                      if (verifiedCount == reports.size && reports.isNotEmpty()) {
+                        "هر دو دامنه manokid.ir و manokid.com با موفقیت تایید شدند."
+                      } else {
+                        "نتیجه بررسی زنده سرور دریافت شد؛ جزئیات هر دامنه را ببینید."
+                      }
+                    )
+                  }
+                },
+                modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("verify_assetlinks_btn"),
+              ) {
+                if (isVerifyingDomains) {
+                  CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                  Spacer(Modifier.width(8.dp))
+                  Text("در حال بررسی زنده سرورها...")
+                } else {
+                  Icon(Icons.Rounded.CloudDone, contentDescription = null, modifier = Modifier.size(18.dp))
+                  Spacer(Modifier.width(8.dp))
+                  Text("بررسی زنده assetlinks.json روی سرور واقعی")
+                }
+              }
+
+              if (domainReports.isNotEmpty()) {
+                domainReports.forEach { report ->
+                  val (bgColor, accentColor, iconVec) =
+                    when (report.severity) {
+                      AssetLinksCheckSeverity.VERIFIED ->
+                        Triple(
+                          manoTintedSurface(SuccessSurface, DarkSage, lightAlpha = 0.85f, darkAlpha = 0.22f),
+                          manoSemanticAccent(SuccessEmerald, DarkSage),
+                          Icons.Rounded.CheckCircle,
+                        )
+                      AssetLinksCheckSeverity.WARNING ->
+                        Triple(
+                          manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 0.85f, darkAlpha = 0.22f),
+                          manoSemanticAccent(CautionAmber, DarkGold),
+                          Icons.Rounded.WarningAmber,
+                        )
+                      AssetLinksCheckSeverity.FAILED ->
+                        Triple(
+                          manoTintedSurface(DangerSurface, DarkCoral, lightAlpha = 0.85f, darkAlpha = 0.22f),
+                          manoSemanticAccent(DangerCrimson, DarkCoral),
+                          Icons.Rounded.ErrorOutline,
+                        )
+                    }
+                  Surface(
+                    color = bgColor,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.45f)),
+                    modifier = Modifier.fillMaxWidth().testTag("assetlinks_report_${report.domain}"),
+                  ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                      ) {
+                        Icon(iconVec, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+                        Text(
+                          text = "${report.domain} — ${report.headlineFa}",
+                          style = MaterialTheme.typography.labelLarge,
+                          fontWeight = FontWeight.Bold,
+                          color = accentColor,
+                        )
+                      }
+                      Text(
+                        text = report.detailsFa,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                      )
+                      LtrText(text = report.url, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                  }
+                }
+              }
+
               Surface(
                 color = manoCardSurface(),
                 shape = RoundedCornerShape(12.dp),

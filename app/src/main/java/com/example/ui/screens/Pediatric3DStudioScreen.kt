@@ -1,8 +1,13 @@
 package com.example.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.view.HapticFeedbackConstants
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -56,6 +61,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,16 +70,20 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.data.ManoHapticIntensity
+import com.example.data.ManoWebGlQuality
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
 import com.example.domain.util.LiquidFormulationId
+import com.example.ui.util.ManoHaptics
 import com.example.ui.theme.CautionAmber
 import com.example.ui.theme.CautionSurface
 import com.example.ui.theme.CoralCare
@@ -159,6 +169,8 @@ fun Pediatric3DStudioScreen(
   childProfile: ChildProfileDemo? = null,
   childBirthDateEpochMs: Long? = null,
   latestTempCelsius: Float? = null,
+  hapticIntensity: ManoHapticIntensity = ManoHapticIntensity.MEDIUM,
+  webGlQuality: ManoWebGlQuality = ManoWebGlQuality.AUTO,
   onBack: () -> Unit = {},
 ) {
   val lifecycleOwner = LocalLifecycleOwner.current
@@ -268,6 +280,10 @@ fun Pediatric3DStudioScreen(
     wasMatched = isTargetMatched
   }
 
+  val latestIsDark by rememberUpdatedState(isDark)
+  val latestActiveScene by rememberUpdatedState(activeScene)
+  val latestHapticIntensity by rememberUpdatedState(hapticIntensity)
+  val latestWebGlQuality by rememberUpdatedState(webGlQuality)
   val webViewRef = remember { mutableStateOf<WebView?>(null) }
 
   fun runJs(script: String) {
@@ -285,6 +301,12 @@ fun Pediatric3DStudioScreen(
   LaunchedEffect(pageLoaded, isDark) {
     if (pageLoaded) {
       runJs("window.Mano3D && window.Mano3D.setThemeMode($isDark);")
+    }
+  }
+
+  LaunchedEffect(pageLoaded, webGlQuality) {
+    if (pageLoaded) {
+      runJs("window.Mano3D && window.Mano3D.setPerformanceProfile('${webGlQuality.id}');")
     }
   }
 
@@ -368,6 +390,7 @@ fun Pediatric3DStudioScreen(
       modifier = Modifier.fillMaxSize().testTag("pediatric_3d_webview"),
       factory = { ctx ->
         WebView(ctx).apply {
+          isHapticFeedbackEnabled = true
           setBackgroundColor(if (isDark) 0xFF08191F.toInt() else 0xFFF0F7F8.toInt())
           settings.javaScriptEnabled = true
           settings.domStorageEnabled = true
@@ -387,6 +410,23 @@ fun Pediatric3DStudioScreen(
               fun onPartSelected(partId: String) {
                 post {
                   selectedPartLabelFa = partDescriptionFa(partId)
+                  if (partId == "mano") {
+                    selectedManoSquadId = "default"
+                  } else if (partId.startsWith("mano_")) {
+                    selectedManoSquadId = partId
+                  }
+                }
+              }
+
+              @JavascriptInterface
+              fun onCharacterTapped(partId: String) {
+                post {
+                  ManoHaptics.perform(
+                    context = context,
+                    view = this@apply,
+                    intensity = latestHapticIntensity,
+                    isPrimaryInteraction = partId == "mano",
+                  )
                 }
               }
             },
@@ -427,8 +467,9 @@ fun Pediatric3DStudioScreen(
 
               override fun onPageFinished(view: WebView?, url: String?) {
                 pageLoaded = true
-                runJs("window.Mano3D && window.Mano3D.setThemeMode($isDark);")
-                runJs("window.Mano3D && window.Mano3D.setScene('$activeScene');")
+                runJs("window.Mano3D && window.Mano3D.setPerformanceProfile('${latestWebGlQuality.id}');")
+                runJs("window.Mano3D && window.Mano3D.setThemeMode($latestIsDark);")
+                runJs("window.Mano3D && window.Mano3D.setScene('$latestActiveScene');")
               }
             }
 
@@ -448,12 +489,13 @@ fun Pediatric3DStudioScreen(
           .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
       Surface(
-        color = if (isDark) DarkSurface.copy(alpha = 0.94f) else Color(0xECFFFFFF),
+        color = if (isDark) DarkSurface.copy(alpha = 0.94f) else Color(0xF0FFFFFF),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, borderColor),
+        shadowElevation = 6.dp,
       ) {
         Row(
-          modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -467,6 +509,8 @@ fun Pediatric3DStudioScreen(
             text = selectedPartLabelFa,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
           )
         }
       }
@@ -533,14 +577,14 @@ fun Pediatric3DStudioScreen(
 
     // Collapsible floating RGBA control dock (compact <= 15% collapsed height)
     Surface(
-      color = if (isDark) DarkSurface.copy(alpha = 0.94f) else Color(0xEBFFFFFF),
+      color = if (isDark) DarkSurface.copy(alpha = 0.95f) else Color(0xF2FFFFFF),
       shape = RoundedCornerShape(22.dp),
       border = BorderStroke(1.dp, borderColor),
+      shadowElevation = 8.dp,
       modifier =
         Modifier
           .align(Alignment.BottomCenter)
-          .navigationBarsPadding()
-          .padding(horizontal = 12.dp, vertical = 10.dp)
+          .padding(horizontal = 12.dp, vertical = 8.dp)
           .fillMaxWidth()
           .testTag("studio_3d_control_dock"),
     ) {

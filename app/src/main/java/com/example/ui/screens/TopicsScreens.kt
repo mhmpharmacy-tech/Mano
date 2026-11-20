@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Search
@@ -164,6 +165,16 @@ fun TopicsScreen(
           onValueChange = onQueryChange,
           label = { Text("جست‌وجو در موضوعات (مثلاً تب، یبوست، شیرخشک)") },
           leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+          trailingIcon = {
+            if (query.isNotEmpty()) {
+              IconButton(
+                onClick = { onQueryChange("") },
+                modifier = Modifier.minimumInteractiveComponentSize(),
+              ) {
+                Icon(Icons.Rounded.Close, contentDescription = "پاک کردن جست‌وجو")
+              }
+            }
+          },
           singleLine = true,
           shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
           modifier = Modifier.fillMaxWidth().testTag("topics_search_input"),

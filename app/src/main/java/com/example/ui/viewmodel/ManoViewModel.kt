@@ -3,10 +3,13 @@ package com.example.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import org.json.JSONObject
 import com.example.data.GalacticOrbitSelection
 import com.example.data.ManoContentRepository
+import com.example.data.ManoHapticIntensity
 import com.example.data.ManoPreferencesRepository
 import com.example.data.ManoThemeMode
+import com.example.data.ManoWebGlQuality
 import com.example.domain.model.AgeBand
 import com.example.domain.model.Article
 import com.example.domain.model.ChildProfileDemo
@@ -34,6 +37,7 @@ import com.example.domain.util.PersianNormalizer
 import com.example.domain.util.TimelineDosePoint
 import com.example.domain.util.TimelineTempPoint
 import com.example.domain.util.TriageEngine
+import com.example.domain.util.VaccinationScheduleEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -134,6 +138,15 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
 
   val savedSyrupScans: StateFlow<List<SavedSyrupScan>> =
     prefs.savedSyrupScans.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val onboardingCompleted: StateFlow<Boolean?> =
+    prefs.onboardingCompleted.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+  val hapticIntensity: StateFlow<ManoHapticIntensity> =
+    prefs.hapticIntensity.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ManoHapticIntensity.MEDIUM)
+
+  val webGlQuality: StateFlow<ManoWebGlQuality> =
+    prefs.webGlQuality.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ManoWebGlQuality.AUTO)
 
   private val _uiState = MutableStateFlow(ManoUiState())
   val uiState: StateFlow<ManoUiState> = _uiState.asStateFlow()
@@ -444,38 +457,15 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun submitAskPharmacistDemo() {
+    val validated = validateAskPharmacistForm() ?: return
     val form = _uiState.value.askPharmacist
-    if (form.hasUrgentFlags) {
-      _uiState.update {
-        it.copy(
-          askPharmacist =
-            form.copy(
-              validationErrorFa =
-                "در صورت وجود علائم هشدار فوری، درخواست مشاوره آنلاین کافی نیست؛ لطفاً فوراً با اورژانس ۱۱۵ یا پزشک تماس بگیرید."
-            )
-        )
-      }
-      return
-    }
-    if (!form.consentAccepted) {
-      _uiState.update {
-        it.copy(askPharmacist = form.copy(validationErrorFa = "لطفاً ابتدا رضایت‌نامه ثبت پرسش را تأیید کنید."))
-      }
-      return
-    }
-    if (form.questionText.trim().length < 8) {
-      _uiState.update {
-        it.copy(askPharmacist = form.copy(validationErrorFa = "لطفاً پرسش خود را حداقل در چند کلمه شفاف بنویسید."))
-      }
-      return
-    }
 
     val newReq =
       ConsultationRequestDemo(
         id = "LOCAL-${form.requests.size + 101}",
-        category = form.category,
-        childAgeBand = form.ageBand,
-        questionSummaryFa = form.questionText.trim(),
+        category = validated.first,
+        childAgeBand = validated.second,
+        questionSummaryFa = validated.third,
         hasUrgentFlag = false,
         status = ConsultationStatus.PENDING,
         createdAtLabelFa = "هم‌اکنون (ذخیره‌شده روی دستگاه)",
@@ -573,19 +563,16 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
   fun exportChildProfileSummary(overrideProfile: ChildProfileDemo? = null) {
     val profile = overrideProfile ?: localChildProfile.value ?: return
     val json =
-      """
-      {
-        "source": "MANO_KIDS_LOCAL_SUMMARY",
-        "alias": "${profile.aliasFa}",
-        "ageBand": "${profile.ageBand.labelFa}",
-        "birthOrAge": "${profile.birthDateOrAgeFa}",
-        "weightKg": "${profile.weightKgText}",
-        "weightDate": "${profile.weightDateFa}",
-        "allergies": "${profile.allergiesFa}",
-        "currentMedications": "${profile.currentMedsFa}"
-      }
-      """
-        .trimIndent()
+      JSONObject()
+        .put("source", "MANO_KIDS_LOCAL_SUMMARY")
+        .put("alias", profile.aliasFa)
+        .put("ageBand", profile.ageBand.labelFa)
+        .put("birthOrAge", profile.birthDateOrAgeFa)
+        .put("weightKg", profile.weightKgText)
+        .put("weightDate", profile.weightDateFa)
+        .put("allergies", profile.allergiesFa)
+        .put("currentMedications", profile.currentMedsFa)
+        .toString(2)
     _uiState.update { it.copy(exportedProfileJson = json) }
   }
 
@@ -821,6 +808,71 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
 
   fun mirrorCloudSyrupScans(scans: List<SavedSyrupScan>) {
     viewModelScope.launch { prefs.mirrorCloudSyrupScans(scans) }
+  }
+
+  fun completeOnboarding(
+    aliasFa: String,
+    birthDateEpochMs: Long?,
+    ageBand: AgeBand,
+    weightKgText: String,
+    heightCmText: String,
+    onProfileReady: (ChildProfileDemo) -> Unit = {},
+  ) {
+    val cleanAlias = aliasFa.trim().ifBlank { "فرزند من" }.take(40)
+    val cleanWeight = PersianNormalizer.normalize(weightKgText).replace("٫", ".").replace(",", ".").trim()
+    val cleanHeight = PersianNormalizer.normalize(heightCmText).replace("٫", ".").replace(",", ".").trim()
+    val ageMonthsExact =
+      birthDateEpochMs?.let { bMs ->
+        val days = VaccinationScheduleEngine.diffDays(bMs, System.currentTimeMillis()).coerceAtLeast(0)
+        (days / 30.4375).toInt().coerceIn(0, 144)
+      }
+    val birthDateLabel =
+      birthDateEpochMs?.let { VaccinationScheduleEngine.formatPersianDate(it) } ?: ageBand.labelFa
+    val profile =
+      ChildProfileDemo(
+        aliasFa = cleanAlias,
+        birthDateOrAgeFa = birthDateLabel,
+        ageBand = ageBand,
+        weightKgText = cleanWeight,
+        weightDateFa = VaccinationScheduleEngine.formatPersianDate(System.currentTimeMillis()),
+        allergiesFa = "ثبت نشده",
+        currentMedsFa = "ثبت نشده",
+        consentGranted = true,
+        ageMonthsExact = ageMonthsExact,
+      )
+    viewModelScope.launch {
+      prefs.setLocalChildProfile(profile)
+      prefs.setSelectedAgeBand(ageBand)
+      if (birthDateEpochMs != null && birthDateEpochMs > 0L) {
+        prefs.setChildBirthDateEpochMs(birthDateEpochMs)
+      }
+      if (cleanHeight.isNotEmpty()) {
+        prefs.setChildHeightCm(cleanHeight)
+      }
+      prefs.setOnboardingCompleted(true)
+      onProfileReady(profile)
+      showToast("پروفایل «$cleanAlias» ثبت شد؛ تقویم واکسن، سرنگ mL و نمودار رشد شخصی‌سازی شدند.")
+    }
+  }
+
+  fun skipOnboarding() {
+    viewModelScope.launch {
+      prefs.setOnboardingCompleted(true)
+    }
+  }
+
+  fun setHapticIntensity(intensity: ManoHapticIntensity) {
+    viewModelScope.launch {
+      prefs.setHapticIntensity(intensity)
+      showToast("شدت بازخورد لرزشی روی «${intensity.labelFa}» تنظیم شد.")
+    }
+  }
+
+  fun setWebGlQuality(quality: ManoWebGlQuality) {
+    viewModelScope.launch {
+      prefs.setWebGlQuality(quality)
+      showToast("کیفیت موتور سه‌بعدی WebGL روی «${quality.labelFa}» تنظیم شد.")
+    }
   }
 
   fun showToast(message: String) {

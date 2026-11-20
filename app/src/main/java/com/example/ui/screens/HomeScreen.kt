@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -67,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,10 +89,14 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -103,10 +111,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.R
+import com.example.data.ManoHapticIntensity
 import com.example.domain.model.AgeBand
 import com.example.domain.model.Article
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineSnapshot
+import com.example.ui.util.ManoHaptics
 import com.example.ui.components.GoldenOrbitalGeometry
 import com.example.ui.components.Mano3DIconArtwork
 import com.example.ui.components.ManoBrandCrest
@@ -283,6 +293,7 @@ fun HomeScreen(
   savedSyrupScansCount: Int = 0,
   onNavigateEcosystemPillar: (ManoEcosystemPillar) -> Unit = {},
   scrollToTopTrigger: Int = 0,
+  hapticIntensity: ManoHapticIntensity = ManoHapticIntensity.MEDIUM,
 ) {
   val isDark = LocalManoDarkTheme.current
   val listState = rememberLazyListState()
@@ -446,6 +457,7 @@ fun HomeScreen(
           OrbitalMenu(
             items = orbitalPrimaryItems,
             modifier = Modifier.fillMaxWidth(),
+            hapticIntensity = hapticIntensity,
           )
         }
       }
@@ -532,11 +544,32 @@ fun OrbitalMenu(
   items: List<OrbitalMenuItem>,
   modifier: Modifier = Modifier,
   onMascotTap: () -> Unit = {},
+  hapticIntensity: ManoHapticIntensity = ManoHapticIntensity.MEDIUM,
 ) {
   if (items.isEmpty()) return
 
   val isDark = LocalManoDarkTheme.current
+  val context = LocalContext.current
+  val hostView = LocalView.current
   val scope = rememberCoroutineScope()
+  val mascotGreetings =
+    remember {
+      listOf(
+        "سلام! من مانو هستم، همراه سلامت کودک شما",
+        "برای چرخاندن مدار، آیکون‌ها را آرام بکشید",
+        "هر سؤالی داشتید از داروساز مانو بپرسید",
+      )
+    }
+  var greetingTapCount by remember { mutableIntStateOf(0) }
+  var showGreetingBubble by remember { mutableStateOf(false) }
+
+  LaunchedEffect(greetingTapCount) {
+    if (greetingTapCount > 0) {
+      showGreetingBubble = true
+      delay(2600L)
+      showGreetingBubble = false
+    }
+  }
 
   // Smooth spring radial blossom when entering the Golden Ratio orbit
   val entranceProgress = remember { Animatable(0.25f) }
@@ -922,6 +955,13 @@ fun OrbitalMenu(
                 shape = CircleShape,
               )
               .clickable(onClickLabel = "احوالپرسی با مانو", role = Role.Button) {
+                ManoHaptics.perform(
+                  context = context,
+                  view = hostView,
+                  intensity = hapticIntensity,
+                  isPrimaryInteraction = true,
+                )
+                greetingTapCount++
                 onMascotTap()
                 scope.launch {
                   mascotTapScale.animateTo(1.09f, spring(dampingRatio = 0.40f, stiffness = 360f))
@@ -976,6 +1016,31 @@ fun OrbitalMenu(
         }
       }
     }
+
+    AnimatedVisibility(
+      visible = showGreetingBubble,
+      enter = fadeIn(tween(220)),
+      exit = fadeOut(tween(300)),
+      modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp).zIndex(4f),
+    ) {
+      Surface(
+        color = if (isDark) DarkSurfaceHigh.copy(alpha = 0.94f) else PureWhite.copy(alpha = 0.95f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, TealGlow.copy(alpha = 0.55f)),
+        shadowElevation = 6.dp,
+        modifier = Modifier.testTag("mano_mascot_greeting_bubble"),
+      ) {
+        Text(
+          text = mascotGreetings[(greetingTapCount - 1).coerceAtLeast(0) % mascotGreetings.size],
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.SemiBold,
+          color = if (isDark) DarkTextPrimary else DarkInk,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+      }
+    }
   }
 }
 
@@ -989,6 +1054,7 @@ private fun OrbitalCareNode(
   medallionSize: Dp,
   modifier: Modifier = Modifier,
 ) {
+  val haptics = LocalHapticFeedback.current
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val pressScale by
@@ -1020,7 +1086,10 @@ private fun OrbitalCareNode(
             indication = androidx.compose.material3.ripple(bounded = true, color = accentColor),
             onClickLabel = item.titleFa,
             role = Role.Button,
-            onClick = item.onClick,
+            onClick = {
+              haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+              item.onClick()
+            },
           )
           .minimumInteractiveComponentSize()
           .semantics { contentDescription = item.contentDescriptionFa }

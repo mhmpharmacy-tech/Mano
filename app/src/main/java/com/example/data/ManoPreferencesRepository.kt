@@ -37,6 +37,19 @@ enum class ManoThemeMode(val id: String, val labelFa: String) {
   DARK("dark", "حالت شب"),
 }
 
+enum class ManoHapticIntensity(val id: String, val labelFa: String, val summaryFa: String) {
+  OFF("off", "خاموش", "بدون بازخورد لرزشی"),
+  LIGHT("light", "ملایم", "ضربه بسیار نرم (مناسب شب و آرامش)"),
+  MEDIUM("medium", "متعادل", "شدت استاندارد پیشنهادی برای تعامل روزمره"),
+  STRONG("strong", "قوی", "لرزش واضح‌تر برای گوشی‌های با موتور لرزش ضعیف"),
+}
+
+enum class ManoWebGlQuality(val id: String, val labelFa: String, val summaryFa: String) {
+  AUTO("auto", "خودکار", "تنظیم هوشمند بر اساس پردازنده و رم دستگاه"),
+  BALANCED("balanced", "میان‌رده / روان", "بهینه برای گوشی‌های میان‌رده (مصرف باتری کمتر و نرخ فریم پایدار)"),
+  HIGH("high", "کیفیت بالا", "وضوح کامل، سایه نرم و حداکثر ذرات معلق"),
+}
+
 /**
  * Stores UI preferences, optional growth height, doctor visit drafts, and saved Gemini nutrition plans.
  */
@@ -65,6 +78,9 @@ class ManoPreferencesRepository(private val context: Context) {
     val LOCAL_FEVER_LOGS_JSON = stringPreferencesKey("local_fever_logs_json")
     val LOCAL_DOSE_LOGS_JSON = stringPreferencesKey("local_dose_logs_json")
     val CHECKED_MILESTONE_IDS = stringSetPreferencesKey("checked_milestone_ids")
+    val ONBOARDING_COMPLETED = booleanPreferencesKey("mano_onboarding_completed")
+    val HAPTIC_INTENSITY = stringPreferencesKey("mano_haptic_intensity")
+    val WEBGL_QUALITY = stringPreferencesKey("mano_webgl_quality")
   }
 
   val bookmarkedSlugs: Flow<Set<String>> =
@@ -188,6 +204,21 @@ class ManoPreferencesRepository(private val context: Context) {
 
   val checkedMilestoneIds: Flow<Set<String>> =
     context.manoDataStore.data.map { prefs -> prefs[Keys.CHECKED_MILESTONE_IDS] ?: emptySet() }
+
+  val onboardingCompleted: Flow<Boolean> =
+    context.manoDataStore.data.map { prefs -> prefs[Keys.ONBOARDING_COMPLETED] ?: false }
+
+  val hapticIntensity: Flow<ManoHapticIntensity> =
+    context.manoDataStore.data.map { prefs ->
+      val id = prefs[Keys.HAPTIC_INTENSITY]
+      ManoHapticIntensity.entries.firstOrNull { it.id == id } ?: ManoHapticIntensity.MEDIUM
+    }
+
+  val webGlQuality: Flow<ManoWebGlQuality> =
+    context.manoDataStore.data.map { prefs ->
+      val id = prefs[Keys.WEBGL_QUALITY]
+      ManoWebGlQuality.entries.firstOrNull { it.id == id } ?: ManoWebGlQuality.AUTO
+    }
 
   suspend fun toggleBookmark(slug: String) {
     context.manoDataStore.edit { prefs ->
@@ -537,6 +568,24 @@ class ManoPreferencesRepository(private val context: Context) {
         current.remove(id)
       }
       prefs[Keys.CHECKED_MILESTONE_IDS] = current
+    }
+  }
+
+  suspend fun setOnboardingCompleted(completed: Boolean) {
+    context.manoDataStore.edit { prefs ->
+      prefs[Keys.ONBOARDING_COMPLETED] = completed
+    }
+  }
+
+  suspend fun setHapticIntensity(intensity: ManoHapticIntensity) {
+    context.manoDataStore.edit { prefs ->
+      prefs[Keys.HAPTIC_INTENSITY] = intensity.id
+    }
+  }
+
+  suspend fun setWebGlQuality(quality: ManoWebGlQuality) {
+    context.manoDataStore.edit { prefs ->
+      prefs[Keys.WEBGL_QUALITY] = quality.id
     }
   }
 }
