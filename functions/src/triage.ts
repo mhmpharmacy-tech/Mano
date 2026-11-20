@@ -55,11 +55,11 @@ const CRITICAL_RED_FLAG_IDS = new Set<string>([
   "breathing", "lips", "lethargy", "dehydration", "rash_nonblanch",
   "bilious_vomit", "blood_stool", "severe_distension", "breathing_effort",
   "stridor_rest", "choking_history", "fever_blisters", "severe_dehyd",
-  "green_vomit", "unable_fluids",
+  "green_vomit", "unable_fluids", "infant_no_meconium",
 ]);
 
 const REVIEW_RED_FLAG_IDS = new Set([
-  "ear_pain_or_crying", "infant_no_meconium", "painful_fissure", "prolonged_2w",
+  "ear_pain_or_crying", "painful_fissure", "prolonged_2w",
   "spreading_severe", "no_improve_3d", "bloody_diarrhea",
 ]);
 
