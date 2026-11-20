@@ -51,3 +51,17 @@ test("evaluateServerTriage allows calm non-urgent pediatric OTC/constipation que
   assert.equal(result.outcome, "NONURGENT");
   assert.equal(result.ruleId, "rule_nonurgent_pass_eligible");
 });
+
+
+test("Invalid or unknown triage signals never authorize intake", () => {
+  const base = { ageBandId: "school_6_plus", symptomFlowId: "general" };
+  for (const extra of [
+    { selectedRedFlagIds: ["unknown_flag"] },
+    { selectedRedFlagIds: [42] },
+    { selectedRedFlagIds: "breathing_difficulty" },
+    { hasUrgentFlag: "true" },
+    { questionSummaryFa: 42 },
+  ]) {
+    assert.throws(() => evaluateServerTriage({...base, ...extra} as Parameters<typeof evaluateServerTriage>[0]), /invalid|unrecognized/i);
+  }
+});

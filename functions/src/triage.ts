@@ -8,7 +8,7 @@ const MULTI_SPACE_REGEX = /\s+/g;
 export function normalizePersian(input: string): string {
   if (!input || !input.trim()) return "";
   let out = "";
-  for (const ch of input) {
+  for (const ch of input.normalize("NFKC")) {
     const code = ch.charCodeAt(0);
     if (ch === "ي" || ch === "ى" || ch === "ئ") {
       out += "ی";
@@ -122,9 +122,20 @@ export function evaluateServerTriage(
     );
   }
 
-  const redFlags = Array.isArray(rawInput.selectedRedFlagIds)
-    ? rawInput.selectedRedFlagIds.filter((x): x is string => typeof x === "string")
-    : [];
+  if (rawInput.questionSummaryFa !== undefined &&
+      (typeof rawInput.questionSummaryFa !== "string" || rawInput.questionSummaryFa.length > 600)) {
+    throw new AppError("invalid-argument", "Invalid questionSummaryFa.");
+  }
+  if (rawInput.hasUrgentFlag !== undefined && typeof rawInput.hasUrgentFlag !== "boolean") {
+    throw new AppError("invalid-argument", "Invalid hasUrgentFlag.");
+  }
+  if (rawInput.selectedRedFlagIds !== undefined &&
+      (!Array.isArray(rawInput.selectedRedFlagIds) ||
+       rawInput.selectedRedFlagIds.length > 64 ||
+       rawInput.selectedRedFlagIds.some(id => typeof id !== "string" || !CRITICAL_RED_FLAG_IDS.has(id)))) {
+    throw new AppError("invalid-argument", "Unrecognized red flag input; non-urgent intake blocked.");
+  }
+  const redFlags = rawInput.selectedRedFlagIds ?? [];
 
   if (rawInput.hasUrgentFlag === true) {
     return {
@@ -234,7 +245,7 @@ export function evaluateServerTriage(
     ruleId: "rule_nonurgent_pass_eligible",
     titleFa: "مجاز برای ثبت پرسش غیرفوری داروساز",
     summaryFa:
-      "علامت اورژانسی فوری شناسایی نشد؛ گذرنامه یک‌بارمصرف NONURGENT برای ثبت پرسش صادر شد.",
+      "در غربالگری محدود نرم‌افزاری علامت هشدار شناسایی نشد؛ این نتیجه سلامت کودک یا غیرفوری بودن وضعیت را تأیید نمی‌کند. در صورت نگرانی یا بدتر شدن علائم، منتظر پاسخ آنلاین نمانید.",
     emergencyActionsFa: [],
   };
 }

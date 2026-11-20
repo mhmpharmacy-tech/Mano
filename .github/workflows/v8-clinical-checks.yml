@@ -1,0 +1,30 @@
+name: MANO v8 clinical backend checks
+on:
+  pull_request:
+  push:
+    branches: [main, fix/v8-clinical-release-quarantine]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v8-clinical-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Verify compiled clinical gate
+        run: node --test lib/test/clinical-release.test.js

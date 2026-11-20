@@ -349,6 +349,10 @@ export class ConsultationCaseService {
         );
       }
 
+      if (passDoc.symptomFlowId !== symptomFlowId) {
+        throw new AppError("invalid-argument", "Triage pass symptom flow does not match submitted consultation.");
+      }
+
       const newCase: ConsultationCaseDoc = {
         caseId,
         pharmacyId,

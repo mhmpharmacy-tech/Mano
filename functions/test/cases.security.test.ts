@@ -285,6 +285,7 @@ test("Gate 4: Intake requires valid unused non-expired NONURGENT triage pass; ur
     triagePassId: alicePass.triagePassId!,
     categoryName: "SKIN",
     ageBandId: "preschool_3_6y",
+    symptomFlowId: "rash",
     questionSummaryFa: "قرمزی خفیف پوست پس از تعویض پودر لباسشویی کودک پنج ساله",
     hasUrgentFlag: false,
     consentAccepted: true,
@@ -577,3 +578,26 @@ test("Gate 7: Public pharmacy discovery, out-of-band bootstrap, and expired doc 
   assert.ok(summary.deletedRateLimits >= 1);
 });
 
+
+
+test("Triage pass cannot authorize a different symptom flow and is not consumed by rejection", async () => {
+  const { caseService } = await setupEnv();
+  const parent = makeParent();
+  const pass = await caseService.issueConsultationTriagePass(parent, {
+    ageBandId: "school_6_plus", symptomFlowId: "supplement_question",
+    questionSummaryFa: "پرسش آموزشی درباره مکمل کودک",
+  });
+  assert.ok(pass.triagePassId);
+  const request = {
+    pharmacyId: "pharm_a", triagePassId: pass.triagePassId,
+    categoryName: "SUPPLEMENT" as const, ageBandId: "school_6_plus" as const,
+    questionSummaryFa: "پرسش آموزشی درباره مکمل کودک",
+    hasUrgentFlag: false as const, consentAccepted: true as const, consentVersion: "v1" as const,
+  };
+  await assert.rejects(
+    () => caseService.submitConsultationCase(parent, {...request, symptomFlowId: "cough"}),
+    (err: unknown) => err instanceof AppError && err.code === "invalid-argument",
+  );
+  const result = await caseService.submitConsultationCase(parent, {...request, symptomFlowId: "supplement_question"});
+  assert.equal(result.status, "PENDING");
+});
