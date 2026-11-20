@@ -168,7 +168,7 @@ class ManoSyrupScannerViewModel(
       if (childProfile != null) {
         "${childProfile.aliasFa} • ${LiquidDoseVisualizerEngine.formatAgeFa(ageM)} • ${LiquidDoseVisualizerEngine.formatKg(weightKg)}"
       } else {
-        "سن تقریبی ${LiquidDoseVisualizerEngine.formatAgeFa(ageM)} • وزن تقریبی ${LiquidDoseVisualizerEngine.formatKg(weightKg)}"
+        "سن و وزن ثبت نشده است."
       }
 
     scanJob?.cancel()

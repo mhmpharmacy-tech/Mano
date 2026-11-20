@@ -135,7 +135,7 @@ enum class ManoEcosystemPillar(
     titleFa = "ارتباط امن خانواده و داروساز",
     subtitleFa = "ثبت پرسش غیرفوری دارویی و مراقبتی با غربالگری علائم خطر",
     icon = Icons.Rounded.SupportAgent,
-    iconKind = PediatricIconKind.PHARMACY,
+    iconKind = PediatricIconKind.FAMILY,
     mascotPose = MascotPose.LISTEN,
   ),
   MANO_FOLLOW_UP(

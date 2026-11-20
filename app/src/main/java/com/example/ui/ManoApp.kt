@@ -1232,11 +1232,12 @@ fun ManoApp(
                   onSelectSymptom = viewModel::selectWizardSymptom,
                   onSelectAgeBand = viewModel::selectWizardAgeBand,
                   onUpdateTemp = viewModel::updateWizardTemperature,
+                  onUpdateAgeMonths = viewModel::updateWizardAgeMonths,
                   onUpdateDuration = viewModel::updateWizardDurationHours,
                   onToggleRedFlag = viewModel::toggleWizardRedFlag,
                   onNext = viewModel::wizardNextStep,
                   onBack = viewModel::wizardPreviousStep,
-                  onReset = viewModel::resetWizard,
+                  onReset = { viewModel.resetWizard(); safetyTriageAiVm.resetChecklist() },
                   onOpenArticle = { slug -> navController.navigate(TopicDetailRoute(slug)) },
                   onNavigateAskPharmacist = { navController.navigate(AskPharmacistRoute()) },
                   timelineSnapshot = timelineSnapshot,
@@ -1677,21 +1678,26 @@ fun ManoApp(
                   onSaveProfile = { alias, birthOrAge, band, weightKg, weightDate, allergies, meds, consent ->
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
-                      val resolved =
-                        viewModel.resolveValidatedChildProfile(
-                          aliasFa = alias,
-                          birthDateOrAgeFa = birthOrAge,
-                          ageBand = band,
-                          weightKgText = weightKg,
-                          weightDateFa = weightDate,
-                          allergiesFa = allergies,
-                          currentMedsFa = meds,
-                          consentGranted = consent,
+                      if (!consent) {
+                        viewModel.showToast("ذخیره پروفایل فقط پس از تأیید رضایت والد امکان‌پذیر است.")
+                      } else if (alias.isBlank()) {
+                        viewModel.showToast("لطفاً یک نام مستعار وارد کنید.")
+                      } else if (weightKg.isNotBlank() && (com.example.domain.util.ClinicalNumberInput.decimal(weightKg)?.let { it > 0 && it <= 250 } != true || weightDate.isBlank())) {
+                        viewModel.showToast("وزن معتبر و تاریخ اندازه‌گیری را وارد کنید.")
+                      } else {
+                        activeCloudVm.saveChildProfile(
+                          ChildProfileDemo(
+                            aliasFa = alias.trim(),
+                            birthDateOrAgeFa = birthOrAge.trim().ifEmpty { band.labelFa },
+                            ageMonthsExact = com.example.domain.util.LiquidDoseVisualizerEngine.parseAgeMonthsFromText(birthOrAge),
+                            ageBand = band,
+                            weightKgText = weightKg.trim(),
+                            weightDateFa = weightDate.trim(),
+                            allergiesFa = allergies.trim().ifEmpty { "ثبت نشده" },
+                            currentMedsFa = meds.trim().ifEmpty { "ثبت نشده" },
+                            consentGranted = true,
+                          )
                         )
-                      if (resolved != null) {
-                        val (validatedProfile, parsedBirthEpochMs) = resolved
-                        activeCloudVm.saveChildProfile(validatedProfile)
-                        viewModel.syncChildMetadataFromProfile(band, parsedBirthEpochMs)
                       }
                     } else {
                       viewModel.saveChildProfileDemo(alias, birthOrAge, band, weightKg, weightDate, allergies, meds, consent)

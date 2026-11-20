@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -113,6 +112,7 @@ fun SymptomNavigatorScreen(
   safetyChecklistState: SafetyChecklistUiState = SafetyChecklistUiState.Idle,
   onGenerateSafetyChecklist: (primaryFlow: SymptomFlow, coSymptomsFa: List<String>) -> Unit = { _, _ -> },
   onToggleSafetyChecklistItem: (String) -> Unit = {},
+  onUpdateAgeMonths: (String) -> Unit = {},
 ) {
   val currentFlow = flows.firstOrNull { it.id == wizard.selectedSymptomId } ?: flows.first()
 
@@ -137,7 +137,7 @@ fun SymptomNavigatorScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(modifier = Modifier.fillMaxSize().widthIn(max = 840.dp)) {
       LazyColumn(
-        modifier = Modifier.weight(1f).fillMaxWidth().imePadding().testTag("symptom_navigator_list"),
+        modifier = Modifier.weight(1f).fillMaxWidth().testTag("symptom_navigator_list"),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
       ) {
@@ -170,7 +170,7 @@ fun SymptomNavigatorScreen(
                     LtrText(text = "MANO Safety Triage", color = MaterialTheme.colorScheme.primary)
                   }
                 }
-                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
+                SourceBadge(reviewStatus = currentFlow.review.status)
               }
               Text("هدایتگر گام‌به‌گام علائم کودک", style = MaterialTheme.typography.headlineMedium)
               Text(
@@ -180,7 +180,7 @@ fun SymptomNavigatorScreen(
               )
             }
             TextButton(
-              onClick = onReset,
+              onClick = { selectedCompanionSymptoms = emptyList(); onReset() },
               modifier = Modifier.minimumInteractiveComponentSize().testTag("wizard_reset_button"),
             ) {
               Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -203,9 +203,10 @@ fun SymptomNavigatorScreen(
             item {
               SectionCard {
                 ManoBannerFrame(
-                  resId = R.drawable.img_symptom_care_banner,
-                  contentDescription = "مانو در اتاق آرام کودک همراه دماسنج و سرنگ خوراکی",
-                  aspectRatio = 16f / 9f,
+                  resId = R.drawable.mano_symptoms_orbit,
+                  contentDescription = "مانو شناور با دماسنج و نشان توجه برای بررسی علائم",
+                  aspectRatio = 1.5f,
+                  contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                   ManoPoseAvatar(pose = MascotPose.LISTEN, size = 56.dp)
@@ -281,7 +282,16 @@ fun SymptomNavigatorScreen(
                   }
                 }
 
-                if (currentFlow.asksTemperature) {
+                if (wizard.selectedAgeBand == AgeBand.INFANT_3_12M) {
+                  OutlinedTextField(
+                    value = wizard.ageMonthsText, onValueChange = onUpdateAgeMonths,
+                    label = { Text("سن دقیق به ماه (اگر می‌دانید)") },
+                    supportingText = { Text("در نبود سن دقیق، برای تب بالا مسیر محتاطانه انتخاب می‌شود.") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
+                    modifier = Modifier.fillMaxWidth().testTag("wizard_exact_age_input"),
+                  )
+                }
+                if (currentFlow.asksTemperature || wizard.selectedAgeBand in setOf(AgeBand.NEWBORN, AgeBand.INFANT_3_12M)) {
                   OutlinedTextField(
                     value = wizard.temperatureText,
                     onValueChange = onUpdateTemp,
@@ -393,7 +403,7 @@ fun SymptomNavigatorScreen(
                 )
               }
 
-              item {
+              if (result.canShowSelfCare) item {
                 GeminiPediatricianSafetyChecklistCard(
                   currentFlow = currentFlow,
                   companionSymptoms = selectedCompanionSymptoms,
@@ -446,7 +456,7 @@ fun SymptomNavigatorScreen(
                     listOf(
                       "شناسه قاعده فعال: ${result.triggeredRule.id}",
                       "توضیح قاعده: ${result.triggeredRule.descriptionFa}",
-                      "مانو تشخیص بیماری صادر نمی‌کند و ابزار آموزشی سرنگ mL جایگزین نسخه پزشک یا داروساز نیست.",
+                      "مانو تشخیص بیماری صادر نمی‌کند و دوز عددی دارو محاسبه نمی‌نماید.",
                     ),
                   sources = currentFlow.sources,
                   reviewStatus = currentFlow.review.status,
@@ -580,7 +590,7 @@ private fun GeminiPediatricianSafetyChecklistCard(
     }
 
     Text(
-      text = "با انتخاب علامت اصلی (${currentFlow.titleFa}) و علائم همراه، هوش مصنوعی مانو یک چک‌لیست ایمنی مستند از علائم هشدار فوری، زمان مراجعه هم‌روز به متخصص کودکان و سوالات کلیدی ویزیت تهیه می‌کند.",
+      text = "با انتخاب علامت اصلی (${currentFlow.titleFa}) و علائم همراه، هوش مصنوعی مانو یک چک‌لیست آموزشی تأییدنشده از علائم هشدار فوری، زمان مراجعه هم‌روز به متخصص کودکان و سوالات کلیدی ویزیت تهیه می‌کند.",
       style = MaterialTheme.typography.bodySmall,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

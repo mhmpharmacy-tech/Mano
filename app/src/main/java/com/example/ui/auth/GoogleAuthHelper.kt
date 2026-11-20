@@ -88,6 +88,11 @@ fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
   awaitClose { removeAuthStateListener(listener) }
 }
 
+private fun webClientId(context: Context): String? {
+  val id = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+  return if (id == 0) null else context.getString(id).takeIf { it.isNotBlank() }
+}
+
 fun attemptAutoSignIn(
   context: Context,
   credentialManager: CredentialManager,
@@ -99,14 +104,7 @@ fun attemptAutoSignIn(
     onAuthSuccess()
     return
   }
-  val clientId =
-    try {
-      context.getString(R.string.default_web_client_id)
-    } catch (_: Exception) {
-      onUnauthenticated()
-      return
-    }
-  if (clientId.isBlank()) {
+  val clientId = webClientId(context) ?: run {
     onUnauthenticated()
     return
   }
@@ -148,13 +146,10 @@ fun onGoogleSignInClicked(
   scope: CoroutineScope,
   onAuthCancelled: () -> Unit = {},
 ) {
-  val clientId =
-    try {
-      context.getString(R.string.default_web_client_id)
-    } catch (_: Exception) {
-      onAuthError("تنظیمات ورود با گوگل یافت نشد.")
-      return
-    }
+  val clientId = webClientId(context) ?: run {
+    onAuthError("تنظیمات ورود با گوگل یافت نشد.")
+    return
+  }
 
   val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
   val request = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()

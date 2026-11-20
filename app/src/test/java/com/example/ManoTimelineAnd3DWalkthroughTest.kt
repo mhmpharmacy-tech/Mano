@@ -319,6 +319,7 @@ class ManoTimelineAnd3DWalkthroughTest {
     }
 
     composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("syringe_confirm_label").performScrollTo().performClick()
     composeTestRule.onNodeWithTag("syringe_open_3d_dose_btn").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 

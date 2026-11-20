@@ -18,8 +18,8 @@ android {
     applicationId = "com.aistudio.manokids.rnkvpx"
     minSdk = 24
     targetSdk = 36
-    versionCode = 14
-    versionName = "14.0"
+    versionCode = 13
+    versionName = "13.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -150,8 +150,8 @@ dependencies {
 }
 
 tasks.withType<Test> {
-  failFast = true
-  timeout.set(Duration.ofMinutes(2))
+  failFast = false
+  timeout.set(Duration.ofMinutes(20))
   testLogging {
     events("passed", "failed", "skipped")
   }

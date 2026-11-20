@@ -59,6 +59,15 @@ const CRITICAL_RED_FLAG_IDS = new Set([
     "blood_in_stool",
     "poisoning",
     "anaphylaxis",
+    // IDs emitted by the current Android symptom wizard.
+    "breathing", "lips", "lethargy", "dehydration", "rash_nonblanch",
+    "bilious_vomit", "blood_stool", "severe_distension", "breathing_effort",
+    "stridor_rest", "choking_history", "fever_blisters", "severe_dehyd",
+    "green_vomit", "unable_fluids",
+]);
+const REVIEW_RED_FLAG_IDS = new Set([
+    "ear_pain_or_crying", "infant_no_meconium", "painful_fissure", "prolonged_2w",
+    "spreading_severe", "no_improve_3d", "bloody_diarrhea",
 ]);
 const HIGH_RISK_COMPACT_KEYWORDS = [
     "تشنج",
@@ -91,14 +100,22 @@ function evaluateServerTriage(rawInput) {
     if (rawInput.temperatureCelsius !== undefined &&
         rawInput.temperatureCelsius !== null &&
         (typeof rawInput.temperatureCelsius !== "number" ||
-            Number.isNaN(rawInput.temperatureCelsius) ||
+            !Number.isFinite(rawInput.temperatureCelsius) ||
             rawInput.temperatureCelsius < 34.0 ||
             rawInput.temperatureCelsius > 43.0)) {
         throw new config_1.AppError("invalid-argument", "temperatureCelsius must be a physiological reading between 34.0 and 43.0 °C.");
     }
-    const redFlags = Array.isArray(rawInput.selectedRedFlagIds)
-        ? rawInput.selectedRedFlagIds.filter((x) => typeof x === "string")
-        : [];
+    if (rawInput.selectedRedFlagIds !== undefined &&
+        (!Array.isArray(rawInput.selectedRedFlagIds) || rawInput.selectedRedFlagIds.some((id) => typeof id !== "string" || (!CRITICAL_RED_FLAG_IDS.has(id) && !REVIEW_RED_FLAG_IDS.has(id))))) {
+        throw new config_1.AppError("invalid-argument", "Unknown or malformed red-flag IDs; repeat triage with the current form.");
+    }
+    if (rawInput.hasUrgentFlag !== undefined && typeof rawInput.hasUrgentFlag !== "boolean") {
+        throw new config_1.AppError("invalid-argument", "hasUrgentFlag must be boolean.");
+    }
+    if (rawInput.questionSummaryFa !== undefined && typeof rawInput.questionSummaryFa !== "string") {
+        throw new config_1.AppError("invalid-argument", "questionSummaryFa must be text.");
+    }
+    const redFlags = rawInput.selectedRedFlagIds ?? [];
     if (rawInput.hasUrgentFlag === true) {
         return {
             outcome: "URGENT_EMERGENCY",
@@ -180,6 +197,27 @@ function evaluateServerTriage(rawInput) {
                 "در صورت تنگی نفس، تشنج، کبودی، خونریزی یا بی‌حالی شدید با ۱۱۵ تماس بگیرید.",
                 "برای علائم فوری به جای ثبت پیام آنلاین، به پزشک یا اورژانس مراجعه کنید.",
             ],
+        };
+    }
+    // Duration never changes a confirmed emergency into an input-validation error.
+    const duration = rawInput.durationHours;
+    if (duration !== undefined && duration !== null &&
+        (!Number.isInteger(duration) || duration < 0 || duration > 8760)) {
+        throw new config_1.AppError("invalid-argument", "durationHours must be a non-negative whole number up to 8760.");
+    }
+    const infantHighFever = ageBandId === "infant_3_12m" && tempC !== null && tempC >= 39;
+    const prolonged = (symptomFlowId === "fever" && (duration ?? 0) >= 72) ||
+        (symptomFlowId === "cough" && (duration ?? 0) >= 336);
+    if (redFlags.some((id) => REVIEW_RED_FLAG_IDS.has(id)) || infantHighFever || prolonged) {
+        return {
+            outcome: "NEEDS_TIMELY_REVIEW",
+            ageBandId, symptomFlowId,
+            ruleId: infantHighFever ? "rule_infant_high_fever_unknown_exact_age" : "rule_timely_clinical_review",
+            titleFa: "نیاز به ارزیابی پزشک؛ پرسش غیرفوری کافی نیست",
+            summaryFa: infantHighFever
+                ? "در شیرخوار ۳ تا ۶ ماهه دمای ۳۹ درجه نیازمند ارزیابی فوری پزشک است؛ چون سن دقیق این فرم مشخص نیست، مسیر احتیاطی انتخاب شد."
+                : "علامت هشدار یا طول مدت علائم نیازمند ارزیابی به‌موقع پزشک است. گذرنامه مشاوره غیرفوری صادر نمی‌شود.",
+            emergencyActionsFa: ["برای ارزیابی با پزشک تماس بگیرید؛ در صورت تنگی نفس، کبودی، تشنج یا کاهش هوشیاری با ۱۱۵ تماس بگیرید."],
         };
     }
     return {
