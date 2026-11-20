@@ -1,0 +1,62 @@
+/* Shared, local-only editorial visual system. */
+.article-page { background:#f8fbfa; }
+.article-header { background:#fff; border-bottom:1px solid #dcebe9; }
+.article-header-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:76px; }
+.article-back { color:#08636c; font-weight:800; font-size:13px; padding:12px 4px; }
+.article-hero { background:linear-gradient(110deg,#f1faf7,#e8f4f7); border-bottom:1px solid #dcebe9; }
+.article-hero-grid { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,.6fr); align-items:center; gap:28px; padding-block:40px; }
+.article-heading nav { font-size:13px; color:#4d6875; }
+.article-heading nav a { text-decoration:underline; text-underline-offset:3px; }
+.article-status { display:inline-block; background:#fff3dc; color:#785321; border:1px solid #e9d8b4; border-radius:999px; padding:4px 12px; font-size:12px; margin:14px 0 4px; font-weight:700; }
+.article-heading h1 { margin:10px 0; max-width:760px; font-size:clamp(27px,3.8vw,47px); line-height:1.55; color:#173c49; letter-spacing:-.45px; }
+.article-intro { margin:10px 0; max-width:700px; color:#3e5c68; font-size:16px; line-height:2; }
+.article-version,.article-small { font-size:12px; color:#506a76; line-height:1.9; }
+.article-illustration { min-height:160px; display:grid; place-items:center; }
+.article-illustration img { width:min(100%,290px); aspect-ratio:1; object-fit:contain; mix-blend-mode:multiply; }
+.article-layout { display:grid; grid-template-columns:minmax(0,1fr) 248px; align-items:start; gap:24px; padding-block:28px 60px; }
+.article-main { min-width:0; display:grid; gap:18px; }
+.article-main section,.article-disclosure { background:#fff; border:1px solid #dcebe9; border-radius:18px; padding:clamp(18px,3vw,32px); scroll-margin-top:22px; min-width:0; }
+.article-main h2 { margin:0 0 12px; font-size:clamp(20px,2.1vw,27px); line-height:1.65; }
+.article-main p { margin:9px 0; line-height:2.05; }
+.article-main .article-emergency { background:#fff2ed; border-color:#e4b3a6; color:#733421; }
+.article-main .article-emergency h2 { color:#7c2d20; }
+.article-main .article-emergency .article-small { color:#733421; }
+.article-age-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-block:15px; }
+.age-card { display:flex; flex-direction:column; gap:7px; padding:15px; border:1px solid #d6e9e5; border-radius:13px; color:#224653; background:#f0f8f6; min-width:0; }
+.age-card span { font-weight:800; font-size:13px; }
+.age-card strong { font-size:clamp(19px,2.2vw,27px); line-height:1.5; }
+.age-card p { margin:0; font-size:13px; }
+.age-card.critical { background:#fff3ee; border-color:#e6b7a9; color:#783c2b; }
+.age-card.prompt { background:#fff5e3; border-color:#e1c69b; color:#70471d; }
+.article-note { background:#eef7f5; color:#254c58; padding:16px; border:1px solid #d1e7e4; border-radius:12px; margin-top:15px; }
+.article-note p { margin-bottom:0; }
+.article-action { margin-top:16px; text-align:center; min-height:44px; }
+.article-question { border:1px solid #dcebe9; border-radius:12px; padding:14px 16px; margin-top:10px; }
+.article-question summary { font-weight:800; cursor:pointer; color:#173f49; min-height:32px; }
+.article-question[open] { border-color:#91bbb6; }
+.article-question p { font-size:14px; }
+.medicine-checklist { display:grid; gap:8px; min-width:0; margin:20px 0 0; border:1px solid #d1e7e4; padding:14px; border-radius:14px; }
+.medicine-checklist legend { font-weight:800; padding:0 6px; color:#173f49; }
+.medicine-checklist label { display:flex; align-items:flex-start; gap:10px; min-height:44px; padding:8px; border-radius:8px; background:#f3f8f7; font-size:14px; }
+.medicine-checklist input { width:20px; height:20px; margin:5px 0 0; accent-color:#08636c; flex-shrink:0; }
+.article-evidence ul { padding-inline-start:20px; font-size:14px; overflow-wrap:anywhere; }
+.article-evidence a,.article-sidebar a { color:#08636c; text-decoration:underline; text-underline-offset:3px; }
+.article-disclosure { color:#4d6570; font-size:13px; }
+.article-sidebar { position:sticky; top:18px; display:grid; gap:15px; min-width:0; }
+.article-sidebar nav,.article-related { background:#fff; border:1px solid #dcebe9; border-radius:14px; display:grid; gap:6px; padding:16px; }
+.article-sidebar strong { margin-bottom:7px; font-size:14px; }
+.article-sidebar a { padding:6px 2px; font-size:13px; }
+@media(max-width:850px){.article-layout{grid-template-columns:1fr}.article-sidebar{position:static;grid-row:1}.article-sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px}.article-sidebar nav strong{grid-column:1/-1}.article-related{display:none}}
+@media(max-width:550px){.article-header-inner{min-height:68px}.article-back{font-size:12px}.article-hero-grid{grid-template-columns:1fr;gap:10px;padding-block:22px}.article-illustration{min-height:0;display:none}.article-intro{font-size:15px}.article-age-grid{grid-template-columns:1fr}.article-layout{padding-top:15px;gap:12px}.article-main{gap:12px}.article-main section,.article-disclosure{border-radius:13px;padding:17px}.article-sidebar nav a{font-size:12px}.article-action{width:100%}}
+@media print {.article-header,.article-sidebar,.article-illustration,.footer,.urgent-call,.article-action{display:none!important}.article-layout{display:block}.article-main section,.article-disclosure{break-inside:avoid;border:1px solid #bbb;margin:8px 0}.article-hero{background:#fff}}
+
+/* Safety-first reading order; mobile content is never pushed down by a table of contents. */
+.article-urgent-strip{background:#fff2ed;border-bottom:1px solid #e4b3a6;color:#733421;font-size:13px}
+.article-urgent-strip>.shell{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-block:7px}
+.article-urgent-strip a{color:#733421;font-weight:800;text-decoration:underline;text-underline-offset:3px;flex-shrink:0;padding:9px 2px}
+@media(max-width:850px){.article-sidebar{grid-row:auto}.article-related{display:grid}}
+@media(max-width:550px){.article-urgent-strip>.shell{flex-wrap:wrap;gap:0}.article-urgent-strip a{padding-block:3px}}
+
+.evidence-detail{display:block;color:#506a76;font-size:12px;overflow-wrap:anywhere}.article-evidence li{margin-bottom:10px}.article-age-grid .age-card strong{font-size:clamp(16px,2vw,23px);overflow-wrap:anywhere}
+/* Safety call remains visible on print as a labelled action, not a hidden reference. */
+@media print{.article-main .urgent-call{display:inline-block!important;background:none;color:#733421;border:1px solid #733421}.article-urgent-strip{display:none}}
