@@ -58,7 +58,7 @@ object NutritionPromptBuilder {
     val norm = PersianNormalizer.normalize(ageDetailFa)
     val hasAmbiguousBand = profileAgeMonths == null &&
       (AgeBand.entries.any { PersianNormalizer.normalize(it.labelFa) == norm } ||
-        Regex("""\\d+\\s*(?:تا|الی|-|–)\\s*\\d+""").containsMatchIn(norm))
+        Regex("""\d+\s*(?:تا|الی|-|–)\s*\d+""").containsMatchIn(norm))
     if (hasAmbiguousBand) return true
     val explicitMonths = profileAgeMonths?.takeIf { it in 0..144 }
       ?: LiquidDoseVisualizerEngine.parseAgeMonthsFromText(norm)
