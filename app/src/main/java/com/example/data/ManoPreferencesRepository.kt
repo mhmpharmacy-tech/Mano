@@ -478,6 +478,38 @@ class ManoPreferencesRepository(private val context: Context) {
     }
   }
 
+  /**
+   * Atomic local erasure of child-health data for a caregiver-initiated device reset.
+   * No cloud records or pharmacist audit records are changed by this operation.
+   * App-wide visual preferences are deliberately retained.
+   */
+  suspend fun clearLocalChildHealthData() {
+    context.manoDataStore.edit { prefs ->
+      listOf(
+        Keys.LOCAL_CHILD_PROFILE_JSON,
+        Keys.CHILD_ALIAS_FA,
+        Keys.CHILD_HEIGHT_CM,
+        Keys.CHILD_BIRTH_DATE_EPOCH_MS,
+        Keys.SELECTED_AGE_BAND,
+        Keys.LOCAL_FEVER_LOGS_JSON,
+        Keys.LOCAL_DOSE_LOGS_JSON,
+        Keys.SAVED_SYRUP_SCANS_JSON,
+        Keys.SAVED_VISIT_DRAFTS_JSON,
+        Keys.SAVED_NUTRITION_PLANS_JSON,
+        Keys.VACCINE_RECORDS_JSON,
+        Keys.NOTIFIED_VACCINE_REMINDER_KEYS,
+        Keys.CHECKED_MILESTONE_IDS,
+        Keys.CHECKED_MED_SAFETY_IDS,
+        Keys.BOOKMARKED_SLUGS,
+        Keys.GALACTIC_RING,
+        Keys.GALACTIC_TOPIC_ID,
+        Keys.ONBOARDING_COMPLETED,
+        Keys.VACCINE_REMINDER_ENABLED,
+        Keys.VACCINE_REMINDER_LEAD_DAYS,
+      ).forEach { prefs.remove(it) }
+    }
+  }
+
   suspend fun setThemeMode(mode: ManoThemeMode) {
     context.manoDataStore.edit { prefs ->
       prefs[Keys.THEME_MODE] = mode.id

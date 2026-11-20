@@ -588,7 +588,18 @@ fun ManoApp(
   LaunchedEffect(timelineSnapshot.tempPoints, effectiveChildProfile) {
     val latestPoint = timelineSnapshot.tempPoints.lastOrNull()
     val alert = FeverDoseTimelineEngine.evaluateHighFeverAlert(timelineSnapshot, effectiveChildProfile)
-    if (latestPoint != null && alert != null && latestPoint.tempCelsius > FeverDoseTimelineEngine.HIGH_FEVER_ALERT_THRESHOLD_C) {
+    val exactAgeMonths = effectiveChildProfile?.ageMonthsExact
+      ?: com.example.domain.util.LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(effectiveChildProfile)
+    val possibleUnderThreeMonths =
+      (exactAgeMonths != null && exactAgeMonths < 3) ||
+        (exactAgeMonths == null && effectiveChildProfile?.ageBand == AgeBand.NEWBORN)
+    // Only the *newest* measurement can generate a new dialog. A previous high
+    // reading must not be re-announced when a normal temperature is subsequently logged.
+    val latestNeedsUrgentAlert =
+      latestPoint != null &&
+        (latestPoint.tempCelsius > FeverDoseTimelineEngine.HIGH_FEVER_ALERT_THRESHOLD_C ||
+          (possibleUnderThreeMonths && latestPoint.tempCelsius >= 38.0f))
+    if (latestNeedsUrgentAlert && latestPoint != null && alert != null) {
       val eventKey = "${latestPoint.id}_${latestPoint.timestampMs}"
       if (eventKey != lastTriggeredHighFeverKey) {
         lastTriggeredHighFeverKey = eventKey
@@ -1684,7 +1695,11 @@ fun ManoApp(
                       viewModel.saveChildProfileDemo(alias, birthOrAge, band, weightKg, weightDate, allergies, meds, consent)
                     }
                   },
-                  onExportSummary = viewModel::exportChildProfileSummary,
+                  onExportSummary = {
+                    // Export only the current displayed account's child, never a residual offline profile.
+                    viewModel.exportChildProfileSummary(effectiveChildProfile)
+                  },
+                  onEraseLocalData = viewModel::eraseLocalChildHealthData,
                   onDeleteProfile = {
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {

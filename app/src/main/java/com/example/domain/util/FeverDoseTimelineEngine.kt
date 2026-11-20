@@ -2,6 +2,7 @@ package com.example.domain.util
 
 import com.example.data.FeverLogCloud
 import com.example.data.MedicationDoseLogCloud
+import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
 import com.example.ui.components.AlertSeverity
 import java.text.SimpleDateFormat
@@ -113,8 +114,10 @@ object FeverDoseTimelineEngine {
     snapshot: FeverDoseTimelineSnapshot,
     childProfile: ChildProfileDemo? = null,
   ): HighFeverClinicalAlert? {
-    val ageMonths = LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile)
-    val underThreeMonths = ageMonths != null && ageMonths < 3
+    val ageMonths = childProfile?.ageMonthsExact
+      ?: LiquidDoseVisualizerEngine.initialAgeMonthsFromProfile(childProfile)
+    val underThreeMonths = (ageMonths != null && ageMonths < 3) ||
+      (ageMonths == null && childProfile?.ageBand == AgeBand.NEWBORN)
     val latestHigh = snapshot.tempPoints.lastOrNull {
       it.tempCelsius > HIGH_FEVER_ALERT_THRESHOLD_C ||
         (underThreeMonths && it.tempCelsius >= 38.0f)

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.WarningAmber
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -604,6 +605,7 @@ fun MyChildScreen(
   onSaveProfile: (String, String, AgeBand, String, String, String, String, Boolean) -> Unit,
   onExportSummary: () -> Unit,
   onDeleteProfile: () -> Unit,
+  onEraseLocalData: () -> Unit = {},
   currentUser: FirebaseUser? = null,
   onCloudAuthSuccess: () -> Unit = {},
   onCloudAuthError: (String) -> Unit = {},
@@ -620,8 +622,53 @@ fun MyChildScreen(
   var currentMeds by remember(profile) { mutableStateOf(profile?.currentMedsFa ?: "") }
   var consent by remember(profile) { mutableStateOf(profile?.consentGranted ?: false) }
   var weightErrorFa by remember(profile) { mutableStateOf<String?>(null) }
+  var showProfileDeleteConfirmation by remember { mutableStateOf(false) }
+  var showLocalEraseConfirmation by remember { mutableStateOf(false) }
   val parsedBirthEpochMs =
     remember(birthOrAge) { VaccinationScheduleEngine.parseFlexibleDateToEpochMs(birthOrAge) }
+
+  if (showProfileDeleteConfirmation) {
+    AlertDialog(
+      onDismissRequest = { showProfileDeleteConfirmation = false },
+      title = { Text("تأیید حذف پروفایل کودک") },
+      text = {
+        Text(
+          if (currentUser != null) {
+            "فقط پروفایل کودک از حساب ابری حذف می‌شود. سوابق تب، دارو، واکسن، مشاوره و اسناد داروساز با این دکمه پاک نمی‌شوند."
+          } else {
+            "فقط اطلاعات پروفایل و اندازه‌گیری‌های پایه این دستگاه پاک می‌شود. سوابق دیگر با این دکمه حذف نمی‌شوند."
+          }
+        )
+      },
+      confirmButton = {
+        TextButton(
+          onClick = { showProfileDeleteConfirmation = false; onDeleteProfile() },
+          modifier = Modifier.testTag("confirm_profile_delete_btn"),
+        ) { Text("حذف فقط پروفایل", color = MaterialTheme.colorScheme.error) }
+      },
+      dismissButton = {
+        TextButton(onClick = { showProfileDeleteConfirmation = false }) { Text("انصراف") }
+      },
+    )
+  }
+  if (showLocalEraseConfirmation) {
+    AlertDialog(
+      onDismissRequest = { showLocalEraseConfirmation = false },
+      title = { Text("پاک‌سازی داده‌های آفلاین مانو") },
+      text = {
+        Text("اطلاعات آفلاین مانو (DataStore) و خلاصه ویجت پاک می‌شوند، ولی کش داخلی Firebase ممکن است باقی بماند. برای پاک‌سازی کامل فضای ذخیره‌سازی اپ پس از خروج از حساب، از تنظیمات Android > برنامه‌ها > Manokid > فضای ذخیره‌سازی > پاک کردن داده‌ها استفاده کنید. پرونده ابری حذف نمی‌شود.")
+      },
+      confirmButton = {
+        TextButton(
+          onClick = { showLocalEraseConfirmation = false; onEraseLocalData() },
+          modifier = Modifier.testTag("confirm_local_health_erase_btn"),
+        ) { Text("پاک‌سازی داده‌های آفلاین", color = MaterialTheme.colorScheme.error) }
+      },
+      dismissButton = {
+        TextButton(onClick = { showLocalEraseConfirmation = false }) { Text("انصراف") }
+      },
+    )
+  }
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
@@ -640,14 +687,14 @@ fun MyChildScreen(
                 verticalAlignment = Alignment.CenterVertically,
               ) {
                 Text("پروفایل فرزند من", style = MaterialTheme.typography.headlineSmall)
-                SourceBadge(reviewStatus = ReviewStatus.APPROVED)
+                Text("پرونده خصوصی", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
               Text(
                 text =
                   if (currentUser != null) {
                     "همگام‌سازی امن با حساب گوگل فعال است؛ اطلاعات فقط پس از رضایت والد در مسیر خصوصی کاربر ذخیره می‌شود."
                   } else {
-                    "اطلاعات به‌صورت دائمی روی دستگاه ذخیره می‌شود و پس از ورود با حساب گوگل به فضای ابری منتقل می‌گردد."
+                    "اطلاعات روی این دستگاه نگهداری می‌شوند و بدون درخواست و رضایت صریح شما به حساب گوگل دیگری منتقل نمی‌شوند."
                   },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -775,11 +822,11 @@ fun MyChildScreen(
                 Text("خروجی خلاصه")
               }
               Button(
-                onClick = onDeleteProfile,
+                onClick = { showProfileDeleteConfirmation = true },
                 colors = ButtonDefaults.buttonColors(containerColor = DangerCrimson, contentColor = PureWhite),
                 modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("delete_child_btn"),
               ) {
-                Text("حذف کامل")
+                Text("حذف پروفایل")
               }
             }
             OutlinedButton(
@@ -804,6 +851,19 @@ fun MyChildScreen(
               }
             }
           }
+        }
+      }
+      item {
+        SectionCard {
+          Text("حریم خصوصی و پاک‌سازی دستگاه", style = MaterialTheme.typography.titleMedium)
+          Text(
+            "این گزینه داده‌های آفلاین مانو و ویجت را پاک می‌کند، نه کش Firebase یا اطلاعات ابری. برای پاک‌سازی کامل حافظه اپ، پس از خروج از حساب از تنظیمات Android گزینه «پاک کردن داده‌ها» را انتخاب کنید.",
+            style = MaterialTheme.typography.bodySmall,
+          )
+          OutlinedButton(
+            onClick = { showLocalEraseConfirmation = true },
+            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("erase_local_health_data_btn"),
+          ) { Text("پاک‌سازی داده‌های آفلاین مانو و ویجت") }
         }
       }
     }
@@ -1250,7 +1310,7 @@ fun InfoScreen(
             SectionCard {
               Text("مراجع پایه برای راستی‌آزمایی بالینی", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
               Text(
-                text = "راهنماهای علمی و دارویی مانو بر اساس مراجع بین‌المللی زیر تدوین شده و به تأیید مسئول علمی رسیده است.",
+                text = "منابع علمی این بخش معرفی شده‌اند؛ تأیید موردی هر متن و نسخه آن باید همراه تاریخ، نام بازبین و شواهد ثبت شود.",
                 style = MaterialTheme.typography.bodySmall,
               )
               sources.forEach { src ->
@@ -1270,7 +1330,7 @@ fun InfoScreen(
                 "وجود علائم هشدار (Red Flags) پیش از توصیه مراقبت خانگی",
                 "وضوح فارسی بدون جمله‌بندی گمراه‌کننده",
                 "تعیین تاریخ بازبینی بعدی و بومی‌سازی برای داروهای ایران",
-                "امضای علمی تأییدشده: ${ManoSourcesAndClinicalSeed.CLINICAL_REVIEWER_IDENTITY_FA}",
+                "ثبت امضای علمی موردی، نسخه محتوا و تاریخ تأیید در دفتر بازبینی",
               ).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
             }
           }
@@ -1279,10 +1339,10 @@ fun InfoScreen(
         "privacy" -> {
           item {
             SectionCard {
-              Text("حریم خصوصی و معماری امنیت فعال", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+              Text("حریم خصوصی و کنترل‌های امنیتی برنامه", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
               Text("• هیچ ردیاب تبلیغاتی، SDK تبلیغ یا پروفایل‌سازی تجاری برای کودک در اپلیکیشن وجود ندارد.", style = MaterialTheme.typography.bodyMedium)
               Text("• همگام‌سازی ابری پرونده کودک، تب، دوز دارو، واکسن‌ها و مشاوره‌ها با ورود گوگل (Credential Manager) و قواعد ایزوله به ازای هر کاربر محافظت می‌شود.", style = MaterialTheme.typography.bodyMedium)
-              Text("• تمام ارتباطات ابری با رمزنگاری HTTPS/TLS، گواهی App Check و کنترل دسترسی سروری داروسازان (RBAC) انجام می‌شود و هر زمان می‌توانید پرونده محلی یا ابری را حذف کنید.", style = MaterialTheme.typography.bodyMedium)
+              Text("• App Check و کنترل دسترسی در کد پیش‌بینی شده‌اند، اما پیکربندی عملیاتی باید جداگانه راستی‌آزمایی شود. حذف پروفایل ابری، سوابق دیگر را حذف نمی‌کند؛ پاک‌سازی کامل دستگاه از صفحه پرونده کودک قابل انجام است.", style = MaterialTheme.typography.bodyMedium)
             }
           }
         }

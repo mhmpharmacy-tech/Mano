@@ -19,6 +19,8 @@ import androidx.compose.material.icons.rounded.Vaccines
 import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -69,6 +71,108 @@ class ManoAuditRemediationTest {
       repo.clearLocalFeverLogs()
       repo.clearLocalDoseLogs()
     }
+  }
+
+  @Test
+  fun localHealthErasure_clearsChildDataAndWidget_butRetainsDisplayPreferences() = runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val prefs = ManoPreferencesRepository(context)
+    prefs.setThemeMode(ManoThemeMode.DARK)
+    val profile = ChildProfileDemo(
+      aliasFa = "کودک تست",
+      birthDateOrAgeFa = "۸ ماهه",
+      ageBand = AgeBand.INFANT_3_12M,
+      weightKgText = "8",
+      weightDateFa = "امروز",
+      allergiesFa = "",
+      currentMedsFa = "",
+      consentGranted = true,
+      ageMonthsExact = 8,
+    )
+    prefs.setLocalChildProfile(profile)
+    prefs.setChildBirthDateEpochMs(1_750_000_000_000L)
+    prefs.setChildHeightCm("70")
+    val log = TimelineDosePoint(
+      id = "private_dose",
+      medicationSlug = "acetaminophen",
+      medicationNameFa = "استامینوفن",
+      dosageFormFa = "شربت",
+      volumeMlText = "2 mL",
+      timestampMs = 1_750_000_000_000L,
+      givenAtLabelFa = "۱۴:۰۰",
+      noteFa = "",
+      isSyncedCloud = false,
+    )
+    prefs.addLocalDoseLog(log)
+    val temp = TimelineTempPoint(
+      id = "private_fever",
+      tempCelsius = 38.1f,
+      timestampMs = 1_750_000_000_000L,
+      timeLabelFa = "۱۴:۰۰",
+      siteFa = "زیربغلی",
+      caregiverFa = "مادر",
+      noteFa = "",
+      isSyncedCloud = false,
+    )
+    prefs.addLocalFeverLog(temp)
+    val snapshot = com.example.domain.util.FeverDoseTimelineEngine.buildSnapshot(
+      emptyList(), listOf(temp), emptyList(), listOf(log), nowMs = 1_750_000_000_000L,
+    )
+    com.example.widget.FeverTimelineWidgetStore.saveAndUpdateWidgets(context, snapshot)
+    assertTrue(com.example.widget.FeverTimelineWidgetStore.readSummary(context).second.contains("استامینوفن"))
+    prefs.clearLocalChildHealthData()
+    com.example.widget.FeverTimelineWidgetStore.clearStoredSummary(context)
+    assertNull(prefs.localChildProfile.first())
+    assertNull(prefs.childBirthDateEpochMs.first())
+    assertEquals("", prefs.childHeightCm.first())
+    assertTrue(prefs.localDoseLogs.first().isEmpty())
+    assertTrue(prefs.localFeverLogs.first().isEmpty())
+    assertTrue(prefs.savedVisitDrafts.first().isEmpty())
+    assertTrue(prefs.savedNutritionPlans.first().isEmpty())
+    assertTrue(prefs.savedSyrupScans.first().isEmpty())
+    assertEquals(ManoThemeMode.DARK, prefs.themeMode.first())
+    assertTrue(com.example.widget.FeverTimelineWidgetStore.readSummary(context).second.contains("ثبت نشده"))
+  }
+
+  @Test
+  fun childDeletion_uiRequiresConfirmationAndSeparatesCloudFromLocalErasure() {
+    val profile = ChildProfileDemo(
+      aliasFa = "کودک",
+      birthDateOrAgeFa = "۱۸ ماهه",
+      ageBand = AgeBand.TODDLER_1_3Y,
+      weightKgText = "10",
+      weightDateFa = "امروز",
+      allergiesFa = "",
+      currentMedsFa = "",
+      consentGranted = true,
+      ageMonthsExact = 18,
+    )
+    var profileDeleted = 0
+    var localErased = 0
+    composeTestRule.setContent {
+      ManoKidsTheme {
+        com.example.ui.screens.MyChildScreen(
+          profile = profile,
+          exportedJson = null,
+          onSaveProfile = { _, _, _, _, _, _, _, _ -> },
+          onExportSummary = {},
+          onDeleteProfile = { profileDeleted++ },
+          onEraseLocalData = { localErased++ },
+        )
+      }
+    }
+    composeTestRule.onNodeWithTag("my_child_list").performScrollToNode(hasTestTag("delete_child_btn"))
+    composeTestRule.onNodeWithTag("delete_child_btn").performClick()
+    assertEquals(0, profileDeleted)
+    composeTestRule.onNodeWithTag("confirm_profile_delete_btn").performClick()
+    assertEquals(1, profileDeleted)
+    assertEquals(0, localErased)
+    composeTestRule.onNodeWithTag("my_child_list").performScrollToNode(hasTestTag("erase_local_health_data_btn"))
+    composeTestRule.onNodeWithTag("erase_local_health_data_btn").performClick()
+    assertEquals(0, localErased)
+    composeTestRule.onNodeWithTag("confirm_local_health_erase_btn").performClick()
+    assertEquals(1, localErased)
+    assertEquals(1, profileDeleted)
   }
 
   @Test

@@ -68,6 +68,16 @@ object FeverTimelineWidgetStore {
     }
   }
 
+  /** Remove previously displayed health information from home-screen widgets after local erasure. */
+  fun clearStoredSummary(context: Context) {
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit { clear() }
+    val manager = AppWidgetManager.getInstance(context)
+    val component = ComponentName(context, FeverTimelineWidgetProvider::class.java)
+    manager.getAppWidgetIds(component).forEach { widgetId ->
+      FeverTimelineWidgetProvider.updateAppWidget(context, manager, widgetId)
+    }
+  }
+
   fun readSummary(context: Context): Triple<String, String, String> {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     return Triple(

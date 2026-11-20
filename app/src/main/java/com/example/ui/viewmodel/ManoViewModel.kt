@@ -39,6 +39,7 @@ import com.example.domain.util.TimelineTempPoint
 import com.example.domain.util.TriageEngine
 import com.example.domain.util.VaccinationScheduleEngine
 import com.example.domain.util.ClinicalNumberInput
+import com.example.widget.FeverTimelineWidgetStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -660,6 +661,26 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
           exportedProfileJson = null,
           toastMessageFa = "پروفایل کودک از حافظه دستگاه پاک شد.",
         )
+      }
+    }
+  }
+
+  /** Local-only wipe. Cloud documents and pharmacist audit records are never touched. */
+  fun eraseLocalChildHealthData() {
+    viewModelScope.launch {
+      try {
+        prefs.clearLocalChildHealthData()
+        FeverTimelineWidgetStore.clearStoredSummary(getApplication<Application>().applicationContext)
+        _uiState.update { state ->
+          state.copy(
+            exportedProfileJson = null,
+            askPharmacist = AskPharmacistState(),
+            symptomWizard = SymptomWizardState(),
+            toastMessageFa = "داده‌های آفلاین مانو و خلاصه ویجت پاک شد؛ کش Firebase و پرونده ابری ممکن است همچنان وجود داشته باشند.",
+          )
+        }
+      } catch (_: Exception) {
+        showToast("حذف داده‌های محلی کامل نشد. دوباره تلاش کنید و در صورت تداوم خطا با پشتیبانی تماس بگیرید.")
       }
     }
   }
