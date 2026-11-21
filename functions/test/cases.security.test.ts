@@ -680,6 +680,8 @@ test("care card spans delivery, family activity, reply and explicit closure", as
   await assert.rejects(() => updateCare(store,parent,{...ids,action:"question",requestId:"question",text:"changed payload"}),
     (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   await transact(staff,"reply");
+  await assert.rejects(() => updateCare(store, staff, {...ids,action:"close",requestId:"unconfirmed_close"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   await transact(staff,"close");
   await assert.rejects(() => updateCare(store,parent,{...ids,action:"dose",requestId:"late",confirmed:true}),
     (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
