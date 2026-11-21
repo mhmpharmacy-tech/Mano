@@ -134,7 +134,7 @@ export interface RateLimitDoc {
 }
 
 export interface ParentConsultationView {
-  careCard?: import("./care").CareCard;
+  careCard?: import("./care").PublicCareCard;
   caseId: string;
   pharmacyId: string;
   categoryName: ConsultationCategory;
