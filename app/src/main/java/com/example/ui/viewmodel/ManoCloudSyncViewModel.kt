@@ -110,6 +110,9 @@ class ManoCloudSyncViewModel(
   private val _selectedPharmacyId = MutableStateFlow<String?>(null)
   val selectedPharmacyId: StateFlow<String?> = _selectedPharmacyId.asStateFlow()
 
+  private val _pendingInvitationPharmacyId = MutableStateFlow<String?>(null)
+  val pendingInvitationPharmacyId: StateFlow<String?> = _pendingInvitationPharmacyId.asStateFlow()
+
   private val _serverConsultations = MutableStateFlow<List<ConsultationRequestDemo>>(emptyList())
   val serverConsultations: StateFlow<List<ConsultationRequestDemo>> = _serverConsultations.asStateFlow()
 
@@ -154,7 +157,40 @@ class ManoCloudSyncViewModel(
   }
 
   fun selectPharmacy(pharmacyId: String) {
+    // Only choices returned by the verified server registry may be selected.
+    val accepted = _acceptingPharmacies.value.any {
+      it.pharmacyId == pharmacyId && it.acceptingCases
+    }
+    if (!accepted) return
+    _pendingInvitationPharmacyId.value = null
     _selectedPharmacyId.value = pharmacyId
+  }
+
+  fun requestPharmacyFromInvitation(pharmacyId: String) {
+    val id = pharmacyId.trim()
+    if (!id.matches(Regex("^[A-Za-z0-9_-]{1,64}$"))) return
+    _pendingInvitationPharmacyId.value = id
+    _selectedPharmacyId.value = null
+    // Delay actual selection until the live verified registry includes the ID.
+    applyVerifiedPharmacyInvitation()
+  }
+
+  fun clearPharmacyInvitation() {
+    _pendingInvitationPharmacyId.value = null
+  }
+
+  private fun applyVerifiedPharmacyInvitation() {
+    val invitedId = _pendingInvitationPharmacyId.value ?: return
+    val accepted = _acceptingPharmacies.value.firstOrNull {
+      it.pharmacyId == invitedId && it.acceptingCases
+    }
+    if (accepted != null) {
+      _selectedPharmacyId.value = accepted.pharmacyId
+      _pendingInvitationPharmacyId.value = null
+    } else {
+      // No fallback to a different pharmacy: parents must explicitly choose it.
+      _selectedPharmacyId.value = null
+    }
   }
 
   fun refreshServerConsultations(silent: Boolean = false) {
@@ -162,7 +198,11 @@ class ManoCloudSyncViewModel(
       val pharmaciesRes = repository.fetchAcceptingPharmaciesFromServer()
       pharmaciesRes.getOrNull()?.let { list ->
         _acceptingPharmacies.value = list
-        if (_selectedPharmacyId.value == null || list.none { it.pharmacyId == _selectedPharmacyId.value }) {
+        if (_pendingInvitationPharmacyId.value != null) {
+          applyVerifiedPharmacyInvitation()
+        } else if (_selectedPharmacyId.value == null ||
+          list.none { it.pharmacyId == _selectedPharmacyId.value && it.acceptingCases }) {
+          // Ordinary direct entry shows choices but never silently changes an active referral.
           _selectedPharmacyId.value = list.firstOrNull { it.acceptingCases }?.pharmacyId
         }
       }
