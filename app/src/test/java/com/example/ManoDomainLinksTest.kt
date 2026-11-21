@@ -13,6 +13,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.ManoContentRepository
 import com.example.domain.util.ManoDeepLinkParser
 import com.example.domain.util.ManoDomainLinks
+import com.example.domain.util.PharmacyInvitationPolicy
+import com.example.domain.model.PublicPharmacyOption
 import com.example.domain.util.VaccinationScheduleEngine
 import com.example.ui.navigation.AskPharmacistRoute
 import com.example.ui.navigation.FaqRoute
@@ -86,6 +88,25 @@ class ManoDomainLinksTest {
     assertTrue(text.contains("فور"))
     assertTrue(text.contains("pharmacy=pharm_10"))
     assertNull(ManoDomainLinks.buildPharmacyIntroductionText("bad/id"))
+  }
+
+  @Test
+  fun pharmacyInvitationPolicy_neverSilentlyRedirectsToAnotherPharmacy() {
+    val verifiedList = listOf(
+      PublicPharmacyOption("pharm_a", "داروخانه الف", acceptingCases = true),
+      PublicPharmacyOption("pharm_b", "داروخانه ب", acceptingCases = false),
+      PublicPharmacyOption("pharm_c", "داروخانه ج", acceptingCases = true),
+    )
+    assertEquals("pharm_a",
+      PharmacyInvitationPolicy.resolveAcceptingPharmacyId("pharm_a", verifiedList))
+    assertEquals("pharm_c",
+      PharmacyInvitationPolicy.resolveAcceptingPharmacyId("pharm_c", verifiedList))
+    // A paused shop may never fall back to the first accepting pharmacy.
+    assertNull(PharmacyInvitationPolicy.resolveAcceptingPharmacyId("pharm_b", verifiedList))
+    assertNull(PharmacyInvitationPolicy.resolveAcceptingPharmacyId("unknown", verifiedList))
+    assertNull(PharmacyInvitationPolicy.resolveAcceptingPharmacyId("../pharm_a", verifiedList))
+    assertNull(PharmacyInvitationPolicy.resolveAcceptingPharmacyId("pharm_a", emptyList()))
+    assertNull(PharmacyInvitationPolicy.resolveAcceptingPharmacyId(null, verifiedList))
   }
 
   @Test
