@@ -7,7 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
-import android.graphics.pdf.PrintedPdfDocument
+import android.print.pdf.PrintedPdfDocument
 import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
 import android.print.PageRange
