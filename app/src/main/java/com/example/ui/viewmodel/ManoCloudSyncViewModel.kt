@@ -15,6 +15,7 @@ import com.example.domain.model.ConsultationRequestDemo
 import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.DoctorVisitDraft
 import com.example.domain.model.PublicPharmacyOption
+import com.example.domain.util.ManoDomainLinks
 import com.example.domain.model.SavedSyrupScan
 import com.example.domain.model.StaffAccessStatus
 import com.example.domain.model.StaffConsultationCase
@@ -168,7 +169,7 @@ class ManoCloudSyncViewModel(
 
   fun requestPharmacyFromInvitation(pharmacyId: String) {
     val id = pharmacyId.trim()
-    if (!id.matches(Regex("^[A-Za-z0-9_-]{1,64}$"))) return
+    if (!ManoDomainLinks.isValidPublicPharmacyId(id)) return
     _pendingInvitationPharmacyId.value = id
     _selectedPharmacyId.value = null
     // Delay actual selection until the live verified registry includes the ID.
