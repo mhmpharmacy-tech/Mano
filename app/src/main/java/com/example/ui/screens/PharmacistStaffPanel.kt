@@ -123,7 +123,7 @@ fun PharmacistStaffPanelContent(
         Text("ارسال یا آماده‌سازی راهنمای عمومی برای چاپ")
       }
       val pharmacyId = staffAccess.pharmacyId
-      val invitation = pharmacyId?.takeIf { staffAccess.isVerifiedPharmacist }?.let {
+      val invitation = pharmacyId?.takeIf { currentUser != null && staffAccess.isVerifiedPharmacist }?.let {
         ManoDomainLinks.pharmacyInvitationUrl(it)
       }
       if (invitation != null) {
