@@ -85,6 +85,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -138,11 +139,9 @@ import com.example.ui.theme.DarkInk
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceHigh
 import com.example.ui.theme.HeroDarkMid
-import com.example.ui.theme.HeroLightMid
 import com.example.ui.theme.MascotOrbDarkEdge
 import com.example.ui.theme.MascotOrbDarkMid
 import com.example.ui.theme.MutedSlate
-import com.example.ui.theme.OrbLabelDarkScrim
 import com.example.ui.theme.ParticleTealTint
 import com.example.ui.theme.WarmIvory
 import com.example.ui.theme.DarkTextMuted
@@ -355,7 +354,7 @@ fun HomeScreen(
           titleFa = "اسکنر شربت",
           contentDescriptionFa = "اسکنر شربت و قطره برای تشخیص غلظت دارو با دوربین",
           icon = Icons.Rounded.QrCodeScanner,
-          accentRole = TopicAccentRole.AQUA,
+          accentRole = TopicAccentRole.MANGO,
           iconKind = PediatricIconKind.SCANNER,
           onClick = onNavigateSyrupScanner,
         ),
@@ -375,7 +374,7 @@ fun HomeScreen(
           titleFa = "پوست و مراقبت",
           contentDescriptionFa = "پوست و مراقبت منزل، پوست نوزاد و پوشک",
           icon = Icons.Rounded.Spa,
-          accentRole = TopicAccentRole.PLUM,
+          accentRole = TopicAccentRole.SAGE,
           iconKind = PediatricIconKind.DIAPER,
           onClick = onNavigateSkin,
         ),
@@ -385,7 +384,7 @@ fun HomeScreen(
           titleFa = "پرسش‌وپاسخ",
           contentDescriptionFa = "پرسش و پاسخ علمی و مستند با منابع معتبر",
           icon = Icons.AutoMirrored.Rounded.Help,
-          accentRole = TopicAccentRole.SAGE,
+          accentRole = TopicAccentRole.PLUM,
           iconKind = PediatricIconKind.FAQ,
           onClick = { onNavigateEcosystemPillar(ManoEcosystemPillar.DOCUMENTED_QA) },
         ),
@@ -438,7 +437,7 @@ fun HomeScreen(
           if (isDark) {
             Brush.verticalGradient(listOf(DeepScreen, HeroDarkMid, DeepScreen))
           } else {
-            Brush.verticalGradient(listOf(CleanWhite, HeroLightMid, WarmIvory))
+            Brush.verticalGradient(listOf(CleanWhite, Color(0xFFFFF9F2), WarmIvory))
           }
 
         Column(
@@ -1110,11 +1109,11 @@ private fun OrbitalCareNode(
       label = "orbitalNodePressSpring",
     )
   val iconSize = (medallionSize.value * 0.48f).coerceIn(22f, 27f).dp
-  val surfaceBg = if (isDark) DarkSurfaceHigh else PureWhite
+  val surfaceBg = lerp(if (isDark) DarkSurfaceHigh else PureWhite, accentColor, if (isDark) 0.20f else 0.14f)
   val rimBrush =
     Brush.linearGradient(
       if (isDark) listOf(PureWhite.copy(alpha = 0.28f), accentColor.copy(alpha = 0.60f))
-      else listOf(PureWhite, accentColor.copy(alpha = 0.34f))
+      else listOf(accentColor.copy(alpha = 0.45f), accentColor.copy(alpha = 0.85f))
     )
 
   CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -1169,7 +1168,7 @@ private fun OrbitalCareNode(
             icon = item.icon,
             accentColor = accentColor,
             iconKind = item.iconKind,
-            containerSize = medallionSize - 6.dp,
+            containerSize = medallionSize - 9.dp,
             iconSize = iconSize,
             cornerRadius = (medallionSize.value / 2f).dp,
           )
@@ -1187,7 +1186,7 @@ private fun OrbitalCareNode(
         modifier =
           Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isDark) OrbLabelDarkScrim.copy(alpha = 0.68f) else PureWhite.copy(alpha = 0.72f))
+            .background(surfaceBg)
             .padding(horizontal = 5.dp, vertical = 1.dp),
       )
     }

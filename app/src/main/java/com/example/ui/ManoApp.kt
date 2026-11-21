@@ -668,7 +668,7 @@ fun ManoApp(
       listOf(
         NavTab("خانه", Icons.Rounded.Home, Icons.Outlined.Home, HomeRoute, "nav_home", TopicAccentRole.TEAL),
         NavTab("علائم", Icons.Rounded.HealthAndSafety, Icons.Outlined.HealthAndSafety, SymptomsRoute(), "nav_symptoms", TopicAccentRole.CORAL),
-        NavTab("داروها", Icons.Rounded.MedicalServices, Icons.Outlined.MedicalServices, MedicinesRoute, "nav_medicines", TopicAccentRole.SAGE),
+        NavTab("داروها", Icons.Rounded.MedicalServices, Icons.Outlined.MedicalServices, MedicinesRoute, "nav_medicines", TopicAccentRole.TEAL),
         NavTab("رشد", Icons.Rounded.ChildCare, Icons.Outlined.ChildCare, GrowthRoute, "nav_growth", TopicAccentRole.SKY),
         NavTab("پرسش‌ها", Icons.AutoMirrored.Rounded.Help, Icons.AutoMirrored.Outlined.HelpOutline, FaqRoute(), "nav_faq", TopicAccentRole.PLUM),
       )
@@ -738,11 +738,11 @@ fun ManoApp(
             listOf(
               DrawerNavItem("موضوعات سلامت", Icons.Rounded.HealthAndSafety, TopicsRoute(), TopicAccentRole.CORAL, PediatricIconKind.URGENT),
               DrawerNavItem("داروهای کودک", Icons.Rounded.MedicalServices, MedicinesRoute, TopicAccentRole.TEAL, PediatricIconKind.MEDICINE),
-              DrawerNavItem("اسکنر برچسب شربت و قطره", Icons.Rounded.QrCodeScanner, SyrupScannerRoute, TopicAccentRole.TEAL, PediatricIconKind.SCANNER),
-              DrawerNavItem("پوست و پوشک", Icons.Rounded.Spa, SkinRoute, TopicAccentRole.PLUM, PediatricIconKind.DIAPER),
+              DrawerNavItem("اسکنر برچسب شربت و قطره", Icons.Rounded.QrCodeScanner, SyrupScannerRoute, TopicAccentRole.MANGO, PediatricIconKind.SCANNER),
+              DrawerNavItem("پوست و پوشک", Icons.Rounded.Spa, SkinRoute, TopicAccentRole.SAGE, PediatricIconKind.DIAPER),
               DrawerNavItem("وسایل مراقبتی (نبولایزر/بخور)", Icons.Rounded.MedicalServices, DevicesRoute, TopicAccentRole.SKY, PediatricIconKind.DEVICE),
               DrawerNavItem("آزمایشگاه سه‌بعدی مانو (3D)", Icons.Rounded.ViewInAr, Pediatric3DStudioRoute(), TopicAccentRole.AQUA, PediatricIconKind.COMPARE_LAB),
-              DrawerNavItem("رشد و تکامل", Icons.Rounded.ChildCare, GrowthRoute, TopicAccentRole.SAGE, PediatricIconKind.GROWTH),
+              DrawerNavItem("رشد و تکامل", Icons.Rounded.ChildCare, GrowthRoute, TopicAccentRole.SKY, PediatricIconKind.GROWTH),
               DrawerNavItem("برنامه واکسیناسیون و یادآور", Icons.Rounded.Vaccines, VaccinesRoute, TopicAccentRole.SAGE, PediatricIconKind.VACCINE),
               DrawerNavItem("غذای سالم و مقوی کودک", Icons.Rounded.Restaurant, NutritionRoute, TopicAccentRole.MANGO, PediatricIconKind.SUPPLEMENTS),
               DrawerNavItem("پرسش‌های پرتکرار (FAQ)", Icons.AutoMirrored.Rounded.Help, FaqRoute(), TopicAccentRole.PLUM, PediatricIconKind.FAQ),
