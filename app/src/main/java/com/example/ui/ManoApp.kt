@@ -319,6 +319,24 @@ fun ManoApp(
     )
   }
 
+  // Discard ephemeral clinical drafts when the caregiver/account changes. Persistent
+  // offline records remain on this device until the caregiver explicitly erases them.
+  // Cloud ViewModels below are separately keyed by UID.
+  var observedCaregiverUid by remember { mutableStateOf(currentUser?.uid) }
+  LaunchedEffect(currentUser?.uid) {
+    val newUid = currentUser?.uid
+    if (observedCaregiverUid != newUid) {
+      visitDraftVm.resetToIdle()
+      nutritionVm.resetToIdle()
+      syrupScannerVm.reset()
+      safetyTriageAiVm.resetChecklist()
+      safetyTriageAiVm.resetDocumentedQa()
+      viewModel.clearTransientHealthSession()
+      showVisitDraftSheet = false
+    }
+    observedCaregiverUid = newUid
+  }
+
   // Strictly auth-gated Cloud Sync ViewModel: only instantiated and observed while currentUser != null
   val cloudVm: ManoCloudSyncViewModel? =
     if (auth != null && currentUser?.uid != null) {
@@ -1742,7 +1760,15 @@ fun ManoApp(
                     // Export only the current displayed account's child, never a residual offline profile.
                     viewModel.exportChildProfileSummary(effectiveChildProfile)
                   },
-                  onEraseLocalData = viewModel::eraseLocalChildHealthData,
+                  onEraseLocalData = {
+                    visitDraftVm.resetToIdle()
+                    nutritionVm.resetToIdle()
+                    syrupScannerVm.reset()
+                    safetyTriageAiVm.resetChecklist()
+                    safetyTriageAiVm.resetDocumentedQa()
+                    showVisitDraftSheet = false
+                    viewModel.eraseLocalChildHealthData()
+                  },
                   onDeleteProfile = {
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {
