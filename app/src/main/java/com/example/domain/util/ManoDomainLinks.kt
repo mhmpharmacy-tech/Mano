@@ -40,9 +40,14 @@ object ManoDomainLinks {
    * Public navigation hint only: never an access token or proof of pharmacy verification.
    * Firestore/Functions must independently check an accepting, active pharmacy.
    */
+  fun isValidPublicPharmacyId(raw: String?): Boolean {
+    val id = raw?.trim() ?: return false
+    return Regex("^[A-Za-z0-9_-]{1,64}$").matches(id)
+  }
+
   fun pharmacyInvitationUrl(pharmacyId: String, host: String = CANONICAL_HOST): String? {
     val id = pharmacyId.trim()
-    if (!Regex("^[A-Za-z0-9_-]{1,64}$").matches(id)) return null
+    if (!isValidPublicPharmacyId(id)) return null
     return "https://${safeHost(host)}/pharmacist?pharmacy=${encodeQuery(id)}"
   }
 
