@@ -53,6 +53,7 @@ private fun CareCardsContent(uid: String?) {
       val fields = remember { mutableStateMapOf<String,String>() }
       val pending = remember { mutableMapOf<String,String>() }
       var confirmDoseReport by remember { mutableStateOf(false) }
+      var confirmCloseFollowUp by remember { mutableStateOf(false) }
       fun submit(action: String, values: Map<String,String> = emptyMap()) {
         if (busy) return
         busy = true
