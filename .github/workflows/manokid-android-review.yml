@@ -8,12 +8,16 @@ on:
       - "app/**"
       - "functions/**"
       - "firestore.rules"
+      - "public/**"
+      - "scripts/**"
       - ".github/workflows/manokid-android-review.yml"
   pull_request:
     paths:
       - "app/**"
       - "functions/**"
       - "firestore.rules"
+      - "public/**"
+      - "scripts/**"
       - ".github/workflows/manokid-android-review.yml"
   workflow_dispatch:
 
@@ -34,6 +38,8 @@ jobs:
           node-version: '22'
       - run: npm ci && npm test
         working-directory: functions
+      - name: Smoke test public QR landing without network
+        run: node scripts/verify-pharmacy-landing.mjs
 
   android-build-and-tests:
     name: Android debug build and Robolectric
