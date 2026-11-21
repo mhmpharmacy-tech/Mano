@@ -3,7 +3,8 @@ package com.example.ui.screens
 import com.example.domain.model.GrowthMeasurement
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.VaccinationScheduleEngine
-import java.text.NumberFormat
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 internal fun measurementTimeFa(epochMs: Long): String {
@@ -13,7 +14,9 @@ internal fun measurementTimeFa(epochMs: Long): String {
 }
 
 internal fun measurementNumberFa(value: Double): String =
-  NumberFormat.getNumberInstance(Locale.forLanguageTag("fa-IR")).format(value)
+  VaccinationScheduleEngine.toPersianDigits(
+    DecimalFormat("0.###", DecimalFormatSymbols(Locale.ROOT)).format(value).replace('.', '٫'),
+  )
 
 internal fun GrowthMeasurement.summaryFa(): String = listOfNotNull(
   weightKg?.let { "وزن: ${measurementNumberFa(it)} کیلوگرم" },

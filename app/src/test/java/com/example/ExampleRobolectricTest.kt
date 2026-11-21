@@ -239,7 +239,10 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("nav_growth").performClick()
     composeTestRule.onNodeWithTag("growth_new_weight").assertIsDisplayed().performTextInput("۱۲٫۳")
     composeTestRule.onNodeWithTag("growth_save_measurement").performScrollTo().performClick()
-    composeTestRule.onNodeWithTag("growth_list").performScrollToNode(hasText("وزن: ۱۲٫۳ کیلوگرم"))
+    composeTestRule.waitUntil(10_000L) {
+      composeTestRule.onAllNodes(hasText("اندازه امروز ذخیره شد.")).fetchSemanticsNodes().isNotEmpty()
+    }
+    composeTestRule.onNodeWithTag("growth_list").performScrollToNode(hasTestTag("growth_history_row"))
     composeTestRule.onNodeWithText("وزن: ۱۲٫۳ کیلوگرم").assertIsDisplayed()
   }
 
