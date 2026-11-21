@@ -37,6 +37,7 @@ try {
           button.onclick=async()=>{
             if(kind==="send"&&!window.confirm("پاسخ پرونده توسط داروساز تأیید شده است؟ ارسال کارت فقط پس از بازبینی نهایی مجاز است."))return;
             if(kind==="dose"&&!window.confirm("آیا مصرف دارو را گزارش می‌کنید؟ این گزینه فقط زمان ثبت در سامانه را ذخیره می‌کند؛ مقدار یا زمان واقعی مصرف ثبت و تأیید نمی‌شود."))return;
+            if(kind==="close"&&!window.confirm("پس از پایان پیگیری، پاسخ و گزارش جدید ثبت نمی‌شود. کارت بسته شود؟"))return;
             const values=Object.fromEntries(Object.entries(inputs).map(([k,v])=>[k,v.value.trim()]));
             if(Object.values(values).some(v=>!v)){ $("status").textContent="لطفاً همهٔ فیلدها را تکمیل کنید.";return }
             button.disabled=true;
