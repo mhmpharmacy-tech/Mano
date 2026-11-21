@@ -36,11 +36,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.ConsultationPayloadMapper
 import com.example.data.ManoSourcesAndClinicalSeed
+import com.example.domain.util.ManoDomainLinks
+import com.example.ui.util.ManoLinkShareHelper
 import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.ReviewStatus
 import com.example.domain.model.StaffAccessStatus
@@ -76,7 +79,9 @@ fun PharmacistStaffPanelContent(
   onRefreshStaffInbox: (forceTokenRefresh: Boolean, statusFilter: ConsultationStatus?) -> Unit,
   onAcknowledgeReceived: (pharmacyId: String, caseId: String, internalNote: String?) -> Unit,
   onSubmitReview: (pharmacyId: String, caseId: String, internalNote: String?, parentReply: String, pharmacistAttestation: Boolean) -> Unit,
+  onShowFeedback: (String) -> Unit = {},
 ) {
+  val context = LocalContext.current
   var statusFilter by rememberSaveable { mutableStateOf<ConsultationStatus?>(null) }
   val isDark = LocalManoDarkTheme.current
   val connectAccent = if (isDark) DarkPlum else PlumCare
@@ -86,6 +91,71 @@ fun PharmacistStaffPanelContent(
     modifier = Modifier.fillMaxWidth().testTag("pharmacist_staff_panel"),
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
+    // MANO Start is useful to small/low-tech pharmacies without a clinical inbox.
+    // These links are informational; no appointments or intake are promised.
+    SectionCard(modifier = Modifier.testTag("pharmacy_start_kit")) {
+      LtrText(text = "MANO Start • Pharmacy Starter Kit", color = MaterialTheme.colorScheme.primary)
+      Text("شروع ساده برای داروخانه", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+      Text(
+        "برای معرفی آموزش‌های عمومی به خانواده‌ها نیازی به ورود اطلاعات کودک یا مدیریت پیام نیست. متن راهنما را می‌توان از طریق برنامه‌های گوشی ارسال یا برای چاپ آماده کرد.",
+        style = MaterialTheme.typography.bodySmall,
+      )
+      OutlinedButton(
+        onClick = {
+          val intro = """
+            مانوکید | همراه آموزشی خانواده و کودک
+
+            آموزش عمومی علائم شایع، نگهداری دارو و مراقبت کودک.
+            راهنما: ${ManoDomainLinks.homeUrl()}
+            
+            در موارد فوری به اورژانس مراجعه کنید. این راهنما جایگزین معاینه نیست.
+            پیوند وب تا پیش از راه‌اندازی و تأیید دامنه ممکن است در مرورگر فعال نباشد.
+          """.trimIndent()
+          val res = ManoLinkShareHelper.shareTextWithLink(context, "راهنمای عمومی مانوکید", intro)
+          if (res.isFailure) onShowFeedback("ارسال راهنما در این دستگاه انجام نشد.")
+        },
+        modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("pharmacy_generic_guide_share"),
+      ) {
+        Text("ارسال یا آماده‌سازی راهنمای عمومی برای چاپ")
+      }
+      val pharmacyId = staffAccess.pharmacyId
+      val invitation = pharmacyId?.takeIf { staffAccess.isVerifiedPharmacist }?.let {
+        ManoDomainLinks.pharmacyInvitationUrl(it)
+      }
+      if (invitation != null) {
+        Text("لینک معرفی ویژه همین داروخانه", style = MaterialTheme.typography.titleSmall)
+        LtrText(text = invitation)
+        Text(
+          "این لینک فقط داروخانه را برای انتخاب به والد پیشنهاد می‌کند. تا وقتی سامانه، وضعیت پذیرش و احراز داروخانه را تأیید نکند، درخواست برای آن ثبت نمی‌شود.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+          OutlinedButton(
+            onClick = {
+              val copied = ManoLinkShareHelper.copyToClipboard(context, "MANOKID pharmacy invitation", invitation)
+              onShowFeedback(if (copied) "پیوند داروخانه کپی شد." else "کپی پیوند ممکن نشد.")
+            },
+            modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("pharmacy_invite_copy"),
+          ) { Text("کپی لینک") }
+          Button(
+            onClick = {
+              val text = ManoDomainLinks.buildPharmacyIntroductionText(pharmacyId!!)
+              val result = text?.let { ManoLinkShareHelper.shareTextWithLink(context, "معرفی داروخانه در مانوکید", it) }
+              if (result == null || result.isFailure) onShowFeedback("اشتراک‌گذاری لینک داروخانه انجام نشد.")
+            },
+            modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("pharmacy_invite_share"),
+          ) { Text("ارسال به والد") }
+        }
+      } else {
+        Text(
+          "لینک اختصاصی پس از تأیید نقش داروساز و شناسه داروخانه در سرور فعال می‌شود؛ شناسه دلخواه قابل‌استفاده نیست.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
+    }
+
     // Verification Status & Authority Banner
     SectionCard(modifier = Modifier.testTag("staff_verification_card")) {
       Row(
@@ -168,6 +238,12 @@ fun PharmacistStaffPanelContent(
           }
         }
 
+        Text(
+          "آمار زیر فقط مربوط به پرونده‌های بارگذاری‌شده در فیلتر فعلی است؛ این عدد تعداد مراجعات، فروش یا کارکرد ماهانه داروخانه نیست.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.testTag("staff_metrics_scope_notice"),
+        )
         val pendingCount = inboxCases.count { it.status == ConsultationStatus.PENDING }
         val receivedCount = inboxCases.count { it.status == ConsultationStatus.RECEIVED }
         val reviewedCount = inboxCases.count { it.status == ConsultationStatus.REVIEWED }
@@ -217,6 +293,11 @@ fun PharmacistStaffPanelContent(
           }
         }
 
+        Text(
+          "پذیرش پرونده‌های جدید با تنظیم تأییدشده acceptingCases در سرور کنترل می‌شود؛ این پنل فعلاً دکمه توقف سروری پذیرش یا رزرو وقت ندارد.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         // Status filter chips & refresh
         FlowRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
