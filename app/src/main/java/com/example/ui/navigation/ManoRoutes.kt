@@ -42,6 +42,7 @@ data class AskPharmacistRoute(
   val categoryId: String? = null,
   val initialMode: String = "parent",
   val referralId: String? = null,
+  val invitedPharmacyId: String? = null,
 )
 
 @Serializable data object MyChildRoute
