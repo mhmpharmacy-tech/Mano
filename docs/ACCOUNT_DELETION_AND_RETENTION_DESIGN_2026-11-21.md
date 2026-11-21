@@ -20,6 +20,9 @@ Google Play account deletion requirements: https://support.google.com/googleplay
 ## Current local-only erasure behavior
 - `ManoPreferencesRepository.clearLocalChildHealthData()` removes DataStore values for child profiles, weight/height metadata, logs, nutrition, vaccination, drafts, scans, safety checklists, bookmarks and onboarding.
 - `FeverTimelineWidgetStore.clearStoredSummary()` clears any old fever/dose summary shown on the home-screen widget.
+- `ManoSensitiveCacheCleaner.clear()` removes MANO's temporary child-health PDF exports (`visit_draft_pdfs/`), syrup-label photos (`scanned_syrups/`) and cached shared care images (`shared_cards/`) on the explicitly confirmed local wipe. Unrelated visual/app caches are retained; a cache cleanup failure must not be reported as a complete wipe.
+- The active in-memory visit draft, nutrition output, scanned label, triage checklist and documented Q&A are reset when the signed-in UID changes, and when local erasure is confirmed. Persistent guest records remain until separately erased.
+- Explicitly copied pharmacist follow-up text is marked sensitive for Android 13+ clipboard previews, but clipboard contents can still be accessible to applications or remain until replaced; users are warned.
 - A two-step explicit UI confirmation distinguishes *local data removal* from *cloud profile document removal*. The latter still leaves other cloud collections intact.
 - This local reset does **not** guarantee erasure of the Firebase SDK on-disk Firestore cache. In-app copy instructs caregivers to sign out and use Android Settings > Apps > Manokid > Storage > Clear storage for full device-level app data removal.
 - No irreversible erasure of production cloud data has been attempted.
