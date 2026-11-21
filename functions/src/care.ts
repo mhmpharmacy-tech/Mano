@@ -24,7 +24,7 @@ export async function updateCare(store: BackendStore, caller: CallerContext | nu
   const action = field(data.action, 20);
   const id = assertValidId(data.requestId, "requestId");
   const staff = ["send","reply","close"].includes(action);
-  if (["send","dose"].includes(action) && data.confirmed !== true)
+  if (["send","dose","close"].includes(action) && data.confirmed !== true)
     throw new AppError("failed-precondition", "Explicit action confirmation is required");
   if (!staff && !["open","dose","question","checkin"].includes(action))
     throw new AppError("invalid-argument", "Unknown action");
