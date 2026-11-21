@@ -669,7 +669,7 @@ test("care card spans delivery, family activity, reply and explicit closure", as
     (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
 
   const transact = (who: CallerContext, action: string) =>
-    updateCare(store, who, {...ids, action, requestId:action, text:"آزمایشی", confirmed:action === "dose"});
+    updateCare(store, who, {...ids, action, requestId:action, text:"آزمایشی", confirmed:action === "dose" || action === "close"});
   await assert.rejects(() => transact(makeParent("another"),"open"),
     (err: unknown) => err instanceof AppError && err.code === "permission-denied");
   await assert.rejects(() => updateCare(store, parent, {...ids, action:"dose", requestId:"unconfirmed"}),
