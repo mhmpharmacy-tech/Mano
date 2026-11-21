@@ -14,6 +14,7 @@ import com.example.data.ManoContentRepository
 import com.example.domain.util.ManoDeepLinkParser
 import com.example.domain.util.ManoDomainLinks
 import com.example.domain.util.VaccinationScheduleEngine
+import com.example.ui.navigation.AskPharmacistRoute
 import com.example.ui.navigation.FaqRoute
 import com.example.ui.navigation.GrowthRoute
 import com.example.ui.navigation.HomeRoute
@@ -62,6 +63,77 @@ class ManoDomainLinksTest {
     assertFalse(ManoDomainLinks.isSupportedHost("manokid.ir.evil.com"))
     assertFalse(ManoDomainLinks.isSupportedHost("google.com"))
     assertFalse(ManoDomainLinks.isSupportedHost(null))
+  }
+
+  @Test
+  fun pharmacyInvitationLinks_requireSafeIdsAndNeverAuthorizeUnknownHosts() {
+    assertEquals(
+      "https://manokid.ir/pharmacist?pharmacy=pharm_10",
+      ManoDomainLinks.pharmacyInvitationUrl("pharm_10"),
+    )
+    assertTrue(ManoDomainLinks.isValidPublicPharmacyId("rx-21_abc"))
+    for (bad in listOf("", " ", "../rx", "rx?other=1", "pharmacy/xx", "داروخانه", "a".repeat(65))) {
+      assertFalse("Invalid id must be rejected: $bad", ManoDomainLinks.isValidPublicPharmacyId(bad))
+      assertNull(ManoDomainLinks.pharmacyInvitationUrl(bad))
+    }
+    assertEquals(
+      "https://manokid.ir/pharmacist?pharmacy=pharm_10",
+      ManoDomainLinks.pharmacyInvitationUrl("pharm_10", host = "evil.example"),
+    )
+    val text = ManoDomainLinks.buildPharmacyIntroductionText("pharm_10", "داروخانه آزمایشی")
+    assertNotNull(text)
+    assertTrue(text!!.contains("داروخانه آزمایشی"))
+    assertTrue(text.contains("فور"))
+    assertTrue(text.contains("pharmacy=pharm_10"))
+    assertNull(ManoDomainLinks.buildPharmacyIntroductionText("bad/id"))
+  }
+
+  @Test
+  fun pharmacyDeepLink_isOnlyUntrustedNavigationHint_notAPharmacistPrivilege() {
+    val valid = ManoDeepLinkParser.resolve(
+      "https://manokid.ir/pharmacist?pharmacy=pharm_10",
+      articleSlugs, medSlugs, symptomIds,
+    )
+    assertEquals(AskPharmacistRoute(invitedPharmacyId = "pharm_10"), valid?.route)
+    assertNull(valid?.fallbackNoticeFa)
+
+    val invalid = ManoDeepLinkParser.resolve(
+      "https://manokid.ir/pharmacist?pharmacy=../pharm_10",
+      articleSlugs, medSlugs, symptomIds,
+    )
+    assertEquals(AskPharmacistRoute(), invalid?.route)
+    assertNotNull(invalid?.fallbackNoticeFa)
+
+    assertNull(ManoDeepLinkParser.resolve(
+      "https://manokid.ir.attacker.example/pharmacist?pharmacy=pharm_10",
+      articleSlugs, medSlugs, symptomIds,
+    ))
+    assertNull(ManoDeepLinkParser.resolve(
+      "javascript:pharmacy=pharm_10", articleSlugs, medSlugs, symptomIds,
+    ))
+  }
+
+  @Test
+  fun pharmacyStartKit_showsEducationalSharingWithoutUnverifiedPharmacyInvitation() {
+    composeTestRule.setContent {
+      ManoKidsTheme(darkTheme = false) {
+        com.example.ui.screens.PharmacistStaffPanelContent(
+          currentUser = null,
+          staffAccess = com.example.domain.model.StaffAccessStatus(),
+          inboxCases = emptyList(),
+          isLoadingInbox = false,
+          inFlightCaseId = null,
+          staffErrorFa = null,
+          onRefreshStaffInbox = { _, _ -> },
+          onAcknowledgeReceived = { _, _, _ -> },
+          onSubmitReview = { _, _, _, _, _ -> },
+        )
+      }
+    }
+    composeTestRule.onNodeWithTag("pharmacy_start_kit").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("pharmacy_generic_guide_share").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("pharmacy_invite_copy").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("pharmacy_invite_share").assertDoesNotExist()
   }
 
   @Test
