@@ -55,11 +55,12 @@ const CRITICAL_RED_FLAG_IDS = new Set<string>([
   "breathing", "lips", "lethargy", "dehydration", "rash_nonblanch",
   "bilious_vomit", "blood_stool", "severe_distension", "breathing_effort",
   "stridor_rest", "choking_history", "fever_blisters", "severe_dehyd",
-  "nasal_battery", "heavy_blood_sputum", "eye_vision", "eye_injury", "eye_chemical", "eye_orbital",
+  "mastoid_swelling", "ear_battery", "nasal_battery", "heavy_blood_sputum", "eye_vision", "eye_injury", "eye_chemical", "eye_orbital",
   "green_vomit", "unable_fluids", "infant_no_meconium",
 ]);
 
 const REVIEW_RED_FLAG_IDS = new Set([
+  "ear_discharge", "ear_hearing", "ear_severe", "ear_risk",
   "nasal_foreign_body", "poor_feeding", "blood_in_sputum", "eye_contact",
   "ear_pain_or_crying", "painful_fissure", "prolonged_2w",
   "spreading_severe", "no_improve_3d", "bloody_diarrhea",
@@ -266,7 +267,9 @@ export function evaluateServerTriage(
     (["cough", "wet_cough"].includes(symptomFlowId) && (duration ?? 0) >= 336) ||
     (symptomFlowId === "runny_nose" && (duration ?? 0) >= 240);
   const youngInfant = ageBandId === "newborn" && ["eye", "runny_nose", "wet_cough"].includes(symptomFlowId);
-  if (youngInfant || redFlags.some((id) => REVIEW_RED_FLAG_IDS.has(id)) || infantHighFever || prolonged) {
+  const earReview = symptomFlowId === "ear" &&
+    (ageBandId === "newborn" || ageBandId === "infant_3_12m" || (duration ?? 0) >= 72);
+  if (earReview || youngInfant || redFlags.some((id) => REVIEW_RED_FLAG_IDS.has(id)) || infantHighFever || prolonged) {
     return {
       outcome: "NEEDS_TIMELY_REVIEW",
       ageBandId, symptomFlowId,

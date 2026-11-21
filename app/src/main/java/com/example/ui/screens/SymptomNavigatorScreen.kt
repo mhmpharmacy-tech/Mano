@@ -118,6 +118,10 @@ fun SymptomNavigatorScreen(
 ) {
   val currentFlow = flows.firstOrNull { it.id == wizard.selectedSymptomId } ?: flows.first()
 
+  var search by rememberSaveable { mutableStateOf("") }
+  val searching = search.isNotBlank()
+  val matches = remember(flows, search) { com.example.domain.util.SymptomSearch.filter(flows, search) }
+  val focus = androidx.compose.ui.platform.LocalFocusManager.current
   val companionSymptomOptions =
     remember {
       listOf(
@@ -153,7 +157,7 @@ fun SymptomNavigatorScreen(
             Text("راهنمای علائم کودک", modifier = Modifier.weight(1f),
               style = MaterialTheme.typography.titleLarge)
             TextButton(
-              onClick = { selectedCompanionSymptoms = emptyList(); showCompanions = false; onReset() },
+              onClick = { selectedCompanionSymptoms = emptyList(); showCompanions = false; search = ""; onReset() },
               modifier = Modifier.minimumInteractiveComponentSize().testTag("wizard_reset_button"),
             ) {
               Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -177,21 +181,31 @@ fun SymptomNavigatorScreen(
               Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                   ManoFramedIllustration(R.drawable.mano_symptoms_orbit, "مانو با دماسنج", width = 48.dp, aspectRatio = 1f)
-                  Text("کدام علامت بیشتر نگرانتان کرده؟", style = MaterialTheme.typography.titleMedium)
+                  OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    label = { Text("جست‌وجوی علامت") },
+                    placeholder = { Text("مثلاً گوششو می‌گیره") },
+                    singleLine = true,
+                    trailingIcon = { if (searching) TextButton(onClick = { search = "" }) { Text("پاک کردن") } },
+                    modifier = Modifier.weight(1f).testTag("symptom_search"),
+                  )
                 }
+                if (matches.isEmpty()) Text("علامتی پیدا نشد. عبارت کوتاه‌تری بنویسید یا جست‌وجو را پاک کنید.")
                 FlowRow(
                   horizontalArrangement = Arrangement.spacedBy(8.dp),
                   verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                  flows.forEach { flow ->
+                  matches.forEach { flow ->
                     SymptomChip(
                       label = flow.titleFa,
                       selected = flow.id == wizard.selectedSymptomId,
-                      onClick = { onSelectSymptom(flow.id) },
+                      onClick = { onSelectSymptom(flow.id); search = ""; focus.clearFocus() },
                       modifier = Modifier.testTag("symptom_choice_${flow.id}"),
                     )
                   }
                 }
+                if (searching) return@Column
                 SourceBadge(reviewStatus = currentFlow.review.status)
                 Text(currentFlow.subtitleFa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
@@ -435,7 +449,7 @@ fun SymptomNavigatorScreen(
           }
         }
 
-        if (wizard.step < 3) {
+        if (wizard.step < 3 && !searching) {
           item {
             Text("برای دسترسی به چک‌لیست آموزشی، ابتدا سن کودک و علائم هشدار را در غربالگری ثبت کنید.",
               style = MaterialTheme.typography.bodySmall)
@@ -483,6 +497,7 @@ fun SymptomNavigatorScreen(
             }
             Button(
               onClick = onNext,
+              enabled = !searching,
               modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("wizard_next_btn"),
             ) {
               Text(if (wizard.step == 2) "مشاهده نتیجه راهنما" else "ادامه")

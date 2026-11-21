@@ -131,12 +131,17 @@ object TriageEngine {
 
     val prolongedNasal = flow.id == "runny_nose" && (durationHours ?: 0) >= 240
     val youngInfant = ageBand == AgeBand.NEWBORN && flow.id in setOf("eye", "wet_cough", "runny_nose")
-    val sameDay = youngInfant || checkedReviewFlags.any { it.id in setOf("poor_feeding", "blood_in_sputum", "eye_contact", "nasal_foreign_body") }
-    if (youngInfant || prolongedNasal || checkedReviewFlags.isNotEmpty() || prolongedFever || prolongedCough || youngInfantHighTemp) {
+    val infantEar = flow.id == "ear" && ageBand in setOf(AgeBand.NEWBORN, AgeBand.INFANT_3_12M)
+    val persistentEar = flow.id == "ear" && (durationHours ?: 0) >= 72
+    val earWarning = flow.id == "ear" && checkedReviewFlags.isNotEmpty()
+    val sameDay = youngInfant || infantEar || earWarning || checkedReviewFlags.any { it.id in setOf("poor_feeding", "blood_in_sputum", "eye_contact", "nasal_foreign_body") }
+    if (infantEar || persistentEar || youngInfant || prolongedNasal || checkedReviewFlags.isNotEmpty() || prolongedFever || prolongedCough || youngInfantHighTemp) {
       val reasonParts = mutableListOf<String>()
       if (checkedReviewFlags.isNotEmpty()) {
         reasonParts += checkedReviewFlags.joinToString("، ") { it.labelFa }
       }
+      if (infantEar) reasonParts += "گوش‌درد یا ترشح گوش در شیرخوار زیر یک سال"
+      if (persistentEar) reasonParts += "ماندگاری مشکل گوش برای سه روز یا بیشتر"
       if (youngInfant) reasonParts += "سن کمتر از سه ماه"
       if (prolongedNasal) reasonParts += "ادامهٔ آبریزش برای ده روز یا بیشتر"
       if (prolongedFever) reasonParts += "تداوم تب بیش از ۷۲ ساعت"

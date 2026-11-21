@@ -85,8 +85,17 @@ object ManoSourcesAndClinicalSeed {
   private val nhsEyeInjury = SourceReference("nhsEyeInjury", "Eye injuries", "NHS",
     "https://www.nhs.uk/conditions/eye-injuries/", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
 
+  private val earSources = listOf(
+    SourceReference("nelson_ear", "Nelson Essentials of Pediatrics, 8th ed. — فصل ۱۰۵، PDF ۴۱۷–۴۱۸", "Elsevier", "", "۲۰۱۹"),
+    SourceReference("applied_ear", "Applied Therapeutics, 12th ed. — مورد ۱۰۴–۸، PDF ۸۱۰۲", "Wolters Kluwer", "", "۲۰۲۴"),
+    SourceReference("rch_ear", "Acute otitis media", "Royal Children’s Hospital Melbourne",
+      "https://www.rch.org.au/clinicalguide/guideline_index/acute_otitis_media/", "بررسی منبع: ۲۰۲۶/۱۱/۲۱"),
+    SourceReference("nhs_ear", "Ear infections", "NHS",
+      "https://www.nhs.uk/conditions/ear-infections/", "بررسی منبع: ۲۰۲۶/۱۱/۲۱"),
+  )
+
   val allSources = listOf(srcAapFever, srcAapMedication, srcNiceFever, srcCdcMilestones, srcWhoGrowth, srcAapConstipation,
-    nelsonCold, nelsonEye, aapCold, nasalForeignBody, nhsCold, rchEye, nhsEyeInjury)
+    nelsonCold, nelsonEye, aapCold, nasalForeignBody, nhsCold, rchEye, nhsEyeInjury) + earSources
 
   const val CLINICAL_REVIEWER_NAME_FA = "دکتر محمدحسین محمدی"
   const val CLINICAL_REVIEWER_REG_ID = "د۳۴۳۶۱"
@@ -319,6 +328,28 @@ object ManoSourcesAndClinicalSeed {
           "با درد شدید، تغییر دید، حساسیت به نور یا آسیب چشم، منتظر پاسخ آنلاین نمانید."),
         review = pendingReviewMeta,
         sources = listOf(nelsonEye, rchEye, nhsEyeInjury),
+      ),
+      SymptomFlow(
+        id = "ear",
+        titleFa = "گوش‌درد یا ترشح گوش",
+        subtitleFa = "کدام گوش اذیتش می‌کند؟ گوشش را می‌کشد، درد دارد یا از گوشش مایع می‌آید؟",
+        relatedArticleSlug = "when-to-see-doctor",
+        asksTemperature = true,
+        redFlags = listOf(
+          RedFlagOption("mastoid_swelling", "پشت گوش قرمز، متورم و دردناک است یا لالهٔ گوش تازه برجسته شده", true),
+          RedFlagOption("ear_battery", "ممکن است باتری دکمه‌ای داخل گوش رفته باشد", true),
+          RedFlagOption("lethargy", "کودک به‌سختی بیدار می‌شود یا پاسخ معمول نمی‌دهد", true),
+          RedFlagOption("ear_discharge", "از گوش مایع، چرک یا خون خارج می‌شود", false),
+          RedFlagOption("ear_hearing", "شنوایی تازه کم شده یا کودک سرگیجه دارد", false),
+          RedFlagOption("ear_severe", "درد شدید یا رو به افزایش، یا حال عمومی نامساعد", false),
+          RedFlagOption("ear_risk", "کودک کاشت حلزون یا ضعف ایمنی دارد", false),
+        ),
+        educationalStepsFa = listOf("گرفتن گوش به‌تنهایی علت درد را مشخص نمی‌کند. تشخیص عفونت گوش به معاینهٔ پردهٔ گوش نیاز دارد.",
+          "گوش را خشک نگه دارید. گوش‌پاک‌کن، روغن یا قطرهٔ باقی‌مانده داخل گوش نگذارید. اگر ترشح دارد، فقط بیرون گوش را به‌آرامی پاک کنید."),
+        escalationCriteriaFa = listOf("ترشح گوش، کاهش تازهٔ شنوایی یا درد رو به افزایش را همان روز به پزشک اطلاع دهید.",
+          "اگر درد تا سه روز بهتر نشد، کودک معاینه شود. با تورم و درد پشت گوش یا جلو آمدن لالهٔ گوش، فوراً به اورژانس مراجعه کنید."),
+        review = pendingReviewMeta,
+        sources = earSources,
       ),
     )
 

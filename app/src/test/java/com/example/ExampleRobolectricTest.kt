@@ -5,6 +5,7 @@ import com.example.domain.model.GrowthMeasurement
 import com.example.domain.util.TimelineTempPoint
 import kotlinx.coroutines.runBlocking
 import android.content.Context
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
@@ -72,6 +73,26 @@ class ExampleRobolectricTest {
     } finally {
       runBlocking { prefs.clearLocalChildHealthData() }
     }
+  }
+
+  @Test
+  @Config(sdk = [36], qualifiers = "fa-rIR-w411dp-h915dp-xhdpi")
+  fun colloquialSymptomSearchRequiresExplicitSelection() {
+    val ui = composeTestRule
+    ui.onNodeWithTag("nav_symptoms").performClick()
+    val search = ui.onNodeWithTag("symptom_search")
+    for ((phrase, id) in listOf("دماغش راه افتاده" to "runny_nose", "چشمش قي ميكنه" to "eye", "گوششو می‌گیره" to "ear")) {
+      search.performTextReplacement(phrase)
+      ui.onNodeWithTag("wizard_next_btn").assertIsNotEnabled()
+      ui.onNodeWithTag("symptom_choice_" + id).assertExists()
+    }
+    search.performTextReplacement("ناشناخته")
+    ui.onNodeWithTag("symptom_choice_ear").assertDoesNotExist()
+    ui.onNodeWithTag("wizard_next_btn").assertIsNotEnabled()
+    search.performTextReplacement("گوششو می‌گیره")
+    ui.onNodeWithTag("symptom_choice_ear").performClick()
+    ui.onNodeWithTag("wizard_next_btn").performClick()
+    ui.onNodeWithText("علامت انتخاب‌شده: گوش‌درد یا ترشح گوش").assertExists()
   }
 
   @Test

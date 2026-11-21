@@ -117,14 +117,17 @@ const triage_1 = require("../src/triage");
     strict_1.default.throws(() => (0, triage_1.evaluateServerTriage)({ ...infant, ageBandId: "newborn", temperatureCelsius: 37, ageMonthsExact: 3 }));
 });
 (0, node_test_1.default)("eye, nasal and wet cough pathways preserve infant and duration referrals", () => {
-    for (const symptomFlowId of ["eye", "runny_nose", "wet_cough"]) {
+    for (const symptomFlowId of ["eye", "runny_nose", "wet_cough", "ear"]) {
         strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "newborn", symptomFlowId }).outcome, "NEEDS_TIMELY_REVIEW");
         strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "toddler_1_3y", symptomFlowId }).outcome, "NONURGENT");
     }
-    for (const [symptomFlowId, hours] of [["runny_nose", 240], ["wet_cough", 336]]) {
+    for (const [symptomFlowId, hours] of [["runny_nose", 240], ["wet_cough", 336], ["ear", 72]]) {
         const input = { ageBandId: "toddler_1_3y", symptomFlowId };
         strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ...input, durationHours: hours - 1 }).outcome, "NONURGENT");
         strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ...input, durationHours: hours }).outcome, "NEEDS_TIMELY_REVIEW");
     }
+});
+(0, node_test_1.default)("ear symptoms in an infant require clinician review", () => {
+    strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "infant_3_12m", symptomFlowId: "ear" }).outcome, "NEEDS_TIMELY_REVIEW");
 });
 //# sourceMappingURL=triage.test.js.map

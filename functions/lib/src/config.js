@@ -26,6 +26,7 @@ exports.VALID_SYMPTOM_FLOWS = [
     "runny_nose",
     "wet_cough",
     "eye",
+    "ear",
     "diarrhea",
     "constipation",
     "rash",

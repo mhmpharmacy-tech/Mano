@@ -91,13 +91,17 @@ test("infant screening uses completed months and keeps the cautious default for 
 });
 
 test("eye, nasal and wet cough pathways preserve infant and duration referrals", () => {
-  for (const symptomFlowId of ["eye", "runny_nose", "wet_cough"]) {
+  for (const symptomFlowId of ["eye", "runny_nose", "wet_cough", "ear"]) {
     assert.equal(evaluateServerTriage({ageBandId: "newborn", symptomFlowId}).outcome, "NEEDS_TIMELY_REVIEW");
     assert.equal(evaluateServerTriage({ageBandId: "toddler_1_3y", symptomFlowId}).outcome, "NONURGENT");
   }
-  for (const [symptomFlowId, hours] of [["runny_nose", 240], ["wet_cough", 336]] as const) {
+  for (const [symptomFlowId, hours] of [["runny_nose", 240], ["wet_cough", 336], ["ear", 72]] as const) {
     const input = {ageBandId: "toddler_1_3y", symptomFlowId};
     assert.equal(evaluateServerTriage({...input, durationHours: hours - 1}).outcome, "NONURGENT");
     assert.equal(evaluateServerTriage({...input, durationHours: hours}).outcome, "NEEDS_TIMELY_REVIEW");
   }
+});
+
+test("ear symptoms in an infant require clinician review", () => {
+  assert.equal(evaluateServerTriage({ageBandId: "infant_3_12m", symptomFlowId: "ear"}).outcome, "NEEDS_TIMELY_REVIEW");
 });

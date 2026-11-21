@@ -51,7 +51,7 @@ class ManoClinicalReferenceTest {
       assertEquals(ReviewStatus.NEEDS_CLINICAL_REVIEW, faq.review.status)
       assertTrue(faq.source.title.contains("PDF") || faq.source.url.startsWith("https://www.nice.org.uk/"))
     }
-    assertEquals(8, repository.symptomFlows.size)
+    assertEquals(9, repository.symptomFlows.size)
     for (flow in repository.symptomFlows) {
       assertEquals(ReviewStatus.NEEDS_CLINICAL_REVIEW, flow.review.status)
       assertTrue(flow.sources.any { it.title.contains("PDF") })
@@ -60,7 +60,7 @@ class ManoClinicalReferenceTest {
 
   @Test fun eyeNoseAndWetCoughUseTheirOwnReferralRules() {
     val repo = ManoContentRepository()
-    for (id in listOf("runny_nose", "wet_cough", "eye")) {
+    for (id in listOf("runny_nose", "wet_cough", "eye", "ear")) {
       val flow = repo.symptomFlowById(id)
       assertEquals(id, flow.id)
       assertFalse(TriageEngine.evaluate(flow, AgeBand.NEWBORN, 37.0, 1, emptySet()).showPharmacistOption)
@@ -71,7 +71,7 @@ class ManoClinicalReferenceTest {
         assertEquals(flag.isImmediateEmergency, result.outcome == TriageOutcome.URGENT_EMERGENCY)
       }
     }
-    for ((id, hours) in listOf("runny_nose" to 240, "wet_cough" to 336)) {
+    for ((id, hours) in listOf("runny_nose" to 240, "wet_cough" to 336, "ear" to 72)) {
       val flow = repo.symptomFlowById(id)
       assertTrue(TriageEngine.evaluate(flow, AgeBand.SCHOOL_6_PLUS, null, hours - 1, emptySet()).showPharmacistOption)
       assertFalse(TriageEngine.evaluate(flow, AgeBand.SCHOOL_6_PLUS, null, hours, emptySet()).showPharmacistOption)
