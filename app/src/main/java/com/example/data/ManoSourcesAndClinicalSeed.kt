@@ -70,7 +70,23 @@ object ManoSourcesAndClinicalSeed {
       publishedOrUpdated = "مرجع پایه جهت بازبینی بالینی (۲۰۲۵)",
     )
 
-  val allSources = listOf(srcAapFever, srcAapMedication, srcNiceFever, srcCdcMilestones, srcWhoGrowth, srcAapConstipation)
+  private val nelsonCold = SourceReference("nelsonCold", "Nelson Essentials of Pediatrics, 8th ed. — فصل ۱۰۲، PDF ۴۱۳", "Elsevier",
+    "", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
+  private val nelsonEye = SourceReference("nelsonEye", "Nelson Essentials of Pediatrics, 8th ed. — فصل ۱۱۹، PDF ۴۵۳", "Elsevier",
+    "", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
+  private val aapCold = SourceReference("aapCold", "Children and Colds", "AAP / HealthyChildren",
+    "https://www.healthychildren.org/English/health-issues/conditions/ear-nose-throat/Pages/Children-and-Colds.aspx", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
+  private val nasalForeignBody = SourceReference("nasal_foreign_body_chq", "Foreign body in the nose", "Children’s Health Queensland",
+    "https://www.childrens.health.qld.gov.au/for-health-professionals/queensland-paediatric-emergency-care-qpec/queensland-paediatric-clinical-guidelines/foreign-body-nose", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
+  private val nhsCold = SourceReference("nhsCold", "Colds, coughs and ear infections in children", "NHS",
+    "https://www.nhs.uk/baby/health/colds-coughs-and-ear-infections-in-children/", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
+  private val rchEye = SourceReference("rchEye", "Acute red eye", "Royal Children’s Hospital Melbourne",
+    "https://www.rch.org.au/clinicalguide/guideline_index/Acute_Red_Eye/", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
+  private val nhsEyeInjury = SourceReference("nhsEyeInjury", "Eye injuries", "NHS",
+    "https://www.nhs.uk/conditions/eye-injuries/", "بررسی منبع: ۲۰۲۶/۱۱/۲۱")
+
+  val allSources = listOf(srcAapFever, srcAapMedication, srcNiceFever, srcCdcMilestones, srcWhoGrowth, srcAapConstipation,
+    nelsonCold, nelsonEye, aapCold, nasalForeignBody, nhsCold, rchEye, nhsEyeInjury)
 
   const val CLINICAL_REVIEWER_NAME_FA = "دکتر محمدحسین محمدی"
   const val CLINICAL_REVIEWER_REG_ID = "د۳۴۳۶۱"
@@ -242,6 +258,67 @@ object ManoSourcesAndClinicalSeed {
           ),
         review = approvedReviewMeta,
         sources = listOf(srcNiceFever, srcAapMedication),
+      ),
+      SymptomFlow(
+        id = "runny_nose",
+        titleFa = "آبریزش بینی",
+        subtitleFa = "از یک سوراخ بینی ترشح دارد یا هر دو؟ نفس کشیدن و شیر خوردن کودک چطور است؟",
+        relatedArticleSlug = "when-to-see-doctor",
+        asksTemperature = true,
+        redFlags = listOf(
+          RedFlagOption("breathing_effort", "نفس کشیدن سخت است یا بین دنده‌ها فرو می‌رود", true),
+          RedFlagOption("cyanosis", "لب یا زبان آبی یا خاکستری شده است", true),
+          RedFlagOption("nasal_battery", "احتمال می‌دهم باتری دکمه‌ای یا دو آهن‌ربا داخل بینی رفته باشد", true),
+          RedFlagOption("nasal_foreign_body", "ترشح یک‌طرفهٔ بدبو یا خونی، یا احتمال جسم خارجی در بینی", false),
+          RedFlagOption("poor_feeding", "شیر یا مایعات خیلی کمتر می‌خورد یا ادرارش کم شده است", false),
+        ),
+        educationalStepsFa = listOf("برای گرفتگی ساده، پیش از شیر خوردن می‌توانید از قطرهٔ سالین ساده استفاده کنید.",
+          "زرد یا سبز شدن ترشحات بینی به‌تنهایی دلیل شروع آنتی‌بیوتیک نیست."),
+        escalationCriteriaFa = listOf("ترشح یک‌طرفهٔ بدبو یا خونی را امروز به پزشک نشان دهید. برای بیرون آوردن جسم، چیزی داخل بینی نبرید.",
+          "اگر آبریزش پس از ده روز رو به بهبود نیست یا پس از بهتر شدن دوباره شدت گرفته، با پزشک تماس بگیرید."),
+        review = pendingReviewMeta,
+        sources = listOf(nelsonCold, aapCold, nasalForeignBody),
+      ),
+      SymptomFlow(
+        id = "wet_cough",
+        titleFa = "سرفهٔ خلط‌دار",
+        subtitleFa = "صدای سرفه مرطوب است؟ ناگهانی شروع شد یا به‌تدریج؟ کودک بین سرفه‌ها راحت نفس می‌کشد؟",
+        relatedArticleSlug = "prolonged-cough",
+        asksTemperature = true,
+        redFlags = listOf(
+          RedFlagOption("breathing_effort", "فرورفتگی بین دنده‌ها یا تقلا برای نفس کشیدن", true),
+          RedFlagOption("cyanosis", "کبودی لب‌ها یا زبان", true),
+          RedFlagOption("choking_history", "سرفه ناگهان هنگام غذا خوردن یا بازی با جسم کوچک شروع شد", true),
+          RedFlagOption("heavy_blood_sputum", "خون‌ریزی واضح یا ادامه‌دار با سرفه", true),
+          RedFlagOption("blood_in_sputum", "در خلط خون دیده‌ام", false),
+          RedFlagOption("poor_feeding", "شیر یا مایعات خیلی کمتر می‌خورد یا ادرارش کم شده است", false),
+        ),
+        educationalStepsFa = listOf("لازم نیست کودک خلط را بیرون بیاورد. سرفه به پاک شدن ترشحات کمک می‌کند.",
+          "شیر یا مایعات مناسب سن را در دفعات بیشتر پیشنهاد دهید. شربت ضدسرفه یا خلط‌آور را خودسرانه شروع نکنید."),
+        escalationCriteriaFa = listOf("خلط خونی نیاز به ارزیابی همان روز دارد. خون زیاد یا همراه با دشواری تنفس نیاز به اورژانس دارد.",
+          "اگر سرفه بدتر می‌شود، شیر خوردن را مختل کرده یا دو هفته ادامه یافته، برای معاینه اقدام کنید."),
+        review = pendingReviewMeta,
+        sources = listOf(nhsCold),
+      ),
+      SymptomFlow(
+        id = "eye",
+        titleFa = "قرمزی یا ترشح چشم",
+        subtitleFa = "یک چشم درگیر است یا هر دو؟ اگر شویندهٔ قوی داخل چشم رفته، همین حالا حداقل ۲۰ دقیقه با آب تمیز بشویید و فوراً کمک پزشکی بگیرید.",
+        relatedArticleSlug = "when-to-see-doctor",
+        asksTemperature = true,
+        redFlags = listOf(
+          RedFlagOption("eye_vision", "درد شدید چشم، آزار واضح از نور یا کاهش دید", true),
+          RedFlagOption("eye_injury", "ضربهٔ شدید، زخم یا جسم فرو رفته در چشم", true),
+          RedFlagOption("eye_chemical", "پاشیدن شویندهٔ قوی یا مادهٔ شیمیایی؛ فوراً شست‌وشو با آب تمیز را شروع کنید و کمک اورژانسی بگیرید", true),
+          RedFlagOption("eye_orbital", "تورم پلک همراه درد هنگام حرکت چشم یا بیرون‌زدگی چشم", true),
+          RedFlagOption("eye_contact", "قرمزی چشم در کودکی که لنز تماسی می‌گذارد", false),
+        ),
+        educationalStepsFa = listOf("قبل و بعد از پاک کردن ترشحات دست‌ها را بشویید. برای هر چشم از پد تمیز جداگانه استفاده کنید.",
+          "حولهٔ کودک را جدا نگه دارید. قطرهٔ باقی‌مانده، آنتی‌بیوتیک یا قطرهٔ کورتونی را خودسرانه استفاده نکنید."),
+        escalationCriteriaFa = listOf("چشم قرمز یا چرکی نوزاد در ماه اول زندگی به معاینهٔ فوری همان روز نیاز دارد.",
+          "با درد شدید، تغییر دید، حساسیت به نور یا آسیب چشم، منتظر پاسخ آنلاین نمانید."),
+        review = pendingReviewMeta,
+        sources = listOf(nelsonEye, rchEye, nhsEyeInjury),
       ),
     )
 

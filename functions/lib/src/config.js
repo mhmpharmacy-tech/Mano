@@ -23,6 +23,9 @@ exports.VALID_CATEGORIES = [
 exports.VALID_SYMPTOM_FLOWS = [
     "fever",
     "cough",
+    "runny_nose",
+    "wet_cough",
+    "eye",
     "diarrhea",
     "constipation",
     "rash",

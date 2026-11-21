@@ -44,6 +44,7 @@ object ManoTextbookEvidence {
   fun reviseFlow(flow: SymptomFlow): SymptomFlow {
     val sources = when (flow.id) {
       "fever" -> flow.sources + listOf(nelsonFever, appliedFever)
+      "runny_nose", "wet_cough" -> return flow.copy(sources = flow.sources + appliedCold)
       "cough" -> listOf(appliedCold)
       "constipation" -> listOf(nelsonConstipation)
       "diaper_rash" -> listOf(appliedSkin)

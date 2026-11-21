@@ -116,4 +116,15 @@ const triage_1 = require("../src/triage");
     }
     strict_1.default.throws(() => (0, triage_1.evaluateServerTriage)({ ...infant, ageBandId: "newborn", temperatureCelsius: 37, ageMonthsExact: 3 }));
 });
+(0, node_test_1.default)("eye, nasal and wet cough pathways preserve infant and duration referrals", () => {
+    for (const symptomFlowId of ["eye", "runny_nose", "wet_cough"]) {
+        strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "newborn", symptomFlowId }).outcome, "NEEDS_TIMELY_REVIEW");
+        strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ageBandId: "toddler_1_3y", symptomFlowId }).outcome, "NONURGENT");
+    }
+    for (const [symptomFlowId, hours] of [["runny_nose", 240], ["wet_cough", 336]]) {
+        const input = { ageBandId: "toddler_1_3y", symptomFlowId };
+        strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ...input, durationHours: hours - 1 }).outcome, "NONURGENT");
+        strict_1.default.equal((0, triage_1.evaluateServerTriage)({ ...input, durationHours: hours }).outcome, "NEEDS_TIMELY_REVIEW");
+    }
+});
 //# sourceMappingURL=triage.test.js.map

@@ -1193,146 +1193,29 @@ private fun OrbitalCareNode(
   }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PharmacistConciergeDock(
   isDark: Boolean,
   onNavigateAskPharmacist: () -> Unit,
   onNavigateFollowUp: () -> Unit,
 ) {
-  val dockBackdrop = if (isDark) DeepScreen else WarmIvory
-  val conciergeGradient =
-    if (isDark) {
-      Brush.linearGradient(listOf(ConciergeDarkStart, ConciergeDarkMid, DeepScreen))
-    } else {
-      Brush.linearGradient(listOf(DeepScreen, ConciergeLightMid, DeepTealGlass))
-    }
-  val specularRim =
-    Brush.horizontalGradient(
-      listOf(
-        PureWhite.copy(alpha = if (isDark) 0.18f else 0.28f),
-        TealGlow.copy(alpha = if (isDark) 0.65f else 0.80f),
-        PureWhite.copy(alpha = if (isDark) 0.18f else 0.28f),
-      )
-    )
-
-  Box(
-    modifier =
-      Modifier
-        .fillMaxWidth()
-        .background(Brush.verticalGradient(listOf(dockBackdrop, Color.Transparent)))
-        .padding(start = 8.dp, end = 8.dp, top = 0.dp, bottom = 4.dp),
+  val scheme = MaterialTheme.colorScheme
+  Surface(
+    color = if (isDark) scheme.surfaceVariant else Color(0xFFF0F8F6),
+    shape = RoundedCornerShape(20.dp),
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).testTag("home_pharmacist_hero_card"),
   ) {
-    Surface(
-      shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 26.dp, bottomEnd = 26.dp),
-      color = Color.Transparent,
-      border = BorderStroke(1.2.dp, specularRim),
-      shadowElevation = 10.dp,
-      modifier = Modifier.fillMaxWidth().testTag("home_pharmacist_hero_card"),
-    ) {
-      Column(
-        modifier =
-          Modifier
-            .fillMaxWidth()
-            .background(conciergeGradient)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-          Surface(
-            color = CleanWhite.copy(alpha = 0.94f),
-            shape = CircleShape,
-            border = BorderStroke(1.6.dp, TealGlow.copy(alpha = 0.82f)),
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(54.dp),
-          ) {
-            Image(
-              painter = painterResource(id = R.drawable.mano_pose_pharmacist),
-              contentDescription = "ربات داروساز مانو کید با روپوش سفید و گوشی پزشکی",
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxSize().clip(CircleShape),
-            )
-          }
-
-          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-              Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(KidLime))
-              Text(
-                text = "پاسخ مستقیم داروساز تاییدشده",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = TealGlow,
-              )
-            }
-            Text(
-              text = "ارتباط مستقیم و امن با داروساز کودک",
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
-              color = CleanWhite,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis,
-            )
-          }
+    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Text("داروساز کودک", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+      Text("دربارهٔ مصرف دارو بپرسید یا پاسخ پرسش قبلی را ببینید.",
+        style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+      androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = onNavigateAskPharmacist, modifier = Modifier.testTag("home_pharmacist_cta")) {
+          Text("پرسش از داروساز")
         }
-
-        Text(
-          text = "پرسش دارویی، تداخل شربت‌ها یا نگرانی شبانه را بدون سردرگمی با داروساز مطرح کنید.",
-          style = MaterialTheme.typography.bodySmall,
-          color = CleanWhite.copy(alpha = 0.88f),
-        )
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Button(
-            onClick = onNavigateAskPharmacist,
-            colors =
-              ButtonDefaults.buttonColors(
-                containerColor = TealGlow,
-                contentColor = DeepScreen,
-              ),
-            shape = RoundedCornerShape(15.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
-            modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("home_pharmacist_cta"),
-          ) {
-            Icon(Icons.Rounded.LocalPharmacy, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(
-              text = "گفت‌وگو با داروساز",
-              style = MaterialTheme.typography.labelLarge,
-              fontWeight = FontWeight.ExtraBold,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis,
-            )
-          }
-
-          Surface(
-            onClick = onNavigateFollowUp,
-            color = CleanWhite.copy(alpha = 0.12f),
-            shape = RoundedCornerShape(15.dp),
-            border = BorderStroke(1.dp, TealGlow.copy(alpha = 0.42f)),
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("home_followup_chip"),
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-              Icon(Icons.AutoMirrored.Rounded.FactCheck, contentDescription = null, tint = TealGlow, modifier = Modifier.size(18.dp))
-              Text(
-                text = "پیگیری پاسخ",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = CleanWhite,
-                maxLines = 1,
-              )
-            }
-          }
+        androidx.compose.material3.TextButton(onClick = onNavigateFollowUp, modifier = Modifier.testTag("home_followup_chip")) {
+          Text("پیگیری پاسخ")
         }
       }
     }

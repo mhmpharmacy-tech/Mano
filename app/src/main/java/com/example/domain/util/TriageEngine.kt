@@ -124,16 +124,21 @@ object TriageEngine {
     val checkedReviewFlags =
       flow.redFlags.filter { it.id in selectedRedFlagIds && !it.isImmediateEmergency }
     val prolongedFever = flow.id == "fever" && (durationHours ?: 0) >= 72
-    val prolongedCough = flow.id == "cough" && (durationHours ?: 0) >= 24 * 14
+    val prolongedCough = flow.id in setOf("cough", "wet_cough") && (durationHours ?: 0) >= 24 * 14
     val youngInfantHighTemp =
       ageBand == AgeBand.INFANT_3_12M && (ageMonthsExact == null || ageMonthsExact <= 6) &&
         (temperatureCelsius ?: 0.0) >= 39.0
 
-    if (checkedReviewFlags.isNotEmpty() || prolongedFever || prolongedCough || youngInfantHighTemp) {
+    val prolongedNasal = flow.id == "runny_nose" && (durationHours ?: 0) >= 240
+    val youngInfant = ageBand == AgeBand.NEWBORN && flow.id in setOf("eye", "wet_cough", "runny_nose")
+    val sameDay = youngInfant || checkedReviewFlags.any { it.id in setOf("poor_feeding", "blood_in_sputum", "eye_contact", "nasal_foreign_body") }
+    if (youngInfant || prolongedNasal || checkedReviewFlags.isNotEmpty() || prolongedFever || prolongedCough || youngInfantHighTemp) {
       val reasonParts = mutableListOf<String>()
       if (checkedReviewFlags.isNotEmpty()) {
         reasonParts += checkedReviewFlags.joinToString("، ") { it.labelFa }
       }
+      if (youngInfant) reasonParts += "سن کمتر از سه ماه"
+      if (prolongedNasal) reasonParts += "ادامهٔ آبریزش برای ده روز یا بیشتر"
       if (prolongedFever) reasonParts += "تداوم تب بیش از ۷۲ ساعت"
       if (prolongedCough) reasonParts += "تداوم سرفه بیش از ۲ هفته"
       if (youngInfantHighTemp) reasonParts += if (ageMonthsExact == null)
@@ -143,13 +148,13 @@ object TriageEngine {
 
       return TriageEvaluationResult(
         outcome = TriageOutcome.NEEDS_TIMELY_REVIEW,
-        titleFa = if (youngInfantHighTemp) "تماس فوری با پزشک برای ارزیابی سریع" else "نیاز به ارزیابی پزشک",
+        titleFa = if (sameDay) "امروز کودک را به پزشک نشان دهید" else if (youngInfantHighTemp) "تماس فوری با پزشک برای ارزیابی سریع" else "نیاز به ارزیابی پزشک",
         summaryFa =
           "بر اساس اطلاعات واردشده (${reasonParts.joinToString("، ")})، لازم است کودک در اولین فرصت مناسب توسط پزشک معاینه شود. نکات زیر صرفاً برای مراقبت حمایتی تا زمان ویزیت است و جایگزین تشخیص پزشکی نیست.",
-        immediateActionsFa = if (youngInfantHighTemp) listOf("برای ارزیابی سریع با پزشک یا مرکز درمانی تماس بگیرید؛ منتظر پاسخ مشاورهٔ آنلاین نمانید.") else flow.educationalStepsFa,
+        immediateActionsFa = if (youngInfantHighTemp || sameDay) listOf("برای ارزیابی سریع با پزشک یا مرکز درمانی تماس بگیرید؛ منتظر پاسخ مشاورهٔ آنلاین نمانید.") else flow.educationalStepsFa,
         escalationCriteriaFa = flow.escalationCriteriaFa,
         relatedArticleSlug = flow.relatedArticleSlug,
-        canShowSelfCare = !youngInfantHighTemp,
+        canShowSelfCare = !youngInfantHighTemp && !sameDay,
         triggeredRule =
           TriageRule(
             id = "rule_timely_clinician_review",
