@@ -201,10 +201,11 @@ class ManoCloudSyncViewModel(
         _acceptingPharmacies.value = list
         if (_pendingInvitationPharmacyId.value != null) {
           applyVerifiedPharmacyInvitation()
-        } else if (_selectedPharmacyId.value == null ||
+        } else if (_selectedPharmacyId.value != null &&
           list.none { it.pharmacyId == _selectedPharmacyId.value && it.acceptingCases }) {
-          // Ordinary direct entry shows choices but never silently changes an active referral.
-          _selectedPharmacyId.value = list.firstOrNull { it.acceptingCases }?.pharmacyId
+          // Ordinary entry never auto-assigns a random pharmacy. Parents must
+          // explicitly select it, even if a malformed invitation was opened.
+          _selectedPharmacyId.value = null
         }
       }
 
