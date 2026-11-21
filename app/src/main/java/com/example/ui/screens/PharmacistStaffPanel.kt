@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -36,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +46,7 @@ import com.example.data.ConsultationPayloadMapper
 import com.example.data.ManoSourcesAndClinicalSeed
 import com.example.domain.util.ManoDomainLinks
 import com.example.ui.util.ManoLinkShareHelper
+import com.example.ui.util.PharmacyQrCard
 import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.ReviewStatus
 import com.example.domain.model.StaffAccessStatus
@@ -125,6 +128,31 @@ fun PharmacistStaffPanelContent(
       }
       if (invitation != null) {
         Text("لینک معرفی ویژه همین داروخانه", style = MaterialTheme.typography.titleSmall)
+        Text(
+          "نسخه آماده‌سازی داخلی: تا تأیید دامنه، صفحه فرود و امضای App Links این کارت را به خانواده‌ها توزیع نکنید.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.error,
+          modifier = Modifier.testTag("pharmacy_qr_not_live_warning"),
+        )
+        val qrPreview = remember(invitation) { PharmacyQrCard.createQrBitmap(invitation) }
+        if (qrPreview != null) {
+          Image(
+            bitmap = qrPreview.asImageBitmap(),
+            contentDescription = "کد QR معرفی همین داروخانه در مانوکید",
+            modifier = Modifier.size(192.dp).align(Alignment.CenterHorizontally).testTag("pharmacy_invite_qr"),
+          )
+          OutlinedButton(
+            onClick = {
+              val result = PharmacyQrCard.printStarterCard(
+                context,
+                invitation,
+                pharmacyDisplayNameFa.orEmpty().ifBlank { "داروخانه منتخب" },
+              )
+              if (result.isFailure) onShowFeedback("امکان باز کردن چاپگر یا ساخت کارت PDF وجود ندارد.")
+            },
+            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("pharmacy_invite_print"),
+          ) { Text("چاپ یا ذخیره کارت معرفی در PDF") }
+        }
         LtrText(text = invitation)
         Text(
           "این لینک فقط داروخانه را برای انتخاب به والد پیشنهاد می‌کند. تا وقتی سامانه، وضعیت پذیرش و احراز داروخانه را تأیید نکند، درخواست برای آن ثبت نمی‌شود.",
