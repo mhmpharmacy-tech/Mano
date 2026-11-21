@@ -12,6 +12,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.domain.model.AgeBand
 import com.example.domain.model.ChildProfileDemo
+import com.example.domain.model.ConsultationRequestDemo
+import com.example.domain.model.GrowthMeasurement
 import com.example.domain.model.DoctorVisitDraft
 import com.example.domain.model.NutritionPlanResult
 import com.example.domain.model.SavedSyrupScan
@@ -75,6 +77,9 @@ class ManoPreferencesRepository(private val context: Context) {
     val SAVED_SYRUP_SCANS_JSON = stringPreferencesKey("saved_syrup_scans_json")
     val THEME_MODE = stringPreferencesKey("mano_theme_mode")
     val LOCAL_CHILD_PROFILE_JSON = stringPreferencesKey("local_child_profile_json")
+    val OFFLINE_QUESTIONS = stringPreferencesKey("offline_question_drafts")
+    const val GROWTH_PREFIX = "growth_measurements_"
+    fun growth(uid: String?) = stringPreferencesKey(GROWTH_PREFIX + (uid?.let { "user_$it" } ?: "guest"))
     val LOCAL_FEVER_LOGS_JSON = stringPreferencesKey("local_fever_logs_json")
     val LOCAL_DOSE_LOGS_JSON = stringPreferencesKey("local_dose_logs_json")
     val CHECKED_MILESTONE_IDS = stringSetPreferencesKey("checked_milestone_ids")
@@ -192,6 +197,33 @@ class ManoPreferencesRepository(private val context: Context) {
         json.decodeFromString<List<TimelineTempPoint>>(raw).sortedByDescending { it.timestampMs }
       }.getOrDefault(emptyList())
     }
+
+  fun growthHistory(uid: String?): Flow<List<GrowthMeasurement>> =
+    context.manoDataStore.data.map { prefs ->
+      prefs[Keys.growth(uid)]?.let { json.decodeFromString<List<GrowthMeasurement>>(it) }.orEmpty()
+    }
+
+  suspend fun addGrowthMeasurement(uid: String?, measure: GrowthMeasurement) {
+    require(measure.weightKg != null || measure.heightCm != null)
+    require(measure.weightKg == null || measure.weightKg.isFinite() && measure.weightKg > 0)
+    require(measure.heightCm == null || measure.heightCm.isFinite() && measure.heightCm > 0)
+    val key = Keys.growth(uid)
+    context.manoDataStore.edit { prefs ->
+      val previous = prefs[key]?.let { json.decodeFromString<List<GrowthMeasurement>>(it) }.orEmpty()
+      prefs[key] = json.encodeToString(listOf(measure) + previous)
+    }
+  }
+
+  val offlineQuestions: Flow<List<ConsultationRequestDemo>> = context.manoDataStore.data.map { prefs ->
+    prefs[Keys.OFFLINE_QUESTIONS]?.let { json.decodeFromString<List<ConsultationRequestDemo>>(it) }.orEmpty()
+  }
+
+  suspend fun saveOfflineQuestion(draft: ConsultationRequestDemo) {
+    context.manoDataStore.edit { prefs ->
+      val previous = prefs[Keys.OFFLINE_QUESTIONS]?.let { json.decodeFromString<List<ConsultationRequestDemo>>(it) }.orEmpty()
+      prefs[Keys.OFFLINE_QUESTIONS] = json.encodeToString(listOf(draft) + previous.filter { it.id != draft.id })
+    }
+  }
 
   val localDoseLogs: Flow<List<TimelineDosePoint>> =
     context.manoDataStore.data.map { prefs ->
@@ -486,6 +518,7 @@ class ManoPreferencesRepository(private val context: Context) {
   suspend fun clearLocalChildHealthData() {
     context.manoDataStore.edit { prefs ->
       listOf(
+        Keys.OFFLINE_QUESTIONS,
         Keys.LOCAL_CHILD_PROFILE_JSON,
         Keys.CHILD_ALIAS_FA,
         Keys.CHILD_HEIGHT_CM,
@@ -507,6 +540,7 @@ class ManoPreferencesRepository(private val context: Context) {
         Keys.VACCINE_REMINDER_ENABLED,
         Keys.VACCINE_REMINDER_LEAD_DAYS,
       ).forEach { prefs.remove(it) }
+      prefs.asMap().keys.filter { it.name.startsWith(Keys.GROWTH_PREFIX) }.forEach { prefs.remove(it) }
     }
   }
 

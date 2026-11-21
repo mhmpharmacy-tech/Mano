@@ -421,6 +421,7 @@ class ManoNutritionTest {
     composeTestRule.setContent {
       ManoKidsTheme {
         GrowthScreen(
+          onSaveMeasurement = { _, _ -> },
           selectedAgeBand = AgeBand.TODDLER_1_3Y,
           milestones = emptyList(),
           checkedMilestoneIds = setOf("m1", "m2"),

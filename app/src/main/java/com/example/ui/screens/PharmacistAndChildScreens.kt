@@ -138,6 +138,7 @@ fun AskPharmacistScreen(
   pendingInvitationPharmacyId: String? = null,
   onSelectPharmacy: (String) -> Unit = {},
   isSubmitting: Boolean = false,
+  confirmedIds: Set<String> = emptySet(),
   serverErrorFa: String? = null,
   onCloudAuthSuccess: () -> Unit = {},
   onCloudAuthError: (String) -> Unit = {},
@@ -279,7 +280,7 @@ fun AskPharmacistScreen(
         }
 
         if (currentUser == null) {
-          Text("در حالت مهمان، این پرسش فقط به‌صورت پیش‌نمایش محلی ثبت می‌شود و به داروخانه ارسال نخواهد شد.",
+          Text("این پرسش روی همین دستگاه ذخیره می‌شود. داروساز آن را دریافت نمی‌کند.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else if (selectedPharmacyId == null) {
@@ -301,7 +302,7 @@ fun AskPharmacistScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Text("در حال بررسی تریاژ و ثبت...")
           } else {
-            Text(if (currentUser != null) "ثبت امن در داروخانه" else "ثبت پرسش")
+            Text(if (currentUser != null) "ارسال به داروخانه" else "ذخیره روی این دستگاه")
           }
         }
       }
@@ -343,11 +344,11 @@ fun AskPharmacistScreen(
           }
         }
         Text(
-          text = "چرخه پیگیری: ۱. ثبت و غربالگری ایمنی ← ۲. دریافت در پنل اختصاصی داروخانه ← ۳. ثبت پاسخ علمی و برنامه پیگیری داروساز.",
+          text = if (currentUser == null) "پیش‌نویس‌های این دستگاه به داروخانه ارسال نشده‌اند." else "چرخه پیگیری: ۱. ثبت و غربالگری ایمنی ← ۲. دریافت در پنل اختصاصی داروخانه ← ۳. ثبت پاسخ علمی و برنامه پیگیری داروساز.",
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (state.requests.isNotEmpty()) {
+        if (currentUser != null && state.requests.isNotEmpty()) {
           FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -394,6 +395,14 @@ fun AskPharmacistScreen(
 
     if (state.requests.isNotEmpty()) {
       items(state.requests, key = { it.id }) { req ->
+        if (currentUser == null) {
+          SectionCard(modifier = Modifier.testTag("local_question_${req.id}")) {
+            Text("پیش‌نویس روی دستگاه", style = MaterialTheme.typography.titleSmall)
+            Text(req.questionSummaryFa)
+            Text("ارسال نشده • ${req.createdAtLabelFa}", style = MaterialTheme.typography.bodySmall)
+          }
+          return@items
+        }
         val stepIdx =
           when (req.status) {
             ConsultationStatus.PENDING -> 0
@@ -418,7 +427,7 @@ fun AskPharmacistScreen(
           }
           Text(req.questionSummaryFa, style = MaterialTheme.typography.bodyMedium)
           ProgressTimeline(
-            steps = listOf("در انتظار", "دریافت شد", "بررسی شد"),
+            steps = listOf(if (req.id in confirmedIds) "ارسال شد" else "ثبت قبلی", "دریافت شد", "بررسی شد"),
             currentStepIndex = stepIdx,
           )
           if (req.followUp != null) {
@@ -483,22 +492,11 @@ fun AskPharmacistScreen(
               }
             }
           }
-          if (currentUser != null) {
-            if (req.status != ConsultationStatus.REVIEWED) {
-              OutlinedButton(
-                onClick = { onAdvanceStatus(req.id, req.status) },
-                modifier = Modifier.minimumInteractiveComponentSize().testTag("ask_pharmacist_refresh_${req.id}"),
-              ) {
-                Text("استعلام آخرین وضعیت از سرور")
-              }
-            }
-          } else if (req.status != ConsultationStatus.REVIEWED) {
+          if (req.status != ConsultationStatus.REVIEWED) {
             OutlinedButton(
               onClick = { onAdvanceStatus(req.id, req.status) },
-              modifier = Modifier.minimumInteractiveComponentSize(),
-            ) {
-              Text("پیش‌نمایش مرحله بعدی (حالت آفلاین)")
-            }
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("ask_pharmacist_refresh_${req.id}"),
+            ) { Text("استعلام آخرین وضعیت از سرور") }
           }
         }
       }
@@ -553,9 +551,9 @@ fun AskPharmacistScreen(
               Text(
                 text =
                   if (currentUser != null) {
-                    "حساب گوگل شما متصل است؛ پرسش‌های غیرفوری در کانال امن ابری (MANO Connect) ثبت و پیگیری می‌شوند."
+                    "پس از ارسال موفق، وضعیت پرسش را در بخش پیگیری می‌بینید."
                   } else {
-                    "برای ذخیره و پیگیری ابری درخواست‌ها با حساب گوگل وارد شوید؛ بدون ورود نیز درخواست شما در این نشست ثبت می‌شود."
+                    "بدون ورود می‌توانید پرسش را روی همین دستگاه ذخیره کنید. برای ارسال، وارد حساب شوید و پرسش را ارسال کنید."
                   },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -595,7 +593,7 @@ fun AskPharmacistScreen(
           titleFa = if (isStaffMode) "ورود حساب داروساز تاییدشده" else "ورود با گوگل برای پیگیری ابری پرسش‌ها",
           descriptionFa =
             if (isStaffMode) "حساب داروساز با گواهی سروری تاییدشده و فهرست رسمی داروسازان در سرور بررسی می‌شود."
-            else "درخواست‌های مشاوره خود را به حساب گوگل متصل کنید تا در دستگاه‌های دیگر نیز در دسترس باشند.",
+            else "برای ارسال پرسش تازه به داروخانه، وارد حساب شوید. پیش‌نویس‌های مهمان روی همین دستگاه می‌مانند.",
           onAuthSuccess = onCloudAuthSuccess,
           onAuthError = onCloudAuthError,
           onSignedOut = onSignedOut,

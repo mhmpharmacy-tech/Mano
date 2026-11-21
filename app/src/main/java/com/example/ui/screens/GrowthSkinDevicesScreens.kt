@@ -31,6 +31,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import com.example.domain.model.GrowthMeasurement
+import com.example.domain.util.ClinicalNumberInput
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -77,9 +90,21 @@ fun GrowthScreen(
   savedHeightCm: String = "",
   savedNutritionPlansCount: Int = 0,
   onOpenNutritionAdvisor: () -> Unit = {},
+  history: List<GrowthMeasurement> = emptyList(),
+  onSaveMeasurement: suspend (Double?, Double?) -> Unit,
   vaccineProgressSummaryFa: String = "",
   onOpenVaccinesSchedule: () -> Unit = {},
 ) {
+  var showHistory by rememberSaveable { mutableStateOf(false) }
+  var weight by rememberSaveable { mutableStateOf("") }
+  var height by rememberSaveable { mutableStateOf("") }
+  var saving by remember { mutableStateOf(false) }
+  var saveMessage by rememberSaveable { mutableStateOf<String?>(null) }
+  val scope = rememberCoroutineScope()
+  val kg = ClinicalNumberInput.decimal(weight)
+  val cm = ClinicalNumberInput.decimal(height)
+  val invalidWeight = weight.isNotBlank() && (kg == null || kg <= 0)
+  val invalidHeight = height.isNotBlank() && (cm == null || cm <= 0)
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("growth_list"),
@@ -89,28 +114,59 @@ fun GrowthScreen(
       item {
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ManoFramedIllustration(
-              resId = R.drawable.mano_growth_orbit,
-              contentDescription = "ربات مهربان مانو کید همراه پایش رشد کودک",
-              width = 96.dp,
-              aspectRatio = 1.0f,
-              accentColor = MaterialTheme.colorScheme.primary,
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-              ) {
-                Text("رشد و تکامل کودک", style = MaterialTheme.typography.headlineSmall)
-                SourceBadge(reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW)
+            ManoFramedIllustration(R.drawable.mano_growth_orbit, "مانو و اندازه‌گیری رشد", width = 48.dp, aspectRatio = 1f)
+            Text("ثبت وزن و قد امروز", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+          }
+          Text("وزن، قد یا هر دو را از روی اندازه‌گیری امروز وارد کنید.", style = MaterialTheme.typography.bodySmall)
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(value = weight, onValueChange = { weight = it; saveMessage = null },
+              label = { Text("وزن (کیلوگرم)") }, singleLine = true, enabled = !saving, isError = invalidWeight,
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+              modifier = Modifier.weight(1f).testTag("growth_new_weight"))
+            OutlinedTextField(value = height, onValueChange = { height = it; saveMessage = null },
+              label = { Text("قد (سانتی‌متر)") }, singleLine = true, enabled = !saving, isError = invalidHeight,
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+              modifier = Modifier.weight(1f).testTag("growth_new_height"))
+          }
+          if (invalidWeight || invalidHeight) Text("اندازه باید یک عدد مثبت باشد.", color = MaterialTheme.colorScheme.error)
+          Button(onClick = {
+            if (!saving) {
+              saving = true
+              scope.launch {
+                try {
+                  onSaveMeasurement(kg, cm)
+                  weight = ""
+                  height = ""
+                  showHistory = true
+                  saveMessage = "اندازه امروز ذخیره شد."
+                } catch (e: java.io.IOException) {
+                  saveMessage = "ذخیره انجام نشد. دوباره تلاش کنید."
+                } finally {
+                  saving = false
+                }
               }
-              Text(
-                text = "پایش نقاط عطف حرکتی، گفتاری و اجتماعی به همراه یادآوری ویزیت‌های دوره‌ای رشد.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
             }
+          }, enabled = !saving && !invalidWeight && !invalidHeight && (kg != null || cm != null),
+            modifier = Modifier.fillMaxWidth().testTag("growth_save_measurement")) {
+            Text("ذخیره اندازه روی این دستگاه")
+          }
+          saveMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+          TextButton(onClick = { showHistory = !showHistory }, modifier = Modifier.testTag("growth_toggle_history")) {
+            Text(if (showHistory) "بستن سابقه اندازه‌ها" else "دیدن روند وزن و قد")
+          }
+        }
+      }
+      if (showHistory) {
+        if (history.isEmpty()) item { Text("هنوز اندازه‌ای در این دفتر ثبت نشده است.") }
+        items(history) { measurement ->
+          val date = remember(measurement.recordedAtMs) {
+            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT,
+              java.util.Locale.forLanguageTag("fa-IR")).format(java.util.Date(measurement.recordedAtMs))
+          }
+          SectionCard {
+            Text(date, style = MaterialTheme.typography.labelLarge)
+            Text(listOfNotNull(measurement.weightKg?.let { "وزن: $it کیلوگرم" },
+              measurement.heightCm?.let { "قد: $it سانتی‌متر" }).joinToString("   •   "))
           }
         }
       }
