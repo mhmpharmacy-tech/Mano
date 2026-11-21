@@ -41,7 +41,7 @@ try {
             const values=Object.fromEntries(Object.entries(inputs).map(([k,v])=>[k,v.value.trim()]));
             if(Object.values(values).some(v=>!v)){ $("status").textContent="لطفاً همهٔ فیلدها را تکمیل کنید.";return }
             button.disabled=true;
-            try{await call("updateCareCard",{pharmacyId:row.pharmacyId,caseId:row.caseId,action:kind,requestId,confirmed:kind==="send"||kind==="dose",...values});if(epoch===revision)await load()}
+            try{await call("updateCareCard",{pharmacyId:row.pharmacyId,caseId:row.caseId,action:kind,requestId,confirmed:kind==="send"||kind==="dose"||kind==="close",...values});if(epoch===revision)await load()}
             catch{button.disabled=false;$("status").textContent="ثبت تأیید نشد. دوباره تلاش کنید."}
           };
         }
