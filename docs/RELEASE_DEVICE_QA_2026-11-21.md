@@ -19,7 +19,7 @@ Status: **NOT RUN on real devices. NO-GO until every mandatory gate passes.** Al
 8. Dose given 14:00 and entered at 18:00: display interval from 14:00; invalid/future HH:mm is rejected; prior-day time resolves correctly.
 9. Offline caregiver A data → sign in account B → verify no A fever/dose/vaccine/scan/draft/birth date/height is presented to B. Repeat after sign-out and process restart.
 10. Profile deletion: confirmation required, wording explicitly says *profile only*. Check cloud profile absent; other cloud records remain and are not misrepresented as erased.
-11. **Mano DataStore / widget erasure:** confirmation required; profile, vaccine, dose, fever, nutrition plans, scan data, drafts, milestone checks and widget summaries absent after restart while offline. Cloud records remain untouched; Firebase SDK cache is not guaranteed cleared by this in-app action. Test Android system Clear storage separately.
+11. **Mano DataStore / widget / sensitive-cache erasure:** confirmation required; profile, vaccine, dose, fever, nutrition plans, scan data, drafts, milestone checks and widget summaries absent after restart while offline. Before wipe, create a synthetic visit PDF, scan photo and shared card, then confirm the three app-owned cache directories are cleared and unrelated visual assets remain. Cloud records remain untouched; Firebase SDK cache is not guaranteed cleared by this in-app action. Test Android system Clear storage separately.
 12. Account deletion: **NOT IMPLEMENTED**; separate verified server-side deletion and retention process required. Do not claim support.
 13. Firestore emulator and staging: user A cannot access B; owners cannot mark any clinical consultation as reviewed or bypass triage; staff access restricted by pharmacy ID.
 14. App Check: authorized signed build accepted, unauthorized client rejected; verify deployed server setting in Firebase console (repository code alone insufficient).
@@ -50,3 +50,9 @@ Status: **NOT RUN on real devices. NO-GO until every mandatory gate passes.** Al
 References:
 - GitHub: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository
 - Firebase App Check: https://firebase.google.com/docs/app-check/enable-enforcement
+
+## Additional nonclinical account-transition and clipboard checks
+- Sign in as synthetic caregiver A, create an unsaved consultation, in-memory visit PDF, scanned syrup result and nutrition output. Sign out and sign in as caregiver B without force-stopping: confirm no A draft, symptom form, PDF preview, scan bitmap, chatbot/Q&A result or account-specific record is displayed. Repeat A → guest → B and after recreation.
+- Copy a synthetic follow-up summary on Android 13–16: clipboard preview should obscure the copied text. Copy a public pharmacy URL and confirm it is not treated as sensitive. On Android 9–12, do not promise clipboard secrecy; verify warning and user control.
+- Deliberately corrupt synthetic offline growth-history and unsent-question JSON in an emulator test fixture; screens should load an empty state, not crash. Ensure a new valid entry can subsequently be saved. Never test against real health data.
+- Confirm `main` CI includes the exact changed release candidate, then separately verify a real-device test matrix and Firebase production configuration. CI alone does not authorize release.
