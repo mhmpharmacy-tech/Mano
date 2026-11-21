@@ -2,11 +2,13 @@ package com.example.ui.util
 
 import android.app.Activity
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.PersistableBundle
 import androidx.core.net.toUri
 import java.security.MessageDigest
 
@@ -32,9 +34,20 @@ object ManoLinkShareHelper {
       context.startActivity(chooser)
     }
 
-  fun copyToClipboard(context: Context, label: String, text: String): Boolean {
+  fun copyToClipboard(context: Context, label: String, text: String, sensitive: Boolean = false): Boolean {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return false
-    clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+    val clip = ClipData.newPlainText(label, text)
+    if (sensitive) {
+      // Android 13+ suppresses the clipboard preview of health details with this flag.
+      // Older Android releases do not guarantee such protection; caregivers should avoid sharing clip contents.
+      val sensitiveKey = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ClipDescription.EXTRA_IS_SENSITIVE
+      } else {
+        "android.content.extra.IS_SENSITIVE"
+      }
+      clip.description.extras = PersistableBundle().apply { putBoolean(sensitiveKey, true) }
+    }
+    clipboard.setPrimaryClip(clip)
     return true
   }
 
