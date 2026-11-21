@@ -80,6 +80,7 @@ fun PharmacistStaffPanelContent(
   onAcknowledgeReceived: (pharmacyId: String, caseId: String, internalNote: String?) -> Unit,
   onSubmitReview: (pharmacyId: String, caseId: String, internalNote: String?, parentReply: String, pharmacistAttestation: Boolean) -> Unit,
   onShowFeedback: (String) -> Unit = {},
+  pharmacyDisplayNameFa: String? = null,
 ) {
   val context = LocalContext.current
   var statusFilter by rememberSaveable { mutableStateOf<ConsultationStatus?>(null) }
@@ -140,7 +141,10 @@ fun PharmacistStaffPanelContent(
           ) { Text("کپی لینک") }
           Button(
             onClick = {
-              val text = ManoDomainLinks.buildPharmacyIntroductionText(pharmacyId!!)
+              val text = ManoDomainLinks.buildPharmacyIntroductionText(
+                pharmacyId!!,
+                displayNameFa = pharmacyDisplayNameFa.orEmpty().ifBlank { "داروخانه منتخب" },
+              )
               val result = text?.let { ManoLinkShareHelper.shareTextWithLink(context, "معرفی داروخانه در مانوکید", it) }
               if (result == null || result.isFailure) onShowFeedback("اشتراک‌گذاری لینک داروخانه انجام نشد.")
             },
