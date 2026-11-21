@@ -358,6 +358,8 @@ fun ManoApp(
     ?: remember { mutableStateOf(emptyList()) }
   val selectedPharmacyId by cloudVm?.selectedPharmacyId?.collectAsStateWithLifecycle()
     ?: remember { mutableStateOf(null) }
+  val pendingInvitationPharmacyId by cloudVm?.pendingInvitationPharmacyId?.collectAsStateWithLifecycle()
+    ?: remember { mutableStateOf(null) }
   val isSubmittingConsultation by cloudVm?.isSubmittingConsultation?.collectAsStateWithLifecycle()
     ?: remember { mutableStateOf(false) }
   val serverConsultationErrorFa by cloudVm?.serverConsultationErrorFa?.collectAsStateWithLifecycle()
@@ -1596,6 +1598,13 @@ fun ManoApp(
                   }
                   return@composable
                 }
+                LaunchedEffect(entry, cloudVm, args.invitedPharmacyId) {
+                  if (args.invitedPharmacyId != null) {
+                    cloudVm?.requestPharmacyFromInvitation(args.invitedPharmacyId)
+                  } else {
+                    cloudVm?.clearPharmacyInvitation()
+                  }
+                }
                 LaunchedEffect(entry) {
                   if (args.referralId == null) viewModel.clearSymptomReferral()
                   val mappedCategory =
@@ -1669,6 +1678,8 @@ fun ManoApp(
                   currentUser = currentUser,
                   acceptingPharmacies = acceptingPharmacies,
                   selectedPharmacyId = selectedPharmacyId,
+                  invitedPharmacyId = args.invitedPharmacyId,
+                  pendingInvitationPharmacyId = pendingInvitationPharmacyId,
                   onSelectPharmacy = { pharmacyId -> cloudVm?.selectPharmacy(pharmacyId) },
                   isSubmitting = isSubmittingConsultation,
                   serverErrorFa = serverConsultationErrorFa,
