@@ -52,13 +52,15 @@ private fun CareCardsContent(uid: String?) {
       var expanded by remember { mutableStateOf(false) }
       val fields = remember { mutableStateMapOf<String,String>() }
       val pending = remember { mutableMapOf<String,String>() }
+      var confirmDoseReport by remember { mutableStateOf(false) }
+      var confirmCloseFollowUp by remember { mutableStateOf(false) }
       fun submit(action: String, values: Map<String,String> = emptyMap()) {
         if (busy) return
         busy = true
         scope.launch {
           try {
             val args = values + mapOf("pharmacyId" to row["pharmacyId"], "caseId" to row["caseId"], "action" to action,
-              "confirmed" to (action == "send"), "requestId" to pending.getOrPut(action) { UUID.randomUUID().toString() })
+              "confirmed" to (action == "send" || action == "dose" || action == "close"), "requestId" to pending.getOrPut(action) { UUID.randomUUID().toString() })
             FirebaseFunctions.getInstance("us-central1").getHttpsCallable("updateCareCard").call(args).await()
             pending.remove(action)
             fields.clear()
@@ -72,9 +74,15 @@ private fun CareCardsContent(uid: String?) {
         if (expanded && !staff && card != null && card["openedAt"] == null) submit("open")
       }) { Text(card?.let { "${it["child"]} · ${it["medicine"]}" } ?: row["questionSummaryFa"].toString()) }
       if (expanded && card == null && staff) {
-        val labels = mapOf("child" to "نام کودک", "medicine" to "نام فرآورده", "strength" to "غلظت یا قدرت", "instructions" to "دستور مصرف", "followUp" to "موعد پیگیری")
-        labels.forEach { (k,v) -> OutlinedTextField(fields[k].orEmpty(), { fields[k]=it }, label={ Text(v) }) }
-        Button(enabled=!busy && labels.keys.all { !fields[it].isNullOrBlank() }, onClick={ submit("send",fields.toMap()) }) { Text("تأیید و ارسال به خانواده") }
+        val reviewed = row["status"] == "REVIEWED" &&
+          (row["parentResponse"] as? Map<*, *>)?.get("attestationConfirmed") == true
+        if (!reviewed) {
+          Text("ارسال کارت مراقبت فقط پس از ثبت پاسخ تأییدشده داروساز در پرونده امکان‌پذیر است.")
+        } else {
+          val labels = mapOf("child" to "نام کودک", "medicine" to "نام فرآورده", "strength" to "غلظت یا قدرت", "instructions" to "دستور مصرف", "followUp" to "موعد پیگیری")
+          labels.forEach { (k,v) -> OutlinedTextField(fields[k].orEmpty(), { fields[k]=it }, label={ Text(v) }) }
+          Button(enabled=!busy && labels.keys.all { !fields[it].isNullOrBlank() }, onClick={ submit("send",fields.toMap()) }) { Text("تأیید و ارسال به خانواده") }
+        }
       } else if (expanded && card != null) {
         Text("${card["strength"]}\n${card["instructions"]}\nموعد پیگیری: ${card["followUp"]}")
         val labels = mapOf("send" to "ارسال کارت","open" to "مشاهدهٔ خانواده","dose" to "ثبت مصرف","question" to "سؤال خانواده","reply" to "پاسخ داروساز","checkin" to "پیگیری خانواده","close" to "پایان پیگیری")
@@ -83,11 +91,30 @@ private fun CareCardsContent(uid: String?) {
           Text("${labels[event["action"]]} · ${DateFormat.getDateTimeInstance(3,3,Locale.forLanguageTag("fa-IR")).format(Date(at))} ${event["text"]}")
         }
         if (card["closedAt"] == null) {
-          if (!staff) Button(enabled=!busy,onClick={ submit("dose") }) { Text("ثبت مصرف همین حالا") }
-          OutlinedTextField(fields["text"].orEmpty(),{fields["text"]=it},label={Text(if(staff) "پاسخ خانواده" else "سؤال یا گزارش پیگیری")})
+          if (!staff) {
+            Button(enabled=!busy, onClick={ confirmDoseReport = true }) { Text("گزارش مصرف توسط والد") }
+            Text("این گزارش فقط زمان ثبت را ذخیره می‌کند، نه مقدار دارو یا زمان واقعی مصرف.", style=MaterialTheme.typography.bodySmall)
+            if (confirmDoseReport) AlertDialog(
+              onDismissRequest={ confirmDoseReport = false },
+              title={ Text("تأیید گزارش مصرف") },
+              text={ Text("آیا مصرف دارو را گزارش می‌کنید؟ این ثبت به‌معنی تأیید مقدار یا ساعت واقعی مصرف توسط داروساز نیست.") },
+              confirmButton={ TextButton(enabled=!busy, onClick={ confirmDoseReport=false; submit("dose") }) { Text("ثبت گزارش") } },
+              dismissButton={ TextButton(onClick={ confirmDoseReport=false }) { Text("انصراف") } },
+            )
+          }
+          OutlinedTextField(fields["text"].orEmpty(),{fields["text"]=it},label={Text(if(staff) "پاسخ به خانواده" else "سؤال یا گزارش پیگیری")})
           val actions = if(staff) listOf("reply") else listOf("question","checkin")
           actions.forEach { a -> Button(enabled=!busy && !fields["text"].isNullOrBlank(),onClick={submit(a,fields.toMap())}) {Text(labels.getValue(a))} }
-          if(staff) TextButton(enabled=!busy,onClick={submit("close")}) { Text("پایان پیگیری") }
+          if(staff) {
+            TextButton(enabled=!busy,onClick={ confirmCloseFollowUp=true }) { Text("پایان پیگیری") }
+            if (confirmCloseFollowUp) AlertDialog(
+              onDismissRequest={ confirmCloseFollowUp=false },
+              title={ Text("تأیید پایان پیگیری") },
+              text={ Text("پس از بستن کارت، ثبت پاسخ یا گزارش جدید ممکن نیست. آیا پیگیری این پرونده به پایان رسیده است؟") },
+              confirmButton={ TextButton(enabled=!busy, onClick={ confirmCloseFollowUp=false; submit("close") }) { Text("بستن کارت") } },
+              dismissButton={ TextButton(onClick={ confirmCloseFollowUp=false }) { Text("انصراف") } },
+            )
+          }
         }
       }
     } }

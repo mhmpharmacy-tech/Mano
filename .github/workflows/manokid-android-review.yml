@@ -40,6 +40,8 @@ jobs:
         working-directory: functions
       - name: Smoke test public QR landing without network
         run: node scripts/verify-pharmacy-landing.mjs
+      - name: Validate family care-card browser module syntax
+        run: node --check public/care/care.js
 
   android-build-and-tests:
     name: Android debug build and Robolectric

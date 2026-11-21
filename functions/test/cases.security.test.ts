@@ -645,17 +645,54 @@ test("care card spans delivery, family activity, reply and explicit closure", as
 
   const ids = { pharmacyId:"pharm_a",caseId:createdCase.caseId };
   const issue = {...ids,action:"send",requestId:"send1",confirmed:true,child:"کودک",medicine:"نمونه",strength:"نمونه",instructions:"دستور آزمایشی",followUp:"فردا"};
-  await assert.rejects(updateCare(store,parent,issue));
+  // No medication handoff may precede a clinical review attested by the pharmacist.
+  await assert.rejects(() => updateCare(store, parent, issue),
+    (err: unknown) => err instanceof AppError && err.code === "permission-denied");
+  await assert.rejects(() => updateCare(store, staff, issue),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
+  await caseService.reviewConsultationCase(staff, {
+    ...ids, nextStatus: "RECEIVED", internalNote: "Received for human review",
+  });
+  await assert.rejects(() => updateCare(store, staff, issue),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
+  await caseService.reviewConsultationCase(staff, {
+    ...ids, nextStatus: "REVIEWED", parentReply: "Human pharmacist reviewed the demonstration consultation.",
+    pharmacistAttestation: true,
+  });
+  await assert.rejects(() => updateCare(store, staff, {...issue, confirmed:false}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   await updateCare(store,staff,issue);
-  await updateCare(store,staff,issue);
-  const transact = (who: CallerContext, action: string) => updateCare(store,who,{...ids,action,requestId:action,text:"آزمایشی"});
-  await assert.rejects(transact(makeParent("another"),"open"));
+  await updateCare(store,staff,issue); // Same request may be retried without duplicating events.
+  await assert.rejects(() => updateCare(store,staff,{...issue,strength:"different strength"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
+  await assert.rejects(() => updateCare(store,staff,{...issue,instructions:"changed instructions"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
+
+  const transact = (who: CallerContext, action: string) =>
+    updateCare(store, who, {...ids, action, requestId:action, text:"آزمایشی", confirmed:action === "dose" || action === "close"});
+  await assert.rejects(() => transact(makeParent("another"),"open"),
+    (err: unknown) => err instanceof AppError && err.code === "permission-denied");
+  await assert.rejects(() => updateCare(store, parent, {...ids, action:"dose", requestId:"unconfirmed"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   for (const action of ["open","dose","dose","question","checkin"]) await transact(parent,action);
+  await assert.rejects(() => updateCare(store,parent,{...ids,action:"checkin",requestId:"question",text:"آزمایشی"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
+  await assert.rejects(() => updateCare(store,parent,{...ids,action:"question",requestId:"question",text:"changed payload"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   await transact(staff,"reply");
+  await assert.rejects(() => updateCare(store, staff, {...ids,action:"close",requestId:"unconfirmed_close"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   await transact(staff,"close");
-  await assert.rejects(updateCare(store,parent,{...ids,action:"dose",requestId:"late"}));
+  await assert.rejects(() => updateCare(store,parent,{...ids,action:"dose",requestId:"late",confirmed:true}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   const family = await caseService.listParentConsultations(parent);
+  const single = await caseService.getParentConsultation(parent,ids);
   const inbox = await caseService.getPharmacyInbox(staff,{pharmacyId:"pharm_a"});
   assert.deepEqual(family[0].careCard?.events.map(e=>e.action),["send","open","dose","question","checkin","reply","close"]);
-  assert.deepEqual(family[0].careCard,inbox[0].careCard);
+  assert.equal(family[0].careCard?.events.find(e=>e.action==="dose")?.text.includes("مقدار/زمان واقعی"), true);
+  assert.ok(family[0].careCard?.events.every(e=>!("actor" in e)));
+  assert.ok(single.careCard?.events.every(e=>!("actor" in e)));
+  assert.equal(inbox[0].careCard?.events[0].actor, staff.uid);
+  assert.equal(inbox[0].careCard?.events[1].actor, parent.uid);
+  assert.equal(family[0].careCard?.events.length,inbox[0].careCard?.events.length);
 });

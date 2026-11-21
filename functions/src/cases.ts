@@ -86,8 +86,13 @@ export interface ReviewConsultationCaseRequest {
 export function toParentConsultationView(
   doc: ConsultationCaseDoc,
 ): ParentConsultationView {
+  const publicCareCard = doc.careCard && {
+    ...doc.careCard,
+    // Staff Firebase UIDs are internal audit data and must never reach families.
+    events: doc.careCard.events.map(({ actor: _actor, ...publicEvent }) => publicEvent),
+  };
   return {
-    ...(doc.careCard ? { careCard: doc.careCard } : {}),
+    ...(publicCareCard ? { careCard: publicCareCard } : {}),
     caseId: doc.caseId,
     pharmacyId: doc.pharmacyId,
     categoryName: doc.categoryName,
