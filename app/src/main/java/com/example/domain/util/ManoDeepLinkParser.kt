@@ -151,7 +151,16 @@ object ManoDeepLinkParser {
 
       "pharmacist", "ask-pharmacist", "consult" -> {
         val cat = query["category"]?.trim()?.takeIf { it.isNotEmpty() }
-        DeepLinkResolution(route = AskPharmacistRoute(cat))
+        val rawId = query["pharmacy"]?.trim().orEmpty()
+        // A pharmacy query parameter is only a hint; selection requires a
+        // live positive match in the server's verified accepting-pharmacy list.
+        val invitedId = rawId.takeIf { ManoDomainLinks.isValidPublicPharmacyId(it) }
+        DeepLinkResolution(
+          route = AskPharmacistRoute(categoryId = cat, invitedPharmacyId = invitedId),
+          fallbackNoticeFa = if (rawId.isNotEmpty() && invitedId == null) {
+            "شناسه معرفی داروخانه نامعتبر است؛ انتخاب داروخانه فقط از فهرست تأییدشده امکان‌پذیر است."
+          } else null,
+        )
       }
 
       "child", "my-child", "profile" -> DeepLinkResolution(route = MyChildRoute)

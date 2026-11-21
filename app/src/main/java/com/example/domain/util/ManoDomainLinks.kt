@@ -36,6 +36,43 @@ object ManoDomainLinks {
 
   fun homeUrl(host: String = CANONICAL_HOST): String = "https://${safeHost(host)}/"
 
+  /**
+   * Public navigation hint only: never an access token or proof of pharmacy verification.
+   * Firestore/Functions must independently check an accepting, active pharmacy.
+   */
+  fun isValidPublicPharmacyId(raw: String?): Boolean {
+    val id = raw?.trim() ?: return false
+    return Regex("^[A-Za-z0-9_-]{1,64}$").matches(id)
+  }
+
+  fun pharmacyInvitationUrl(pharmacyId: String, host: String = CANONICAL_HOST): String? {
+    val id = pharmacyId.trim()
+    if (!isValidPublicPharmacyId(id)) return null
+    return "https://${safeHost(host)}/pharmacist?pharmacy=${encodeQuery(id)}"
+  }
+
+  fun buildPharmacyIntroductionText(
+    pharmacyId: String,
+    displayNameFa: String = "داروخانه منتخب",
+    host: String = CANONICAL_HOST,
+  ): String? {
+    val url = pharmacyInvitationUrl(pharmacyId, host) ?: return null
+    val name = displayNameFa.trim().take(80).ifBlank { "داروخانه منتخب" }
+    return """
+      مانوکید | همراه آموزشی سلامت کودک
+
+      $name، امکان انتخاب این داروخانه را در بخش ارتباط با داروساز مانوکید معرفی می‌کند.
+      آموزش‌های عمومی برای خانواده‌ها در دسترس است. ثبت درخواست غیراضطراری تنها پس از احراز هویت، رضایت والد، غربالگری ایمنی و فعال بودن پذیرش داروخانه امکان‌پذیر است.
+      در موارد فوری، از این مسیر برای انتظار پاسخ استفاده نکنید و فوراً به خدمات درمانی مراجعه کنید.
+
+      پیوند معرفی داروخانه:
+      $url
+
+      این لینک به معنی تضمین پاسخ، نوبت یا فروش دارو نیست. ممکن است تا فعال شدن دامنه و خدمات عمومی، در مرورگر کار نکند.
+    """.trimIndent()
+  }
+
+
   fun topicsUrl(
     categoryId: String? = null,
     query: String = "",

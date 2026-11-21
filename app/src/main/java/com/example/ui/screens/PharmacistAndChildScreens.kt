@@ -134,6 +134,8 @@ fun AskPharmacistScreen(
   currentUser: FirebaseUser? = null,
   acceptingPharmacies: List<PublicPharmacyOption> = emptyList(),
   selectedPharmacyId: String? = null,
+  invitedPharmacyId: String? = null,
+  pendingInvitationPharmacyId: String? = null,
   onSelectPharmacy: (String) -> Unit = {},
   isSubmitting: Boolean = false,
   serverErrorFa: String? = null,
@@ -200,6 +202,20 @@ fun AskPharmacistScreen(
           }
         }
 
+        if (invitedPharmacyId != null) {
+          if (selectedPharmacyId == invitedPharmacyId &&
+            acceptingPharmacies.any { it.pharmacyId == invitedPharmacyId && it.acceptingCases }) {
+            Text("داروخانه معرفی‌کننده در فهرست پذیرش تأیید شد. انتخاب یا تغییر داروخانه با شماست.",
+              style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.testTag("invited_pharmacy_verified"))
+          } else if (pendingInvitationPharmacyId == invitedPharmacyId) {
+            SeverityAlert(
+              severity = AlertSeverity.CAUTION,
+              title = "داروخانه معرفی‌کننده هنوز تأیید نشده است",
+              body = "لینک به‌تنهایی مجوز پذیرش نیست. ممکن است داروخانه فعلاً درخواست نپذیرد یا فهرست آنلاین بارگذاری نشده باشد. می‌توانید از فهرست تأییدشده داروخانه دیگری را انتخاب کنید.",
+            )
+          }
+        }
         if (currentUser != null && acceptingPharmacies.isNotEmpty()) {
           Text("۳. داروخانه پذیرش‌گر تاییدشده", style = MaterialTheme.typography.titleSmall)
           FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -262,9 +278,18 @@ fun AskPharmacistScreen(
           )
         }
 
+        if (currentUser == null) {
+          Text("در حالت مهمان، این پرسش فقط به‌صورت پیش‌نمایش محلی ثبت می‌شود و به داروخانه ارسال نخواهد شد.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (selectedPharmacyId == null) {
+          Text("برای ارسال واقعی، ابتدا یک داروخانه پذیرش‌گر تأییدشده را انتخاب کنید.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testTag("pharmacy_required_notice"))
+        }
         Button(
           onClick = onSubmit,
-          enabled = !isSubmitting,
+          enabled = !isSubmitting && (currentUser == null || selectedPharmacyId != null),
           modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("ask_pharmacist_submit"),
         ) {
           if (isSubmitting) {
@@ -589,6 +614,10 @@ fun AskPharmacistScreen(
             onRefreshStaffInbox = onRefreshStaffInbox,
             onAcknowledgeReceived = onAcknowledgeStaffCaseReceived,
             onSubmitReview = onSubmitStaffCaseReview,
+          onShowFeedback = onShowFeedback,
+          pharmacyDisplayNameFa = acceptingPharmacies.firstOrNull {
+            it.pharmacyId == staffAccess.pharmacyId
+          }?.displayNameFa,
           )
         }
       } else if (isFollowUpFirst) {
