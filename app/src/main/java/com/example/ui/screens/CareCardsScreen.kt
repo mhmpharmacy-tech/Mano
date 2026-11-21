@@ -105,7 +105,16 @@ private fun CareCardsContent(uid: String?) {
           OutlinedTextField(fields["text"].orEmpty(),{fields["text"]=it},label={Text(if(staff) "پاسخ به خانواده" else "سؤال یا گزارش پیگیری")})
           val actions = if(staff) listOf("reply") else listOf("question","checkin")
           actions.forEach { a -> Button(enabled=!busy && !fields["text"].isNullOrBlank(),onClick={submit(a,fields.toMap())}) {Text(labels.getValue(a))} }
-          if(staff) TextButton(enabled=!busy,onClick={submit("close")}) { Text("پایان پیگیری") }
+          if(staff) {
+            TextButton(enabled=!busy,onClick={ confirmCloseFollowUp=true }) { Text("پایان پیگیری") }
+            if (confirmCloseFollowUp) AlertDialog(
+              onDismissRequest={ confirmCloseFollowUp=false },
+              title={ Text("تأیید پایان پیگیری") },
+              text={ Text("پس از بستن کارت، ثبت پاسخ یا گزارش جدید ممکن نیست. آیا پیگیری این پرونده به پایان رسیده است؟") },
+              confirmButton={ TextButton(enabled=!busy, onClick={ confirmCloseFollowUp=false; submit("close") }) { Text("بستن کارت") } },
+              dismissButton={ TextButton(onClick={ confirmCloseFollowUp=false }) { Text("انصراف") } },
+            )
+          }
         }
       }
     } }
