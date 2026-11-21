@@ -41,6 +41,7 @@ import com.example.domain.util.TriageEngine
 import com.example.domain.util.VaccinationScheduleEngine
 import com.example.domain.util.ClinicalNumberInput
 import com.example.widget.FeverTimelineWidgetStore
+import com.example.ui.util.ManoSensitiveCacheCleaner
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -686,18 +687,33 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
+  /** Clear unsaved health-related UI when account ownership changes; never transfer forms between users. */
+  fun clearTransientHealthSession() {
+    _uiState.update { state ->
+      state.copy(
+        symptomWizard = SymptomWizardState(),
+        askPharmacist = AskPharmacistState(),
+        exportedProfileJson = null,
+      )
+    }
+  }
+
   /** Local-only wipe. Cloud documents and pharmacist audit records are never touched. */
   fun eraseLocalChildHealthData() {
     viewModelScope.launch {
       try {
+        val context = getApplication<Application>().applicationContext
         prefs.clearLocalChildHealthData()
-        FeverTimelineWidgetStore.clearStoredSummary(getApplication<Application>().applicationContext)
+        FeverTimelineWidgetStore.clearStoredSummary(context)
+        if (!ManoSensitiveCacheCleaner.clear(context)) {
+          throw java.io.IOException("Some MANO sensitive cache files could not be deleted")
+        }
         _uiState.update { state ->
           state.copy(
             exportedProfileJson = null,
             askPharmacist = AskPharmacistState(),
             symptomWizard = SymptomWizardState(),
-            toastMessageFa = "داده‌های آفلاین مانو و خلاصه ویجت پاک شد؛ کش Firebase و پرونده ابری ممکن است همچنان وجود داشته باشند.",
+            toastMessageFa = "داده‌های محلی، فایل‌های موقت و خلاصه ویجت پاک شدند؛ کش Firebase و پرونده ابری همچنان ممکن است وجود داشته باشند.",
           )
         }
       } catch (_: Exception) {
