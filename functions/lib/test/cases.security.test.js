@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const care_1 = require("../src/care");
 const strict_1 = __importDefault(require("node:assert/strict"));
 const node_test_1 = __importDefault(require("node:test"));
 const admin_1 = require("../src/admin");
@@ -458,5 +459,45 @@ async function setupEnv() {
     await strict_1.default.rejects(caseService.submitConsultationCase(parent, { ...request, temperatureCelsius: 38 }), (error) => error instanceof config_1.AppError && error.code === "failed-precondition");
     const result = await caseService.submitConsultationCase(parent, request);
     strict_1.default.equal(result.questionSummaryFa, screening.questionSummaryFa);
+});
+(0, node_test_1.default)("care card spans delivery, family activity, reply and explicit closure", async () => {
+    const { store, caseService } = await setupEnv();
+    const parent = makeParent();
+    const staff = makePharmacistCaller("pharm_uid_1", "pharm_a");
+    const pass = await caseService.issueConsultationTriagePass(parent, {
+        ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
+        temperatureCelsius: 36.7,
+        questionSummaryFa: "پرسش غیرفوری درباره یبوست خفیف کودک سه ساله",
+    });
+    strict_1.default.equal(pass.eligibleForNonUrgentConsultation, true);
+    strict_1.default.ok(pass.triagePassId);
+    const createdCase = await caseService.submitConsultationCase(parent, {
+        pharmacyId: "pharm_a",
+        triagePassId: pass.triagePassId,
+        categoryName: "OTC",
+        ageBandId: "toddler_1_3y",
+        symptomFlowId: "constipation",
+        questionSummaryFa: "آیا استفاده از پودر پیدرولاکس در کودک سه ساله مجاز است؟",
+        hasUrgentFlag: false,
+        consentAccepted: true,
+        consentVersion: "v1",
+    });
+    const ids = { pharmacyId: "pharm_a", caseId: createdCase.caseId };
+    const issue = { ...ids, action: "send", requestId: "send1", confirmed: true, child: "کودک", medicine: "نمونه", strength: "نمونه", instructions: "دستور آزمایشی", followUp: "فردا" };
+    await strict_1.default.rejects((0, care_1.updateCare)(store, parent, issue));
+    await (0, care_1.updateCare)(store, staff, issue);
+    await (0, care_1.updateCare)(store, staff, issue);
+    const transact = (who, action) => (0, care_1.updateCare)(store, who, { ...ids, action, requestId: action, text: "آزمایشی" });
+    await strict_1.default.rejects(transact(makeParent("another"), "open"));
+    for (const action of ["open", "dose", "dose", "question", "checkin"])
+        await transact(parent, action);
+    await transact(staff, "reply");
+    await transact(staff, "close");
+    await strict_1.default.rejects((0, care_1.updateCare)(store, parent, { ...ids, action: "dose", requestId: "late" }));
+    const family = await caseService.listParentConsultations(parent);
+    const inbox = await caseService.getPharmacyInbox(staff, { pharmacyId: "pharm_a" });
+    strict_1.default.deepEqual(family[0].careCard?.events.map(e => e.action), ["send", "open", "dose", "question", "checkin", "reply", "close"]);
+    strict_1.default.deepEqual(family[0].careCard, inbox[0].careCard);
 });
 //# sourceMappingURL=cases.security.test.js.map

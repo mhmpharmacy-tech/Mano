@@ -1,3 +1,4 @@
+import { updateCare } from "../src/care";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PharmacyAdminService } from "../src/admin";
@@ -615,4 +616,46 @@ test("case intake re-evaluates structured measurements after a nonurgent screeni
     (error: unknown) => error instanceof AppError && error.code === "failed-precondition");
   const result = await caseService.submitConsultationCase(parent, request);
   assert.equal(result.questionSummaryFa, screening.questionSummaryFa);
+});
+
+test("care card spans delivery, family activity, reply and explicit closure", async () => {
+  const {store,caseService} = await setupEnv();
+  const parent = makeParent();
+  const staff = makePharmacistCaller("pharm_uid_1","pharm_a");
+  const pass = await caseService.issueConsultationTriagePass(parent, {
+    ageBandId: "toddler_1_3y",
+    symptomFlowId: "constipation",
+    temperatureCelsius: 36.7,
+    questionSummaryFa: "پرسش غیرفوری درباره یبوست خفیف کودک سه ساله",
+  });
+  assert.equal(pass.eligibleForNonUrgentConsultation, true);
+  assert.ok(pass.triagePassId);
+
+  const createdCase = await caseService.submitConsultationCase(parent, {
+    pharmacyId: "pharm_a",
+    triagePassId: pass.triagePassId,
+    categoryName: "OTC",
+    ageBandId: "toddler_1_3y",
+    symptomFlowId: "constipation",
+    questionSummaryFa: "آیا استفاده از پودر پیدرولاکس در کودک سه ساله مجاز است؟",
+    hasUrgentFlag: false,
+    consentAccepted: true,
+    consentVersion: "v1",
+  });
+
+  const ids = { pharmacyId:"pharm_a",caseId:createdCase.caseId };
+  const issue = {...ids,action:"send",requestId:"send1",confirmed:true,child:"کودک",medicine:"نمونه",strength:"نمونه",instructions:"دستور آزمایشی",followUp:"فردا"};
+  await assert.rejects(updateCare(store,parent,issue));
+  await updateCare(store,staff,issue);
+  await updateCare(store,staff,issue);
+  const transact = (who: CallerContext, action: string) => updateCare(store,who,{...ids,action,requestId:action,text:"آزمایشی"});
+  await assert.rejects(transact(makeParent("another"),"open"));
+  for (const action of ["open","dose","dose","question","checkin"]) await transact(parent,action);
+  await transact(staff,"reply");
+  await transact(staff,"close");
+  await assert.rejects(updateCare(store,parent,{...ids,action:"dose",requestId:"late"}));
+  const family = await caseService.listParentConsultations(parent);
+  const inbox = await caseService.getPharmacyInbox(staff,{pharmacyId:"pharm_a"});
+  assert.deepEqual(family[0].careCard?.events.map(e=>e.action),["send","open","dose","question","checkin","reply","close"]);
+  assert.deepEqual(family[0].careCard,inbox[0].careCard);
 });

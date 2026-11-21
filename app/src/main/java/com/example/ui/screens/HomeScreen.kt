@@ -304,6 +304,7 @@ fun HomeScreen(
   onNavigateSyrupScanner: () -> Unit = {},
   savedSyrupScansCount: Int = 0,
   onNavigateEcosystemPillar: (ManoEcosystemPillar) -> Unit = {},
+  onCareCards: (() -> Unit)? = null,
   previousCare: PreviousCare? = null,
   onContinueCare: (PreviousCare) -> Unit = {},
   scrollToTopTrigger: Int = 0,
@@ -468,6 +469,7 @@ fun HomeScreen(
             }
           }
 
+          onCareCards?.let { open -> androidx.compose.material3.TextButton(onClick = open) { Text("ادامهٔ مراقبت داروخانه") } }
           if (previousCare != null) {
             ContinueCareRow(previousCare, onClick = { onContinueCare(previousCare) })
           }

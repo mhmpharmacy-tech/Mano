@@ -1,3 +1,4 @@
+import { updateCare } from "./care";
 import { CallableRequest, HttpsError, onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { PharmacyAdminService } from "./admin";
@@ -227,3 +228,12 @@ export const cleanupExpiredConsultationState = onSchedule(
     await cleanupService.purgeExpiredOperationalDocs(250);
   },
 );
+
+export const updateCareCard = onCall(CALLABLE_OPTIONS, async request => {
+  try {
+    requireClinicalRelease();
+    return await updateCare(new FirestoreBackendStore(getNamedFirestore()), extractCaller(request), request.data ?? {});
+  } catch (err) {
+    return handleError(err);
+  }
+});
