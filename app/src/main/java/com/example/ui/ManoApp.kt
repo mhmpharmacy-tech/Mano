@@ -161,6 +161,7 @@ import com.example.ui.components.SeverityAlert
 import com.example.ui.components.TopicAccentRole
 import com.example.ui.components.VisitDraftModalBottomSheet
 import com.example.ui.components.resolveAccentColor
+import com.example.ui.util.ManoSensitiveCacheCleaner
 import com.example.ui.theme.CoralCare
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.HairlineBorder
@@ -333,6 +334,9 @@ fun ManoApp(
       safetyTriageAiVm.resetDocumentedQa()
       viewModel.clearTransientHealthSession()
       showVisitDraftSheet = false
+      if (!ManoSensitiveCacheCleaner.clear(context)) {
+        viewModel.showToast("فایل‌های موقت حساب قبلی کامل پاک نشدند؛ برای حذف کامل، حافظه برنامه را از تنظیمات دستگاه پاک کنید.")
+      }
     }
     observedCaregiverUid = newUid
   }
