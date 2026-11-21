@@ -60,7 +60,7 @@ private fun CareCardsContent(uid: String?) {
         scope.launch {
           try {
             val args = values + mapOf("pharmacyId" to row["pharmacyId"], "caseId" to row["caseId"], "action" to action,
-              "confirmed" to (action == "send" || action == "dose"), "requestId" to pending.getOrPut(action) { UUID.randomUUID().toString() })
+              "confirmed" to (action == "send" || action == "dose" || action == "close"), "requestId" to pending.getOrPut(action) { UUID.randomUUID().toString() })
             FirebaseFunctions.getInstance("us-central1").getHttpsCallable("updateCareCard").call(args).await()
             pending.remove(action)
             fields.clear()
