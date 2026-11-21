@@ -38,8 +38,18 @@ export async function updateCare(store: BackendStore, caller: CallerContext | nu
     const now = store.nowMs();
     const duplicate = card?.events.find(e => e.id === id && e.actor === user.uid);
     if (duplicate) {
-      if (duplicate.action !== action ||
-          (["question","reply","checkin"].includes(action) && duplicate.text !== field(data.text,1000))) {
+      const textChanged = ["question","reply","checkin"].includes(action) &&
+        duplicate.text !== field(data.text,1000);
+      // A retry of an issued medicine card must never claim success with revised
+      // strength or instructions while silently retaining the first version.
+      const issuedFieldsChanged = action === "send" && card != null && (
+        card.child !== field(data.child,80) ||
+        card.medicine !== field(data.medicine,120) ||
+        card.strength !== field(data.strength,100) ||
+        card.instructions !== field(data.instructions,1500) ||
+        card.followUp !== field(data.followUp,120)
+      );
+      if (duplicate.action !== action || textChanged || issuedFieldsChanged) {
         throw new AppError("failed-precondition","Request ID was previously used for different content");
       }
       return {ok:true};
