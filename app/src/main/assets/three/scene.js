@@ -13,11 +13,86 @@ try {
   throw err;
 }
 
+// Calibrated Frosted-Glass Render Tuning (Low AO + Restrained Bloom + Soft Reflections + Frosted-Turquoise Mix)
+const MANO_RENDER_TUNING = {
+  ambientOcclusion: {
+    materialAoIntensity: 0.12,
+    contactShadowOpacityLight: 0.28,
+    contactShadowOpacityDark: 0.34,
+  },
+  reflection: {
+    pmremBlur: 0.115,
+    sceneEnvIntensityLight: 0.56,
+    sceneEnvIntensityDark: 0.46,
+    manoPorcelainEnv: 0.32,
+    manoTrimEnv: 0.34,
+    manoAccentEnv: 0.36,
+    manoVisorEnv: 0.36,
+    manoMetalEnv: 0.30,
+    manoSoftEnv: 0.28,
+    plinthEnv: 0.38,
+    squadEnv: 0.32,
+  },
+  frostedMix: {
+    turquoiseColorLight: 0x76dcd2,
+    turquoiseColorDark: 0x8bece2,
+    mistColorLight: 0xf1fbfa,
+    mistColorDark: 0xbdebe7,
+    glowStrengthLight: 0.15,
+    glowStrengthDark: 0.23,
+    transmissionScale: 1.0,
+  },
+  eyeTracking: {
+    maxHeadYaw: 0.27,
+    maxHeadPitch: 0.16,
+    headRollFactor: 0.24,
+    headDamping: 2.6,
+    eyeDamping: 6.2,
+    maxEyeShiftX: 0.038,
+    maxEyeShiftY: 0.022,
+    maxSmileShiftX: 0.008,
+    pointerHoldMs: 2800,
+    tiltHoldMs: 4000,
+    idleDriftAmpX: 0.09,
+    idleDriftAmpY: 0.05,
+  },
+  bloom: {
+    exposureLight: 0.98,
+    exposureDark: 1.03,
+    faceGlowLight: 0.56,
+    faceGlowDark: 0.68,
+    cheekBlushIntensity: 0.32,
+    cheekBlushOpacity: 0.58,
+    emblemGlowLight: 0.16,
+    emblemGlowDark: 0.24,
+    trimGlowLight: 0.10,
+    trimGlowDark: 0.16,
+    squadRimIdle: 0.14,
+    squadRimSelected: 0.38,
+    warmAuraIntensity: 0.62,
+    bokehOpacityLight: 0.32,
+    bokehOpacityDark: 0.42,
+    moteGlowLight: 0.08,
+    moteGlowDark: 0.18,
+    moteOpacity: 0.52,
+    bubbleGlowLight: 0.05,
+    bubbleGlowDark: 0.12,
+    bubbleOpacityLight: 0.24,
+    bubbleOpacityDark: 0.20,
+  },
+};
+
+let currentIsDarkTheme = false;
+let aoIntensityScale = 1.0;
+let bloomIntensityScale = 1.0;
+let envReflectionScale = 1.0;
+let frostedMixScale = 1.0;
+
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = MANO_RENDER_TUNING.bloom.exposureLight;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -27,8 +102,8 @@ scene.fog = new THREE.FogExp2(0xf4faff, 0.024);
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 const roomEnv = new RoomEnvironment();
-scene.environment = pmrem.fromScene(roomEnv, 0.045).texture;
-scene.environmentIntensity = 0.78;
+scene.environment = pmrem.fromScene(roomEnv, MANO_RENDER_TUNING.reflection.pmremBlur).texture;
+scene.environmentIntensity = MANO_RENDER_TUNING.reflection.sceneEnvIntensityLight;
 roomEnv.dispose();
 pmrem.dispose();
 
@@ -69,43 +144,48 @@ controls.target.set(0, 0.72, 0);
 controls.autoRotate = false;
 controls.autoRotateSpeed = 0.0;
 
-// 3-Point Soft Studio Lighting Rig (Key + Aqua Fill + Luminous Back Rim + Hemisphere)
-const keyLight = new THREE.DirectionalLight(0xfff8ef, 2.05);
-keyLight.position.set(4.2, 7.2, 4.6);
+// Soft High-Key Scandinavian Studio Lighting Rig (Diffused Key + Airy Fill + Rim + Low-AO Ambient Lift)
+const keyLight = new THREE.DirectionalLight(0xfffaf4, 1.38);
+keyLight.position.set(4.6, 8.2, 5.0);
 keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1536, 1536);
-keyLight.shadow.radius = 4.5;
+keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.shadow.radius = 8.5;
+keyLight.shadow.blurSamples = 16;
 keyLight.shadow.camera.left = -4.8;
 keyLight.shadow.camera.right = 4.8;
 keyLight.shadow.camera.top = 4.8;
 keyLight.shadow.camera.bottom = -4.8;
 keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 19;
-keyLight.shadow.bias = -0.0004;
-keyLight.shadow.normalBias = 0.022;
+keyLight.shadow.camera.far = 20;
+keyLight.shadow.bias = -0.00025;
+keyLight.shadow.normalBias = 0.036;
 scene.add(keyLight);
 
-const fillLight = new THREE.DirectionalLight(0xd9f4f8, 0.78);
-fillLight.position.set(-4.6, 3.8, 3.6);
+const fillLight = new THREE.DirectionalLight(0xe4f7fa, 1.08);
+fillLight.position.set(-4.8, 4.2, 4.0);
 scene.add(fillLight);
 
-const rimLight = new THREE.DirectionalLight(0xe9fcff, 0.76);
-rimLight.position.set(-1.6, 4.4, -5.2);
+const rimLight = new THREE.DirectionalLight(0xf0fdff, 0.94);
+rimLight.position.set(-1.6, 4.6, -5.2);
 scene.add(rimLight);
 
-const hemiLight = new THREE.HemisphereLight(0xe8f9fc, 0xc5dbd9, 0.74);
+const hemiLight = new THREE.HemisphereLight(0xf4fcff, 0xe2f2f4, 1.12);
 scene.add(hemiLight);
 
-// Ground clinic studio stage & radial contact shadow generator
+const ambientLiftLight = new THREE.AmbientLight(0xf6fcfd, 0.34);
+scene.add(ambientLiftLight);
+
+// Ground clinic studio stage & whisper-soft low-AO radial contact shadow generator
 function makeRadialShadowTexture() {
   const c = document.createElement('canvas');
   c.width = 128;
   c.height = 128;
   const ctx = c.getContext('2d');
-  const g = ctx.createRadialGradient(64, 64, 6, 64, 64, 62);
-  g.addColorStop(0, 'rgba(10, 32, 38, 0.34)');
-  g.addColorStop(0.50, 'rgba(10, 32, 38, 0.13)');
-  g.addColorStop(1, 'rgba(10, 32, 38, 0.0)');
+  const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
+  g.addColorStop(0.0, 'rgba(38, 82, 92, 0.10)');
+  g.addColorStop(0.42, 'rgba(38, 82, 92, 0.045)');
+  g.addColorStop(0.76, 'rgba(38, 82, 92, 0.012)');
+  g.addColorStop(1.0, 'rgba(38, 82, 92, 0.0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c);
@@ -119,7 +199,7 @@ function createContactShadow(rx, rz) {
   const mat = new THREE.MeshBasicMaterial({
     map: contactShadowTex,
     transparent: true,
-    opacity: 0.78,
+    opacity: MANO_RENDER_TUNING.ambientOcclusion.contactShadowOpacityLight,
     depthWrite: false,
   });
   contactShadowMats.push(mat);
@@ -131,21 +211,28 @@ function createContactShadow(rx, rz) {
 
 const floorMesh = new THREE.Mesh(
   new THREE.CircleGeometry(18, 64),
-  new THREE.MeshStandardMaterial({ color: 0xe6f3fe, roughness: 0.90, metalness: 0.0 })
+  new THREE.MeshStandardMaterial({
+    color: 0xeaf5fc,
+    roughness: 0.94,
+    metalness: 0.0,
+    aoMapIntensity: MANO_RENDER_TUNING.ambientOcclusion.materialAoIntensity,
+  })
 );
 floorMesh.rotation.x = -Math.PI / 2;
 floorMesh.receiveShadow = true;
 scene.add(floorMesh);
 
-// Ground-flush matte ceramic studio plinth + calming seafoam perimeter trim
+// Ground-flush frosted milk-glass studio plinth + calm pastel seafoam perimeter trim
 const plinthMat = new THREE.MeshPhysicalMaterial({
-  color: 0xffffff,
-  roughness: 0.24,
+  color: 0xfdfefe,
+  roughness: 0.48,
   roughnessMap: microGrainTex,
-  metalness: 0.02,
-  clearcoat: 0.45,
-  clearcoatRoughness: 0.18,
-  envMapIntensity: 0.95,
+  metalness: 0.0,
+  clearcoat: 0.10,
+  clearcoatRoughness: 0.54,
+  reflectivity: 0.18,
+  envMapIntensity: MANO_RENDER_TUNING.reflection.plinthEnv,
+  aoMapIntensity: MANO_RENDER_TUNING.ambientOcclusion.materialAoIntensity,
 });
 const plinth = new THREE.Mesh(
   new THREE.CylinderGeometry(2.8, 2.96, 0.12, 64),
@@ -156,12 +243,16 @@ plinth.receiveShadow = true;
 scene.add(plinth);
 
 const plinthTrimMat = new THREE.MeshPhysicalMaterial({
-  color: 0x149a8e,
-  emissive: 0x0e7d70,
-  emissiveIntensity: 0.24,
-  roughness: 0.28,
-  metalness: 0.42,
-  clearcoat: 0.35,
+  color: 0x76cec5,
+  emissive: 0x52b0a7,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.trimGlowLight,
+  roughness: 0.54,
+  metalness: 0.08,
+  clearcoat: 0.08,
+  clearcoatRoughness: 0.56,
+  reflectivity: 0.18,
+  envMapIntensity: MANO_RENDER_TUNING.reflection.manoTrimEnv,
+  aoMapIntensity: MANO_RENDER_TUNING.ambientOcclusion.materialAoIntensity,
 });
 const plinthTrimRing = new THREE.Mesh(
   new THREE.TorusGeometry(2.79, 0.022, 12, 72),
@@ -509,131 +600,303 @@ const manoRoot = new THREE.Group();
 manoRoot.position.y = 0.12;
 manoRoot.visible = false;
 scene.add(manoRoot);
-manoRoot.add(createContactShadow(2.15, 2.15));
+manoRoot.add(createContactShadow(2.38, 2.38));
 
 const manoChar = new THREE.Group();
 manoRoot.add(manoChar);
 
-// Soft Sky-Mint Spotlight Aura for soothing maternal/pediatric comfort
-const manoWarmLight = new THREE.PointLight(0x9eece0, 1.15, 5.5, 1.6);
-manoWarmLight.position.set(0.85, 2.15, 1.85);
+// Soft Sky-Mint Fill Aura lifting under-chin & joint shadows without specular bloom flare
+const manoWarmLight = new THREE.PointLight(0xe2f8f5, MANO_RENDER_TUNING.bloom.warmAuraIntensity, 6.2, 1.4);
+manoWarmLight.position.set(0.95, 2.15, 2.05);
 manoRoot.add(manoWarmLight);
 
-// Soft Matte-Velvet Porcelain PBR Materials (Zero Harsh Plastic Glare or Orange)
-const manoPorcelainMat = new THREE.MeshPhysicalMaterial({
-  color: 0xfbf8f3,
-  emissive: 0x143840,
-  emissiveIntensity: 0.02,
-  roughness: 0.36,
+// Soft Frosted-Translucency + Pastel Turquoise Mix PBR Materials (Seamless Banner Harmony)
+const manoAoMaterials = [];
+const manoReflectionEntries = [];
+const manoFrostedMixEntries = [];
+function registerManoAoMaterial(mat, baseEnvIntensity) {
+  mat.aoMapIntensity = MANO_RENDER_TUNING.ambientOcclusion.materialAoIntensity;
+  manoAoMaterials.push(mat);
+  if (typeof baseEnvIntensity === 'number') {
+    mat.envMapIntensity = baseEnvIntensity;
+    manoReflectionEntries.push({ mat, baseEnv: baseEnvIntensity });
+  }
+  return mat;
+}
+function registerManoEnvMaterial(mat, baseEnvIntensity) {
+  mat.envMapIntensity = baseEnvIntensity;
+  manoReflectionEntries.push({ mat, baseEnv: baseEnvIntensity });
+  return mat;
+}
+
+// Hybrid Mix Material: blends a frosted translucent glass layer (transmission + micro-grain + sheen)
+// with a subtle Fresnel pastel-turquoise glow layer so MANO harmonizes seamlessly with frosted-glass banners.
+function createManoFrostedMixMaterial(params, baseEnvIntensity, mixOpts = {}) {
+  const frostedCfg = MANO_RENDER_TUNING.frostedMix;
+  const baseTransmission = typeof params.transmission === 'number' ? params.transmission : 0.34;
+  const baseMixWeight = typeof mixOpts.mixWeight === 'number' ? mixOpts.mixWeight : 0.34;
+  const glowMultiplier = typeof mixOpts.glowMultiplier === 'number' ? mixOpts.glowMultiplier : 1.0;
+
+  const uniforms = {
+    uFrostedTurquoiseColor: { value: new THREE.Color(mixOpts.turquoiseHex || frostedCfg.turquoiseColorLight) },
+    uFrostedMistColor: { value: new THREE.Color(mixOpts.mistHex || frostedCfg.mistColorLight) },
+    uFrostedMixWeight: { value: baseMixWeight },
+    uFrostedGlowStrength: { value: frostedCfg.glowStrengthLight * glowMultiplier },
+  };
+
+  const mat = new THREE.MeshPhysicalMaterial(params);
+  mat.customProgramCacheKey = () => 'mano-frosted-turquoise-mix-v1';
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uFrostedTurquoiseColor = uniforms.uFrostedTurquoiseColor;
+    shader.uniforms.uFrostedMistColor = uniforms.uFrostedMistColor;
+    shader.uniforms.uFrostedMixWeight = uniforms.uFrostedMixWeight;
+    shader.uniforms.uFrostedGlowStrength = uniforms.uFrostedGlowStrength;
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform vec3 uFrostedTurquoiseColor;
+uniform vec3 uFrostedMistColor;
+uniform float uFrostedMixWeight;
+uniform float uFrostedGlowStrength;`
+      )
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+{
+  vec3 frostedViewDir = normalize( vViewPosition );
+  float frostedFresnel = pow( clamp( 1.0 - abs( dot( normalize( normal ), frostedViewDir ) ), 0.0, 1.0 ), 2.35 );
+  float frostedMix = clamp( uFrostedMixWeight * ( 0.34 + 0.66 * frostedFresnel ), 0.0, 0.72 );
+  vec3 frostedTint = mix( uFrostedMistColor, uFrostedTurquoiseColor, 0.46 );
+  diffuseColor.rgb = mix( diffuseColor.rgb, frostedTint, frostedMix * 0.42 );
+  totalEmissiveRadiance += uFrostedTurquoiseColor * ( frostedFresnel * uFrostedGlowStrength );
+}`
+      );
+  };
+
+  registerManoAoMaterial(mat, baseEnvIntensity);
+  manoFrostedMixEntries.push({
+    mat,
+    uniforms,
+    baseTransmission,
+    baseMixWeight,
+    glowMultiplier,
+    customTurquoiseHex: mixOpts.turquoiseHex || null,
+  });
+  return mat;
+}
+
+registerManoEnvMaterial(plinthMat, MANO_RENDER_TUNING.reflection.plinthEnv);
+registerManoEnvMaterial(plinthTrimMat, MANO_RENDER_TUNING.reflection.manoTrimEnv);
+
+// Main MANO Ceramic-Frosted Shell (solid clinical pearl-white with subtle frosted-turquoise edge mist)
+const manoPorcelainMat = createManoFrostedMixMaterial({
+  color: 0xfbfdfc,
+  emissive: 0xe6f7f5,
+  emissiveIntensity: 0.038,
+  roughness: 0.56,
   roughnessMap: microGrainTex,
-  metalness: 0.01,
-  clearcoat: 0.24,
-  clearcoatRoughness: 0.28,
-  sheen: 0.72,
-  sheenColor: new THREE.Color(0xeef9f7),
-  sheenRoughness: 0.45,
-  ior: 1.44,
-  reflectivity: 0.45,
-  envMapIntensity: 0.88,
-});
-
-const manoGoldMat = new THREE.MeshPhysicalMaterial({
-  color: 0x26b5a5,
-  emissive: 0x0e7d70,
-  emissiveIntensity: 0.22,
-  roughness: 0.32,
-  metalness: 0.24,
-  clearcoat: 0.36,
-  clearcoatRoughness: 0.24,
-  sheen: 0.55,
-  sheenColor: new THREE.Color(0xbef7ec),
-  envMapIntensity: 1.0,
-});
-
-const manoAmberAccentMat = new THREE.MeshPhysicalMaterial({
-  color: 0xd9c18a,
-  emissive: 0x9b824e,
-  emissiveIntensity: 0.18,
-  roughness: 0.28,
-  metalness: 0.45,
-  clearcoat: 0.42,
-  clearcoatRoughness: 0.20,
-  envMapIntensity: 1.15,
-});
-
-const manoVisorMat = new THREE.MeshPhysicalMaterial({
-  color: 0x0e282f,
-  roughness: 0.14,
-  metalness: 0.06,
-  clearcoat: 0.65,
-  clearcoatRoughness: 0.12,
-  ior: 1.48,
-  reflectivity: 0.65,
-  envMapIntensity: 1.05,
-});
-
-const manoFaceGlowMat = new THREE.MeshPhysicalMaterial({
-  color: 0x8efce8,
-  emissive: 0x56ecd0,
-  emissiveIntensity: 1.28,
-  roughness: 0.22,
-  clearcoat: 0.25,
-});
-
-const manoCheekBlushMat = new THREE.MeshPhysicalMaterial({
-  color: 0xff9db2,
-  emissive: 0xf47d99,
-  emissiveIntensity: 0.72,
-  roughness: 0.38,
+  metalness: 0.0,
+  transmission: 0.14,
+  thickness: 0.42,
+  attenuationColor: new THREE.Color(0xc4f2ec),
+  attenuationDistance: 1.65,
+  clearcoat: 0.08,
+  clearcoatRoughness: 0.58,
+  sheen: 0.86,
+  sheenColor: new THREE.Color(0xeefbf9),
+  sheenRoughness: 0.64,
+  ior: 1.38,
+  reflectivity: 0.15,
   transparent: true,
-  opacity: 0.78,
+  opacity: 0.96,
+  depthWrite: true,
+}, MANO_RENDER_TUNING.reflection.manoPorcelainEnv, {
+  mixWeight: 0.22,
+  glowMultiplier: 0.58,
 });
+
+// Primary Frosted-Turquoise Hybrid Trim (replaces metallic collars, bezel, cuffs & ear rings)
+const manoGoldMat = createManoFrostedMixMaterial({
+  color: 0xaee6df,
+  emissive: 0x5cc5bb,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.trimGlowLight,
+  roughness: 0.50,
+  roughnessMap: microGrainTex,
+  metalness: 0.02,
+  transmission: 0.34,
+  thickness: 0.52,
+  attenuationColor: new THREE.Color(0x7fdcd3),
+  attenuationDistance: 1.32,
+  clearcoat: 0.10,
+  clearcoatRoughness: 0.54,
+  sheen: 0.78,
+  sheenColor: new THREE.Color(0xdcf8f4),
+  sheenRoughness: 0.60,
+  ior: 1.40,
+  reflectivity: 0.18,
+  transparent: true,
+  opacity: 0.92,
+  depthWrite: true,
+}, MANO_RENDER_TUNING.reflection.manoTrimEnv, {
+  mixWeight: 0.38,
+  glowMultiplier: 1.0,
+});
+
+// Secondary Frosted Mist-Pearl & Turquoise Accent (replaces warm metallic rims & stage halo)
+const manoAmberAccentMat = createManoFrostedMixMaterial({
+  color: 0xdfeff0,
+  emissive: 0x77cfc9,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.trimGlowLight,
+  roughness: 0.50,
+  roughnessMap: microGrainTex,
+  metalness: 0.02,
+  transmission: 0.36,
+  thickness: 0.50,
+  attenuationColor: new THREE.Color(0x9ce7e0),
+  attenuationDistance: 1.40,
+  clearcoat: 0.10,
+  clearcoatRoughness: 0.54,
+  sheen: 0.70,
+  sheenColor: new THREE.Color(0xf0faf9),
+  sheenRoughness: 0.62,
+  ior: 1.39,
+  reflectivity: 0.18,
+  transparent: true,
+  opacity: 0.91,
+  depthWrite: true,
+}, MANO_RENDER_TUNING.reflection.manoAccentEnv, {
+  mixWeight: 0.34,
+  glowMultiplier: 0.92,
+});
+
+const manoVisorMat = registerManoAoMaterial(new THREE.MeshPhysicalMaterial({
+  color: 0x2d4c59,
+  roughness: 0.36,
+  metalness: 0.02,
+  clearcoat: 0.16,
+  clearcoatRoughness: 0.44,
+  ior: 1.38,
+  reflectivity: 0.20,
+}), MANO_RENDER_TUNING.reflection.manoVisorEnv);
+
+const manoFaceGlowMat = registerManoEnvMaterial(new THREE.MeshPhysicalMaterial({
+  color: 0xb6f6ec,
+  emissive: 0x80e4d6,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.faceGlowLight,
+  roughness: 0.42,
+  clearcoat: 0.06,
+  clearcoatRoughness: 0.50,
+}), MANO_RENDER_TUNING.reflection.manoSoftEnv);
+
+const manoCheekBlushMat = registerManoEnvMaterial(new THREE.MeshPhysicalMaterial({
+  color: 0xffbfd0,
+  emissive: 0xf4a2b6,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.cheekBlushIntensity,
+  roughness: 0.58,
+  transparent: true,
+  opacity: MANO_RENDER_TUNING.bloom.cheekBlushOpacity,
+}), MANO_RENDER_TUNING.reflection.manoSoftEnv);
 
 const manoCatchlightMat = new THREE.MeshBasicMaterial({
-  color: 0xffffff,
+  color: 0xf7fcfc,
 });
 
-const manoCoreEmblemMat = new THREE.MeshPhysicalMaterial({
-  color: 0xd9c18a,
-  emissive: 0x8f7239,
-  emissiveIntensity: 0.40,
-  roughness: 0.26,
-  metalness: 0.35,
-  clearcoat: 0.45,
+// Core Chest Emblem & Ear Cap Frosted-Glass Mix (luminous turquoise-frosted glass core)
+const manoCoreEmblemMat = createManoFrostedMixMaterial({
+  color: 0xcff2ee,
+  emissive: 0x67cfc6,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.emblemGlowLight,
+  roughness: 0.46,
+  roughnessMap: microGrainTex,
+  metalness: 0.02,
+  transmission: 0.36,
+  thickness: 0.48,
+  attenuationColor: new THREE.Color(0x7adbd1),
+  attenuationDistance: 1.25,
+  clearcoat: 0.12,
+  clearcoatRoughness: 0.50,
+  sheen: 0.80,
+  sheenColor: new THREE.Color(0xe6faf7),
+  sheenRoughness: 0.58,
+  ior: 1.40,
+  reflectivity: 0.18,
+  transparent: true,
+  opacity: 0.92,
+  depthWrite: true,
+}, MANO_RENDER_TUNING.reflection.manoAccentEnv, {
+  mixWeight: 0.36,
+  glowMultiplier: 1.12,
 });
 
-const manoSproutMat = new THREE.MeshPhysicalMaterial({
-  color: 0x6bbf4e,
-  emissive: 0x2c7f4d,
-  emissiveIntensity: 0.16,
-  roughness: 0.34,
-  metalness: 0.01,
-  clearcoat: 0.35,
-  clearcoatRoughness: 0.24,
-  sheen: 0.68,
-  sheenColor: new THREE.Color(0xd9f99d),
-  sheenRoughness: 0.42,
+const manoSproutMat = registerManoAoMaterial(new THREE.MeshPhysicalMaterial({
+  color: 0x90d384,
+  emissive: 0x5ca878,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.trimGlowLight,
+  roughness: 0.54,
+  metalness: 0.0,
+  clearcoat: 0.08,
+  clearcoatRoughness: 0.54,
+  sheen: 0.78,
+  sheenColor: new THREE.Color(0xeaf9cb),
+  sheenRoughness: 0.62,
+  reflectivity: 0.14,
+}), MANO_RENDER_TUNING.reflection.manoSoftEnv);
+
+const manoScarfMat = createManoFrostedMixMaterial({
+  color: 0x8adbd1,
+  emissive: 0x52bdb2,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.trimGlowLight,
+  roughness: 0.54,
+  roughnessMap: microGrainTex,
+  metalness: 0.0,
+  transmission: 0.28,
+  thickness: 0.44,
+  attenuationColor: new THREE.Color(0x8be4db),
+  attenuationDistance: 1.38,
+  clearcoat: 0.08,
+  clearcoatRoughness: 0.56,
+  sheen: 0.86,
+  sheenColor: new THREE.Color(0xdaf9f4),
+  sheenRoughness: 0.64,
+  ior: 1.39,
+  reflectivity: 0.15,
+  transparent: true,
+  opacity: 0.93,
+  depthWrite: true,
+}, MANO_RENDER_TUNING.reflection.manoSoftEnv, {
+  mixWeight: 0.32,
+  glowMultiplier: 0.88,
 });
 
-const manoScarfMat = new THREE.MeshPhysicalMaterial({
-  color: 0x28b5a0,
-  emissive: 0x0e7d70,
-  emissiveIntensity: 0.14,
+// Replaced Metallic Hardware Material -> Frosted-Glass + Soft Turquoise Glow Mix Material
+const manoFrostedMixMat = createManoFrostedMixMaterial({
+  color: 0xdff4f3,
+  emissive: 0x6cd3c9,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.trimGlowLight,
   roughness: 0.48,
-  metalness: 0.05,
-  clearcoat: 0.18,
-  sheen: 0.85,
-  sheenColor: new THREE.Color(0xb8f7ea),
-  sheenRoughness: 0.55,
+  roughnessMap: microGrainTex,
+  metalness: 0.02,
+  transmission: 0.38,
+  thickness: 0.56,
+  attenuationColor: new THREE.Color(0x88e2d9),
+  attenuationDistance: 1.30,
+  clearcoat: 0.12,
+  clearcoatRoughness: 0.52,
+  sheen: 0.82,
+  sheenColor: new THREE.Color(0xe5faf8),
+  sheenRoughness: 0.58,
+  ior: 1.40,
+  reflectivity: 0.18,
+  transparent: true,
+  opacity: 0.90,
+  depthWrite: true,
+}, MANO_RENDER_TUNING.reflection.manoMetalEnv, {
+  mixWeight: 0.40,
+  glowMultiplier: 1.05,
 });
-
-const metalMat = new THREE.MeshPhysicalMaterial({
-  color: 0xe3ecee,
-  roughness: 0.16,
-  metalness: 0.88,
-  clearcoat: 0.30,
-  envMapIntensity: 1.25,
-});
+const metalMat = manoFrostedMixMat;
 
 // Calm Seafoam Stage Halo Ring under MANO on the Pearl Plinth
 const manoStageHalo = new THREE.Mesh(
@@ -655,7 +918,7 @@ manoRoot.add(manoStageHalo);
   foot.scale.set(1.02, 0.68, 1.34);
   foot.position.set(x, 0.125, 0.06);
   foot.castShadow = true;
-  foot.receiveShadow = true;
+  foot.receiveShadow = false;
   manoChar.add(foot);
 
   const footSole = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.03, 24), manoGoldMat);
@@ -679,7 +942,7 @@ const torso = new THREE.Mesh(new THREE.SphereGeometry(0.56, 36, 28), manoPorcela
 torso.scale.set(1.0, 1.08, 0.90);
 torso.position.y = 0.78;
 torso.castShadow = true;
-torso.receiveShadow = true;
+torso.receiveShadow = false;
 manoChar.add(torso);
 
 // Warm orange-amber belt/waist accent line for extra visual pop
@@ -704,7 +967,7 @@ chestLogoGroup.add(chestAuraRing);
 [-0.105, 0.105].forEach((mx) => {
   const mPillar = new THREE.Mesh(new THREE.CapsuleGeometry(0.030, 0.15, 10, 16), manoGoldMat);
   mPillar.position.set(mx, -0.02, 0.01);
-  mPillar.castShadow = true;
+  mPillar.castShadow = false;
   chestLogoGroup.add(mPillar);
 });
 
@@ -713,7 +976,7 @@ chestLogoGroup.add(chestAuraRing);
   const mDiag = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.115, 10, 16), manoAmberAccentMat);
   mDiag.position.set(dir * 0.052, -0.005, 0.016);
   mDiag.rotation.z = dir * 0.56;
-  mDiag.castShadow = true;
+  mDiag.castShadow = false;
   chestLogoGroup.add(mDiag);
 });
 
@@ -734,7 +997,7 @@ chestLogoGroup.add(plusVert, plusHoriz);
 const stethCollar = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.042, 16, 40), manoGoldMat);
 stethCollar.rotation.x = Math.PI * 0.5;
 stethCollar.position.set(0, 1.31, 0.02);
-stethCollar.castShadow = true;
+stethCollar.castShadow = false;
 manoChar.add(stethCollar);
 
 const neckEmeraldCollar = new THREE.Mesh(new THREE.TorusGeometry(0.365, 0.024, 14, 36), manoScarfMat);
@@ -742,108 +1005,125 @@ neckEmeraldCollar.rotation.x = Math.PI * 0.5;
 neckEmeraldCollar.position.set(0, 1.265, 0.02);
 manoChar.add(neckEmeraldCollar);
 
-// Head chassis + Energetic Orange Side Ear Pods + Thick Orange-Amber Visor Bezel + Glowing Ring-Eyes
+// Articulated Head Pivot Group (pivots softly at the neck collar for Soft Eye Tracking)
+const MANO_HEAD_PIVOT_Y = 1.32;
+const MANO_HEAD_PIVOT_Z = 0.02;
+const manoHeadGroup = new THREE.Group();
+manoHeadGroup.position.set(0, MANO_HEAD_PIVOT_Y, MANO_HEAD_PIVOT_Z);
+manoChar.add(manoHeadGroup);
+
+// Head chassis + Side Ear Pods + Visor Bezel + Articulated Glowing Ring-Eyes
 const head = new THREE.Mesh(new THREE.SphereGeometry(0.50, 36, 28), manoPorcelainMat);
 head.scale.set(1.12, 0.96, 0.95);
-head.position.y = 1.72;
+head.position.set(0, 1.72 - MANO_HEAD_PIVOT_Y, -MANO_HEAD_PIVOT_Z);
 head.castShadow = true;
-head.receiveShadow = true;
-manoChar.add(head);
+head.receiveShadow = false;
+manoHeadGroup.add(head);
 
 [-0.54, 0.54].forEach((ex) => {
   const sign = ex > 0 ? 1 : -1;
   const earPod = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.09, 28), manoPorcelainMat);
   earPod.rotation.z = Math.PI / 2;
-  earPod.position.set(ex, 1.72, 0.02);
-  earPod.castShadow = true;
-  manoChar.add(earPod);
+  earPod.position.set(ex, 1.72 - MANO_HEAD_PIVOT_Y, 0.0);
+  earPod.castShadow = false;
+  manoHeadGroup.add(earPod);
 
   const earOrangeCap = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.025, 24), manoCoreEmblemMat);
   earOrangeCap.rotation.z = Math.PI / 2;
-  earOrangeCap.position.set(ex + sign * 0.042, 1.72, 0.02);
-  manoChar.add(earOrangeCap);
+  earOrangeCap.position.set(ex + sign * 0.042, 1.72 - MANO_HEAD_PIVOT_Y, 0.0);
+  manoHeadGroup.add(earOrangeCap);
 
   const earRing = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.022, 12, 28), manoGoldMat);
   earRing.rotation.y = Math.PI / 2;
-  earRing.position.set(ex + sign * 0.036, 1.72, 0.02);
-  manoChar.add(earRing);
+  earRing.position.set(ex + sign * 0.036, 1.72 - MANO_HEAD_PIVOT_Y, 0.0);
+  manoHeadGroup.add(earRing);
 });
 
 const visorBezel = new THREE.Mesh(new THREE.TorusGeometry(0.362, 0.052, 18, 48), manoGoldMat);
 visorBezel.scale.set(1.18, 0.86, 1.05);
-visorBezel.position.set(0, 1.72, 0.365);
-visorBezel.castShadow = true;
-manoChar.add(visorBezel);
+visorBezel.position.set(0, 1.72 - MANO_HEAD_PIVOT_Y, 0.365 - MANO_HEAD_PIVOT_Z);
+visorBezel.castShadow = false;
+manoHeadGroup.add(visorBezel);
 
 const visorInnerAmberRim = new THREE.Mesh(new THREE.TorusGeometry(0.335, 0.018, 14, 44), manoAmberAccentMat);
 visorInnerAmberRim.scale.set(1.18, 0.86, 1.0);
-visorInnerAmberRim.position.set(0, 1.72, 0.392);
-manoChar.add(visorInnerAmberRim);
+visorInnerAmberRim.position.set(0, 1.72 - MANO_HEAD_PIVOT_Y, 0.392 - MANO_HEAD_PIVOT_Z);
+manoHeadGroup.add(visorInnerAmberRim);
 
 const visorScreen = new THREE.Mesh(new THREE.SphereGeometry(0.415, 32, 24), manoVisorMat);
 visorScreen.scale.set(0.96, 0.73, 0.56);
-visorScreen.position.set(0, 1.72, 0.255);
-manoChar.add(visorScreen);
+visorScreen.position.set(0, 1.72 - MANO_HEAD_PIVOT_Y, 0.255 - MANO_HEAD_PIVOT_Z);
+manoHeadGroup.add(visorScreen);
 
-// Glowing Ring-Eyes with Crisp White Specular Catchlights + Warm Coral-Orange Cheek Blushes
+// Articulated Eye Tracking Group (eyes glide smoothly across the curved visor ahead of the head)
+const manoEyeGroup = new THREE.Group();
+manoHeadGroup.add(manoEyeGroup);
+const manoEyeNodes = [];
+
 [-0.145, 0.145].forEach((x) => {
+  const eyeAnchor = new THREE.Group();
+  eyeAnchor.position.set(x, 1.755 - MANO_HEAD_PIVOT_Y, 0.476 - MANO_HEAD_PIVOT_Z);
+  manoEyeGroup.add(eyeAnchor);
+  manoEyeNodes.push(eyeAnchor);
+
   const eyeRing = new THREE.Mesh(new THREE.TorusGeometry(0.060, 0.016, 14, 32), manoFaceGlowMat);
-  eyeRing.position.set(x, 1.755, 0.476);
-  manoChar.add(eyeRing);
+  eyeAnchor.add(eyeRing);
 
   const catchlight = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 12), manoCatchlightMat);
-  catchlight.position.set(x - 0.024, 1.778, 0.488);
-  manoChar.add(catchlight);
+  catchlight.position.set(-0.024, 0.023, 0.012);
+  eyeAnchor.add(catchlight);
 
   const secondaryDot = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 10), manoCatchlightMat);
-  secondaryDot.position.set(x + 0.022, 1.732, 0.486);
-  manoChar.add(secondaryDot);
+  secondaryDot.position.set(0.022, -0.023, 0.010);
+  eyeAnchor.add(secondaryDot);
 });
 
 [-0.225, 0.225].forEach((cx) => {
   const cheekGlow = new THREE.Mesh(new THREE.SphereGeometry(0.032, 14, 12), manoCheekBlushMat);
   cheekGlow.scale.set(1.35, 0.72, 0.35);
-  cheekGlow.position.set(cx, 1.668, 0.458);
-  manoChar.add(cheekGlow);
+  cheekGlow.position.set(cx, 1.668 - MANO_HEAD_PIVOT_Y, 0.458 - MANO_HEAD_PIVOT_Z);
+  manoHeadGroup.add(cheekGlow);
 });
 
+const smileBaseY = 1.678 - MANO_HEAD_PIVOT_Y;
+const smileBaseZ = 0.482 - MANO_HEAD_PIVOT_Z;
 const smileCurve = new THREE.Mesh(
   new THREE.TorusGeometry(0.088, 0.017, 12, 28, Math.PI * 0.76),
   manoFaceGlowMat
 );
 smileCurve.rotation.z = Math.PI * 1.12;
-smileCurve.position.set(0, 1.678, 0.482);
-manoChar.add(smileCurve);
+smileCurve.position.set(0, smileBaseY, smileBaseZ);
+manoHeadGroup.add(smileCurve);
 
-// Signature MANO V1.0 Single Lush Curved Leaf Sprout + Dual Orange-Gold Base Mount on Head
+// Signature MANO V1.0 Single Lush Curved Leaf Sprout + Base Mount attached to Head
 const sproutCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.076, 0.095, 0.062, 24), manoGoldMat);
-sproutCollar.position.set(0, 2.20, 0);
-manoChar.add(sproutCollar);
+sproutCollar.position.set(0, 2.20 - MANO_HEAD_PIVOT_Y, -MANO_HEAD_PIVOT_Z);
+manoHeadGroup.add(sproutCollar);
 
 const sproutInnerRing = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.016, 10, 24), manoAmberAccentMat);
 sproutInnerRing.rotation.x = Math.PI / 2;
-sproutInnerRing.position.set(0, 2.232, 0);
-manoChar.add(sproutInnerRing);
+sproutInnerRing.position.set(0, 2.232 - MANO_HEAD_PIVOT_Y, -MANO_HEAD_PIVOT_Z);
+manoHeadGroup.add(sproutInnerRing);
 
 const sproutStem = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.20, 14), manoSproutMat);
-sproutStem.position.set(0.015, 2.30, 0);
+sproutStem.position.set(0.015, 2.30 - MANO_HEAD_PIVOT_Y, -MANO_HEAD_PIVOT_Z);
 sproutStem.rotation.z = -0.18;
-sproutStem.castShadow = true;
-manoChar.add(sproutStem);
+sproutStem.castShadow = false;
+manoHeadGroup.add(sproutStem);
 
 // Lush main sculpted leaf tilting gracefully to the right (matching MANO V1.0 reference sheet)
 const mainLeaf = new THREE.Mesh(new THREE.SphereGeometry(0.135, 20, 16), manoSproutMat);
 mainLeaf.scale.set(1.48, 0.38, 0.82);
-mainLeaf.position.set(0.135, 2.41, 0.01);
+mainLeaf.position.set(0.135, 2.41 - MANO_HEAD_PIVOT_Y, 0.01 - MANO_HEAD_PIVOT_Z);
 mainLeaf.rotation.z = 0.38;
 mainLeaf.rotation.y = -0.12;
-mainLeaf.castShadow = true;
-manoChar.add(mainLeaf);
+mainLeaf.castShadow = false;
+manoHeadGroup.add(mainLeaf);
 
 const leafVein = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.19, 8, 12), manoAmberAccentMat);
-leafVein.position.set(0.125, 2.415, 0.032);
+leafVein.position.set(0.125, 2.415 - MANO_HEAD_PIVOT_Y, 0.032 - MANO_HEAD_PIVOT_Z);
 leafVein.rotation.z = -1.18;
-manoChar.add(leafVein);
+manoHeadGroup.add(leafVein);
 
 // Helper to build articulated MANO V1.0 arm with shoulder rings, elbow band, dual wrist cuff, and 3D hand + fingers
 function populateManoArm(armGroup, isRightArm) {
@@ -878,7 +1158,7 @@ function populateManoArm(armGroup, isRightArm) {
   const palm = new THREE.Mesh(new THREE.SphereGeometry(0.096, 18, 14), manoPorcelainMat);
   palm.scale.set(1.05, 0.92, 0.78);
   palm.position.y = -0.435;
-  palm.castShadow = true;
+  palm.castShadow = false;
   armGroup.add(palm);
 
   const thumbDir = isRightArm ? -1 : 1;
@@ -914,12 +1194,12 @@ stationsRing.position.y = 0.72;
 manoRoot.add(stationsRing);
 
 const squadConfigs = [
-  { id: 'mano_drug', color: 0x0f8c79, emissive: 0x16b89f, kind: 'drug', angle: 0 },
-  { id: 'mano_growth', color: 0x1d78c1, emissive: 0x3898e8, kind: 'growth', angle: Math.PI / 3 },
-  { id: 'mano_skin', color: 0xe06356, emissive: 0xf48477, kind: 'skin', angle: (2 * Math.PI) / 3 },
-  { id: 'mano_nutrition', color: 0x6b8e23, emissive: 0x8fb834, kind: 'nutrition', angle: Math.PI },
-  { id: 'mano_care', color: 0x0e96a8, emissive: 0x2ec4d6, kind: 'care', angle: (4 * Math.PI) / 3 },
-  { id: 'mano_connect', color: 0x7c5cbf, emissive: 0x9b7be0, kind: 'connect', angle: (5 * Math.PI) / 3 },
+  { id: 'mano_drug', color: 0x5ab8ab, emissive: 0x6ecbc0, kind: 'drug', angle: 0 },
+  { id: 'mano_growth', color: 0x6aa8d8, emissive: 0x84bce6, kind: 'growth', angle: Math.PI / 3 },
+  { id: 'mano_skin', color: 0xe3948a, emissive: 0xefa9a0, kind: 'skin', angle: (2 * Math.PI) / 3 },
+  { id: 'mano_nutrition', color: 0x8db874, emissive: 0xa2cb8b, kind: 'nutrition', angle: Math.PI },
+  { id: 'mano_care', color: 0x62bcc7, emissive: 0x7fd0da, kind: 'care', angle: (4 * Math.PI) / 3 },
+  { id: 'mano_connect', color: 0x9c88cf, emissive: 0xb19ee0, kind: 'connect', angle: (5 * Math.PI) / 3 },
 ];
 
 const squadMeshesById = new Map();
@@ -935,29 +1215,34 @@ squadConfigs.forEach((cfg, idx) => {
     new THREE.CylinderGeometry(0.28, 0.30, 0.06, 28),
     plinthMat
   );
-  badgeBase.castShadow = true;
-  badgeBase.receiveShadow = true;
+  badgeBase.castShadow = false;
+  badgeBase.receiveShadow = false;
   stGroup.add(badgeBase);
 
-  const suitMat = new THREE.MeshPhysicalMaterial({
+  const suitMat = registerManoAoMaterial(new THREE.MeshPhysicalMaterial({
     color: cfg.color,
     emissive: cfg.emissive,
-    emissiveIntensity: 0.14,
-    roughness: 0.18,
+    emissiveIntensity: 0.06,
+    roughness: 0.54,
     roughnessMap: microGrainTex,
-    metalness: 0.08,
-    clearcoat: 0.95,
-    clearcoatRoughness: 0.08,
-    ior: 1.5,
-  });
+    metalness: 0.02,
+    clearcoat: 0.10,
+    clearcoatRoughness: 0.56,
+    sheen: 0.55,
+    sheenRoughness: 0.64,
+    ior: 1.36,
+    reflectivity: 0.16,
+  }), MANO_RENDER_TUNING.reflection.squadEnv);
 
-  const rimMat = new THREE.MeshPhysicalMaterial({
+  const rimMat = registerManoAoMaterial(new THREE.MeshPhysicalMaterial({
     color: cfg.emissive,
     emissive: cfg.emissive,
-    emissiveIntensity: 0.32,
-    roughness: 0.25,
-    metalness: 0.6,
-  });
+    emissiveIntensity: MANO_RENDER_TUNING.bloom.squadRimIdle,
+    roughness: 0.50,
+    metalness: 0.14,
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.54,
+  }), MANO_RENDER_TUNING.reflection.manoTrimEnv);
   const baseRing = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.016, 10, 28), rimMat);
   baseRing.rotation.x = Math.PI / 2;
   baseRing.position.y = 0.032;
@@ -1417,15 +1702,16 @@ tagInteractive(mannequinGroup, 'mannequin');
 
 // Instanced Ambient Floating Pastel Motes (>24 particles using single InstancedMesh)
 const MOTE_COUNT = 32;
-const moteMat = new THREE.MeshPhysicalMaterial({
-  color: 0x8de0e6,
-  emissive: 0x4fd1c5,
-  emissiveIntensity: 0.14,
-  roughness: 0.22,
-  clearcoat: 0.65,
+const moteMat = registerManoEnvMaterial(new THREE.MeshPhysicalMaterial({
+  color: 0xaee6ea,
+  emissive: 0x78d6cf,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.moteGlowLight,
+  roughness: 0.48,
+  clearcoat: 0.12,
+  clearcoatRoughness: 0.52,
   transparent: true,
-  opacity: 0.72,
-});
+  opacity: MANO_RENDER_TUNING.bloom.moteOpacity,
+}), MANO_RENDER_TUNING.reflection.manoTrimEnv);
 const moteMesh = new THREE.InstancedMesh(
   new THREE.IcosahedronGeometry(0.042, 0),
   moteMat,
@@ -1439,17 +1725,17 @@ const moteSeeds = Array.from({ length: MOTE_COUNT }, (_, i) => ({
   speed: 0.22 + (i % 4) * 0.08,
 }));
 
-// Serene Background Particle System: Layer 1 (Soft Floating Luminous Light Orbs)
+// Serene Background Particle System: Layer 1 (Soft Floating Luminous Light Orbs — restrained bloom)
 function createBokehGlowTexture() {
   const c = document.createElement('canvas');
   c.width = 64;
   c.height = 64;
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
-  g.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-  g.addColorStop(0.28, 'rgba(230, 252, 255, 0.82)');
-  g.addColorStop(0.62, 'rgba(130, 232, 232, 0.28)');
-  g.addColorStop(1.0, 'rgba(130, 232, 232, 0.0)');
+  g.addColorStop(0.0, 'rgba(255, 255, 255, 0.82)');
+  g.addColorStop(0.32, 'rgba(232, 250, 252, 0.56)');
+  g.addColorStop(0.68, 'rgba(154, 226, 226, 0.16)');
+  g.addColorStop(1.0, 'rgba(154, 226, 226, 0.0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 64, 64);
   const tex = new THREE.CanvasTexture(c);
@@ -1463,10 +1749,10 @@ const LIGHT_Y_SPAN = 5.1;
 const lightPositions = new Float32Array(LIGHT_PARTICLE_COUNT * 3);
 const lightColors = new Float32Array(LIGHT_PARTICLE_COUNT * 3);
 const lightPalette = [
-  new THREE.Color(0x00d7c7), // Teal Glow
-  new THREE.Color(0x8fece6), // Mint Whisper
-  new THREE.Color(0xb7e8ff), // Soft Sky
-  new THREE.Color(0xffebc2), // Warm Pearl
+  new THREE.Color(0x6bd6ce), // Soft Pastel Teal
+  new THREE.Color(0xa6ede8), // Mint Whisper
+  new THREE.Color(0xc8ecff), // Soft Sky Mist
+  new THREE.Color(0xfff1d6), // Warm Pearl
 ];
 const lightSeeds = Array.from({ length: LIGHT_PARTICLE_COUNT }, (_, i) => {
   const angle = ((i * 2.399963) % (Math.PI * 2)); // golden-angle distribution
@@ -1496,11 +1782,11 @@ lightGeo.setAttribute('position', new THREE.BufferAttribute(lightPositions, 3));
 lightGeo.setAttribute('color', new THREE.BufferAttribute(lightColors, 3));
 const lightGlowTex = createBokehGlowTexture();
 const lightParticleMat = new THREE.PointsMaterial({
-  size: 0.22,
+  size: 0.20,
   map: lightGlowTex,
   vertexColors: true,
   transparent: true,
-  opacity: 0.56,
+  opacity: MANO_RENDER_TUNING.bloom.bokehOpacityLight,
   depthWrite: false,
   sizeAttenuation: true,
   blending: THREE.NormalBlending,
@@ -1509,23 +1795,23 @@ const backgroundLightParticles = new THREE.Points(lightGeo, lightParticleMat);
 backgroundLightParticles.frustumCulled = false;
 scene.add(backgroundLightParticles);
 
-// Serene Background Particle System: Layer 2 (Translucent Rising Micro-Bubbles)
+// Serene Background Particle System: Layer 2 (Translucent Rising Frosted Micro-Bubbles)
 const BUBBLE_COUNT = 44;
 const BUBBLE_Y_MIN = 0.18;
 const BUBBLE_Y_SPAN = 4.6;
-const bubbleMat = new THREE.MeshPhysicalMaterial({
-  color: 0xdff9fc,
-  emissive: 0x38cfc4,
-  emissiveIntensity: 0.10,
-  roughness: 0.06,
-  metalness: 0.06,
-  clearcoat: 1.0,
-  clearcoatRoughness: 0.05,
-  iridescence: 0.65,
+const bubbleMat = registerManoEnvMaterial(new THREE.MeshPhysicalMaterial({
+  color: 0xe6f8fa,
+  emissive: 0x62cfc7,
+  emissiveIntensity: MANO_RENDER_TUNING.bloom.bubbleGlowLight,
+  roughness: 0.28,
+  metalness: 0.02,
+  clearcoat: 0.28,
+  clearcoatRoughness: 0.34,
+  iridescence: 0.20,
   transparent: true,
-  opacity: 0.36,
+  opacity: MANO_RENDER_TUNING.bloom.bubbleOpacityLight,
   depthWrite: false,
-});
+}), MANO_RENDER_TUNING.reflection.plinthEnv);
 const bubbleMesh = new THREE.InstancedMesh(
   new THREE.SphereGeometry(0.062, 14, 12),
   bubbleMat,
@@ -1638,6 +1924,97 @@ function applyWeighingCameraForStep(step) {
   }
 }
 
+function applyManoAtmosphereIntensities(dark) {
+  const aoCfg = MANO_RENDER_TUNING.ambientOcclusion;
+  const reflCfg = MANO_RENDER_TUNING.reflection;
+  const frostedCfg = MANO_RENDER_TUNING.frostedMix;
+  const bloomCfg = MANO_RENDER_TUNING.bloom;
+
+  const targetAo = aoCfg.materialAoIntensity * aoIntensityScale;
+  floorMesh.material.aoMapIntensity = targetAo;
+  plinthMat.aoMapIntensity = targetAo;
+  plinthTrimMat.aoMapIntensity = targetAo;
+  for (let i = 0; i < manoAoMaterials.length; i++) {
+    manoAoMaterials[i].aoMapIntensity = targetAo;
+  }
+
+  const baseSceneEnv = dark ? reflCfg.sceneEnvIntensityDark : reflCfg.sceneEnvIntensityLight;
+  scene.environmentIntensity = Math.max(0.0, Math.min(1.5, baseSceneEnv * envReflectionScale));
+  const darkEnvFactor = dark ? 0.88 : 1.0;
+  for (let i = 0; i < manoReflectionEntries.length; i++) {
+    const entry = manoReflectionEntries[i];
+    entry.mat.envMapIntensity = Math.max(
+      0.0,
+      Math.min(1.5, entry.baseEnv * darkEnvFactor * envReflectionScale)
+    );
+  }
+
+  const targetTurquoiseHex = dark ? frostedCfg.turquoiseColorDark : frostedCfg.turquoiseColorLight;
+  const targetMistHex = dark ? frostedCfg.mistColorDark : frostedCfg.mistColorLight;
+  const baseFrostedGlow = (dark ? frostedCfg.glowStrengthDark : frostedCfg.glowStrengthLight) * bloomIntensityScale;
+  for (let i = 0; i < manoFrostedMixEntries.length; i++) {
+    const entry = manoFrostedMixEntries[i];
+    if (!entry.customTurquoiseHex) {
+      entry.uniforms.uFrostedTurquoiseColor.value.setHex(targetTurquoiseHex);
+    }
+    entry.uniforms.uFrostedMistColor.value.setHex(targetMistHex);
+    entry.uniforms.uFrostedMixWeight.value = Math.max(
+      0.0,
+      Math.min(0.75, entry.baseMixWeight * frostedMixScale)
+    );
+    entry.uniforms.uFrostedGlowStrength.value = Math.max(
+      0.0,
+      Math.min(0.55, baseFrostedGlow * entry.glowMultiplier * frostedMixScale)
+    );
+    entry.mat.transmission = Math.max(
+      0.0,
+      Math.min(0.65, entry.baseTransmission * frostedCfg.transmissionScale * frostedMixScale)
+    );
+  }
+
+  const baseContactOpacity = dark ? aoCfg.contactShadowOpacityDark : aoCfg.contactShadowOpacityLight;
+  const targetContactOpacity = Math.max(0.0, Math.min(1.0, baseContactOpacity * aoIntensityScale));
+  for (let i = 0; i < contactShadowMats.length; i++) {
+    contactShadowMats[i].opacity = targetContactOpacity;
+  }
+
+  const trimGlow = (dark ? bloomCfg.trimGlowDark : bloomCfg.trimGlowLight) * bloomIntensityScale;
+  plinthTrimMat.emissiveIntensity = trimGlow;
+  manoGoldMat.emissiveIntensity = trimGlow;
+  manoAmberAccentMat.emissiveIntensity = trimGlow;
+  manoScarfMat.emissiveIntensity = trimGlow;
+  manoSproutMat.emissiveIntensity = trimGlow;
+  manoFrostedMixMat.emissiveIntensity = trimGlow;
+
+  manoFaceGlowMat.emissiveIntensity =
+    (dark ? bloomCfg.faceGlowDark : bloomCfg.faceGlowLight) * bloomIntensityScale;
+  manoCheekBlushMat.emissiveIntensity = bloomCfg.cheekBlushIntensity * bloomIntensityScale;
+  manoCheekBlushMat.opacity = Math.max(0.0, Math.min(1.0, bloomCfg.cheekBlushOpacity * bloomIntensityScale));
+  manoCoreEmblemMat.emissiveIntensity =
+    (dark ? bloomCfg.emblemGlowDark : bloomCfg.emblemGlowLight) * bloomIntensityScale;
+  manoWarmLight.intensity = bloomCfg.warmAuraIntensity * (0.65 + 0.35 * bloomIntensityScale);
+
+  moteMat.emissiveIntensity =
+    (dark ? bloomCfg.moteGlowDark : bloomCfg.moteGlowLight) * bloomIntensityScale;
+  moteMat.opacity = Math.max(0.0, Math.min(1.0, bloomCfg.moteOpacity * (0.65 + 0.35 * bloomIntensityScale)));
+
+  lightParticleMat.blending = THREE.NormalBlending;
+  lightParticleMat.opacity = Math.max(
+    0.0,
+    Math.min(1.0, (dark ? bloomCfg.bokehOpacityDark : bloomCfg.bokehOpacityLight) * bloomIntensityScale)
+  );
+  lightParticleMat.size = dark ? 0.21 : 0.19;
+  lightParticleMat.needsUpdate = true;
+
+  bubbleMat.color.setHex(dark ? 0xaaf0ee : 0xe6f8fa);
+  bubbleMat.emissiveIntensity =
+    (dark ? bloomCfg.bubbleGlowDark : bloomCfg.bubbleGlowLight) * bloomIntensityScale;
+  bubbleMat.opacity = Math.max(
+    0.0,
+    Math.min(1.0, (dark ? bloomCfg.bubbleOpacityDark : bloomCfg.bubbleOpacityLight) * (0.6 + 0.4 * bloomIntensityScale))
+  );
+}
+
 // Public bridge called from Android Kotlin via evaluateJavascript
 window.Mano3D = {
   setScene(mode) {
@@ -1657,50 +2034,62 @@ window.Mano3D = {
   },
   setThemeMode(isDark) {
     const dark = Boolean(isDark);
+    currentIsDarkTheme = dark;
     const bgHex = dark ? 0x08191f : 0xf4faff;
-    const floorHex = dark ? 0x0d2128 : 0xe6f3fe;
-    const plinthHex = dark ? 0x142e38 : 0xffffff;
+    const floorHex = dark ? 0x0d2128 : 0xeaf5fc;
+    const plinthHex = dark ? 0x152f39 : 0xfdfefe;
     scene.background.setHex(bgHex);
     scene.fog.color.setHex(bgHex);
     floorMesh.material.color.setHex(floorHex);
     plinthMat.color.setHex(plinthHex);
-    plinthMat.roughness = dark ? 0.20 : 0.20;
-    plinthMat.clearcoat = dark ? 0.65 : 0.65;
-    plinthTrimMat.emissiveIntensity = dark ? 0.45 : 0.28;
+    plinthMat.roughness = dark ? 0.44 : 0.48;
+    plinthMat.clearcoat = dark ? 0.12 : 0.10;
 
-    scene.environmentIntensity = dark ? 0.62 : 0.82;
-    renderer.toneMappingExposure = dark ? 1.12 : 1.06;
+    renderer.toneMappingExposure = dark
+      ? MANO_RENDER_TUNING.bloom.exposureDark
+      : MANO_RENDER_TUNING.bloom.exposureLight;
 
-    keyLight.color.setHex(dark ? 0xf4fbff : 0xfff8ef);
-    keyLight.intensity = dark ? 1.75 : 2.10;
-    fillLight.color.setHex(dark ? 0x56b2c4 : 0xd9f4f8);
-    fillLight.intensity = dark ? 0.58 : 0.80;
-    rimLight.color.setHex(dark ? 0x6fe3d8 : 0xe5f8fa);
-    rimLight.intensity = dark ? 1.18 : 0.85;
+    keyLight.color.setHex(dark ? 0xf4fbff : 0xfffaf4);
+    keyLight.intensity = dark ? 1.24 : 1.34;
+    fillLight.color.setHex(dark ? 0x74c6d4 : 0xe4f7fa);
+    fillLight.intensity = dark ? 0.84 : 1.08;
+    rimLight.color.setHex(dark ? 0x86e8de : 0xf0fdff);
+    rimLight.intensity = dark ? 0.96 : 0.86;
 
-    hemiLight.color.setHex(dark ? 0x3b8696 : 0xe8f9fc);
-    hemiLight.groundColor.setHex(dark ? 0x0b1f26 : 0xd4eaf7);
-    hemiLight.intensity = dark ? 0.50 : 0.76;
+    hemiLight.color.setHex(dark ? 0x5aa3b2 : 0xf4fcff);
+    hemiLight.groundColor.setHex(dark ? 0x16313b : 0xe2f2f4);
+    hemiLight.intensity = dark ? 0.78 : 1.12;
+    ambientLiftLight.color.setHex(dark ? 0x264b56 : 0xf6fcfd);
+    ambientLiftLight.intensity = dark ? 0.26 : 0.34;
 
-    manoFaceGlowMat.emissiveIntensity = dark ? 1.35 : 1.22;
-    manoCoreEmblemMat.emissiveIntensity = dark ? 0.55 : 0.40;
-    manoGoldMat.emissiveIntensity = dark ? 0.28 : 0.22;
-    moteMat.emissiveIntensity = dark ? 0.42 : 0.16;
-    lightParticleMat.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending;
-    lightParticleMat.opacity = dark ? 0.74 : 0.56;
-    lightParticleMat.size = dark ? 0.24 : 0.21;
-    lightParticleMat.needsUpdate = true;
-    bubbleMat.color.setHex(dark ? 0x9ef4f2 : 0xdff9fc);
-    bubbleMat.emissiveIntensity = dark ? 0.28 : 0.10;
-    bubbleMat.opacity = dark ? 0.30 : 0.36;
-    for (let i = 0; i < contactShadowMats.length; i++) {
-      contactShadowMats[i].opacity = dark ? 0.90 : 0.80;
-    }
+    applyManoAtmosphereIntensities(dark);
 
     document.documentElement.classList.toggle('dark-theme', dark);
     document.documentElement.style.background = dark ? '#08191f' : '#f4faff';
     document.body.style.background = dark ? '#08191f' : '#f4faff';
     markInteractive(900);
+  },
+  setLightingAtmosphere(options = {}) {
+    if (typeof options.aoIntensity === 'number' && Number.isFinite(options.aoIntensity)) {
+      aoIntensityScale = Math.max(0.0, Math.min(2.0, options.aoIntensity));
+    }
+    if (typeof options.bloomIntensity === 'number' && Number.isFinite(options.bloomIntensity)) {
+      bloomIntensityScale = Math.max(0.0, Math.min(2.0, options.bloomIntensity));
+    }
+    if (
+      typeof options.envReflectionIntensity === 'number' &&
+      Number.isFinite(options.envReflectionIntensity)
+    ) {
+      envReflectionScale = Math.max(0.0, Math.min(2.0, options.envReflectionIntensity));
+    }
+    if (
+      typeof options.frostedMixIntensity === 'number' &&
+      Number.isFinite(options.frostedMixIntensity)
+    ) {
+      frostedMixScale = Math.max(0.0, Math.min(1.6, options.frostedMixIntensity));
+    }
+    applyManoAtmosphereIntensities(currentIsDarkTheme);
+    markInteractive(600);
   },
   selectSquadMember(memberId) {
     selectedSquadId = squadMeshesById.has(memberId) ? memberId : 'default';
@@ -1714,9 +2103,9 @@ window.Mano3D = {
       manoCoreEmblemMat.emissive.setHex(picked.userData.emissiveColor);
       plinthTrimMat.emissive.setHex(picked.userData.emissiveColor);
     } else {
-      manoCoreEmblemMat.color.setHex(0xd9c18a);
-      manoCoreEmblemMat.emissive.setHex(0x8f7239);
-      plinthTrimMat.emissive.setHex(0x0e7d70);
+      manoCoreEmblemMat.color.setHex(0xcff2ee);
+      manoCoreEmblemMat.emissive.setHex(0x67cfc6);
+      plinthTrimMat.emissive.setHex(0x52b0a7);
     }
     noteUserInteraction(1600);
   },
@@ -1824,6 +2213,27 @@ window.Mano3D = {
   setPerformanceProfile(mode) {
     applyPerformanceProfile(mode);
   },
+  setGazeTilt(nx, ny) {
+    if (!eyeTrackingEnabled) return;
+    if (typeof nx === 'number' && Number.isFinite(nx)) {
+      tiltGazeX = Math.max(-1.0, Math.min(1.0, nx));
+    }
+    if (typeof ny === 'number' && Number.isFinite(ny)) {
+      tiltGazeY = Math.max(-1.0, Math.min(1.0, ny));
+    }
+    nativeTiltActive = true;
+    lastTiltGazeMs = performance.now();
+  },
+  setEyeTrackingEnabled(enabled) {
+    eyeTrackingEnabled = Boolean(enabled);
+    if (!eyeTrackingEnabled) {
+      pointerGazeX = 0;
+      pointerGazeY = 0;
+      tiltGazeX = 0;
+      tiltGazeY = 0;
+    }
+    markInteractive(600);
+  },
 };
 
 const AUTO_ROTATE_IDLE_MS = 5000;
@@ -1882,13 +2292,76 @@ function triggerCharacterHaptic(partId) {
   }
 }
 
+// Soft Eye Tracking state (pointer/touch + phone tilt + calm emotional presence & soft blink)
+let eyeTrackingEnabled = true;
+let pointerGazeX = 0.0;
+let pointerGazeY = 0.0;
+let lastPointerGazeMs = 0;
+let tiltGazeX = 0.0;
+let tiltGazeY = 0.0;
+let lastTiltGazeMs = 0;
+let nativeTiltActive = false;
+let webOrientationBaseBeta = null;
+let webOrientationBaseGamma = null;
+let targetGazeX = 0.0;
+let targetGazeY = 0.0;
+let smoothEyeGazeX = 0.0;
+let smoothEyeGazeY = 0.0;
+let smoothHeadYaw = 0.0;
+let smoothHeadPitch = 0.0;
+let smoothHeadRoll = 0.0;
+let blinkTimerSec = 2.6;
+let blinkProgress = -1.0;
+
+function updatePointerGazeFromClient(clientX, clientY) {
+  if (!eyeTrackingEnabled) return;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+  const nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+  const ny = -(((clientY - rect.top) / rect.height) * 2 - 1);
+  pointerGazeX = Math.max(-1.0, Math.min(1.0, nx));
+  pointerGazeY = Math.max(-1.0, Math.min(1.0, ny));
+  lastPointerGazeMs = performance.now();
+}
+
+// Built-in Web DeviceOrientation fallback when native Android sensor bridge is not driving tilt
+if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+  window.addEventListener(
+    'deviceorientation',
+    (e) => {
+      if (!eyeTrackingEnabled || nativeTiltActive || activeScene !== 'mano') return;
+      if (typeof e.gamma !== 'number' || typeof e.beta !== 'number') return;
+      if (webOrientationBaseBeta === null || webOrientationBaseGamma === null) {
+        webOrientationBaseBeta = e.beta;
+        webOrientationBaseGamma = e.gamma;
+      } else {
+        // Slowly adapt baseline so holding the phone in a new posture stays natural
+        webOrientationBaseBeta += (e.beta - webOrientationBaseBeta) * 0.012;
+        webOrientationBaseGamma += (e.gamma - webOrientationBaseGamma) * 0.012;
+      }
+      const dGamma = e.gamma - webOrientationBaseGamma;
+      const dBeta = e.beta - webOrientationBaseBeta;
+      tiltGazeX = Math.max(-1.0, Math.min(1.0, dGamma / 26.0));
+      tiltGazeY = Math.max(-1.0, Math.min(1.0, -dBeta / 24.0));
+      lastTiltGazeMs = performance.now();
+    },
+    { passive: true }
+  );
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   downX = e.clientX;
   downY = e.clientY;
   cameraLerpActive = false;
   isPointerInteracting = true;
+  updatePointerGazeFromClient(e.clientX, e.clientY);
   noteUserInteraction(2000);
 });
+canvas.addEventListener('pointermove', (e) => {
+  if (activeScene === 'mano' && (isPointerInteracting || e.pointerType === 'mouse')) {
+    updatePointerGazeFromClient(e.clientX, e.clientY);
+  }
+}, { passive: true });
 canvas.addEventListener('pointercancel', () => {
   isPointerInteracting = false;
   noteUserInteraction(1200);
@@ -1898,6 +2371,7 @@ canvas.addEventListener('wheel', () => {
 }, { passive: true });
 canvas.addEventListener('pointerup', (e) => {
   isPointerInteracting = false;
+  updatePointerGazeFromClient(e.clientX, e.clientY);
   noteUserInteraction(1400);
   const dx = e.clientX - downX;
   const dy = e.clientY - downY;
@@ -1917,6 +2391,10 @@ canvas.addEventListener('pointerup', (e) => {
       if (partId === 'mano') {
         window.Mano3D.selectSquadMember('default');
         manoBounce = 1.0;
+        // Center MANO's warm gaze directly on the user when tapped directly
+        pointerGazeX = 0.0;
+        pointerGazeY = 0.08;
+        lastPointerGazeMs = performance.now();
       } else if (squadMeshesById.has(partId)) {
         window.Mano3D.selectSquadMember(partId);
       }
@@ -1968,12 +2446,15 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function isMotionActive(nowMs) {
+  const gazeDelta =
+    Math.abs(targetGazeX - smoothEyeGazeX) + Math.abs(targetGazeY - smoothEyeGazeY);
   return (
     nowMs < interactionBoostUntilMs ||
     controls.autoRotate ||
     cameraLerpActive ||
     bottleShakeTimer > 0 ||
     manoBounce > 0 ||
+    (activeScene === 'mano' && (gazeDelta > 0.025 || blinkProgress >= 0.0)) ||
     Math.abs(currentSyringeMl - targetSyringeMl) > 0.02
   );
 }
@@ -2028,7 +2509,7 @@ function animate(nowMs) {
     feverRing.scale.setScalar(1.0);
   }
 
-  // 3D MANO gentle breath, bounce & orbiting PBR squad characters
+  // 3D MANO gentle breath, bounce, Soft Eye Tracking (head + eyes + blink) & orbiting PBR squad
   if (activeScene === 'mano') {
     manoBounce = Math.max(0, manoBounce - dt * 2.2);
     const hop = Math.sin(manoBounce * Math.PI) * 0.26;
@@ -2037,6 +2518,74 @@ function animate(nowMs) {
     manoChar.scale.set(breath, 2.0 - breath, breath);
     rightArmGroup.rotation.z = -2.28 + Math.sin(t * 4.2) * 0.20;
     leftArmGroup.rotation.z = 0.48 + Math.sin(t * 2.4) * 0.04;
+
+    // Soft Eye Tracking: blend user touch/pointer gaze, phone tilt gaze, and calm idle presence
+    const eyeCfg = MANO_RENDER_TUNING.eyeTracking;
+    if (eyeTrackingEnabled) {
+      const pointerAge = nowMs - lastPointerGazeMs;
+      const pointerWeight =
+        lastPointerGazeMs > 0 && pointerAge < eyeCfg.pointerHoldMs
+          ? Math.max(0.0, 1.0 - Math.pow(pointerAge / eyeCfg.pointerHoldMs, 1.8))
+          : 0.0;
+      const tiltAge = nowMs - lastTiltGazeMs;
+      const tiltWeight =
+        lastTiltGazeMs > 0 && tiltAge < eyeCfg.tiltHoldMs
+          ? Math.max(0.0, 1.0 - Math.pow(tiltAge / eyeCfg.tiltHoldMs, 2.2))
+          : 0.0;
+
+      const idleX = Math.sin(t * 0.55) * eyeCfg.idleDriftAmpX + Math.sin(t * 1.13) * 0.03;
+      const idleY = Math.cos(t * 0.42) * eyeCfg.idleDriftAmpY;
+
+      const ambientX = idleX * (1.0 - tiltWeight * 0.7) + tiltGazeX * tiltWeight;
+      const ambientY = idleY * (1.0 - tiltWeight * 0.7) + tiltGazeY * tiltWeight;
+
+      targetGazeX = Math.max(-1.0, Math.min(1.0, ambientX * (1.0 - pointerWeight) + pointerGazeX * pointerWeight));
+      targetGazeY = Math.max(-1.0, Math.min(1.0, ambientY * (1.0 - pointerWeight) + pointerGazeY * pointerWeight));
+    } else {
+      targetGazeX = 0.0;
+      targetGazeY = 0.0;
+    }
+
+    // Eyes lead softly ahead of head movement for lifelike emotional attentiveness
+    smoothEyeGazeX = damp(smoothEyeGazeX, targetGazeX, eyeCfg.eyeDamping, dt);
+    smoothEyeGazeY = damp(smoothEyeGazeY, targetGazeY, eyeCfg.eyeDamping, dt);
+
+    const desiredHeadYaw = targetGazeX * eyeCfg.maxHeadYaw;
+    const desiredHeadPitch = -targetGazeY * eyeCfg.maxHeadPitch + Math.sin(manoBounce * Math.PI) * -0.08;
+    const desiredHeadRoll = -targetGazeX * eyeCfg.maxHeadYaw * eyeCfg.headRollFactor;
+
+    smoothHeadYaw = damp(smoothHeadYaw, desiredHeadYaw, eyeCfg.headDamping, dt);
+    smoothHeadPitch = damp(smoothHeadPitch, desiredHeadPitch, eyeCfg.headDamping, dt);
+    smoothHeadRoll = damp(smoothHeadRoll, desiredHeadRoll, eyeCfg.headDamping, dt);
+
+    manoHeadGroup.rotation.set(smoothHeadPitch, smoothHeadYaw, smoothHeadRoll);
+
+    // Eyes glide smoothly along curved visor surface without clipping
+    const eyeShiftX = smoothEyeGazeX * eyeCfg.maxEyeShiftX;
+    const eyeShiftY = smoothEyeGazeY * eyeCfg.maxEyeShiftY;
+    const eyeCurveDepth = -0.007 * (smoothEyeGazeX * smoothEyeGazeX + smoothEyeGazeY * smoothEyeGazeY);
+    manoEyeGroup.position.set(eyeShiftX, eyeShiftY, eyeCurveDepth);
+    smileCurve.position.set(smoothEyeGazeX * eyeCfg.maxSmileShiftX, smileBaseY + eyeShiftY * 0.22, smileBaseZ);
+
+    // Gentle emotional micro-blink every ~4.6–6.4 seconds
+    if (blinkProgress < 0.0) {
+      blinkTimerSec -= dt;
+      if (blinkTimerSec <= 0.0) {
+        blinkProgress = 0.0;
+        blinkTimerSec = 4.6 + ((Math.sin(t * 7.3) + 1.0) * 0.9);
+      }
+    } else {
+      blinkProgress += dt * 5.2; // ~0.19s gentle blink cycle
+      if (blinkProgress >= 1.0) {
+        blinkProgress = -1.0;
+      }
+    }
+    const blinkScaleY =
+      blinkProgress >= 0.0 ? 1.0 - Math.sin(blinkProgress * Math.PI) * 0.84 : 1.0;
+    for (let e = 0; e < manoEyeNodes.length; e++) {
+      manoEyeNodes[e].scale.set(1.0 + (1.0 - blinkScaleY) * 0.08, blinkScaleY, 1.0);
+    }
+
     stationsRing.rotation.y = t * 0.30;
     for (let i = 0; i < stationsRing.children.length; i++) {
       const fig = stationsRing.children[i];
@@ -2048,7 +2597,10 @@ function animate(nowMs) {
       fig.position.y = damp(fig.position.y, bobY, 7, dt);
       fig.rotation.y = -stationsRing.rotation.y + Math.sin(t * 1.4 + i) * 0.16;
       if (fig.userData.rimMat) {
-        fig.userData.rimMat.emissiveIntensity = isSelected ? 0.85 : 0.28;
+        const baseRim = isSelected
+          ? MANO_RENDER_TUNING.bloom.squadRimSelected
+          : MANO_RENDER_TUNING.bloom.squadRimIdle;
+        fig.userData.rimMat.emissiveIntensity = baseRim * bloomIntensityScale;
       }
     }
   }

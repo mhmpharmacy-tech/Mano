@@ -68,16 +68,16 @@ fun ManoCalmCharacterCanvas(
       radius = w * 0.48f,
     )
 
-    // 2. Soft floor contact shadow
+    // 2. Soft floor contact shadow (low-AO minimalist diffusion)
     drawOval(
       brush =
         Brush.radialGradient(
-          colors = listOf(Color(0x280C3D47), Color.Transparent),
+          colors = listOf(Color(0x161E4A56), Color.Transparent),
           center = Offset(w * 0.50f, h * 0.91f),
-          radius = w * 0.28f,
+          radius = w * 0.30f,
         ),
-      topLeft = Offset(w * 0.24f, h * 0.87f),
-      size = Size(w * 0.52f, h * 0.08f),
+      topLeft = Offset(w * 0.22f, h * 0.87f),
+      size = Size(w * 0.56f, h * 0.08f),
     )
 
     // 3. Soft rounded boots with calm seafoam ankle cuffs
@@ -507,16 +507,16 @@ fun ManoV1SquadCharacterCanvas(
       radius = w * 0.46f,
     )
 
-    // 2. Soft floor contact shadow
+    // 2. Soft floor contact shadow (low-AO minimalist diffusion)
     drawOval(
       brush =
         Brush.radialGradient(
-          colors = listOf(Color(0x280C3D47), Color.Transparent),
+          colors = listOf(Color(0x161E4A56), Color.Transparent),
           center = Offset(w * 0.47f, h * 0.90f),
-          radius = w * 0.26f,
+          radius = w * 0.28f,
         ),
-      topLeft = Offset(w * 0.22f, h * 0.86f),
-      size = Size(w * 0.50f, h * 0.08f),
+      topLeft = Offset(w * 0.20f, h * 0.86f),
+      size = Size(w * 0.54f, h * 0.08f),
     )
 
     // 3. Cute Rounded Boots with Role Accent Ankle Rings

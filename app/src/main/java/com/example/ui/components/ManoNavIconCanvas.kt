@@ -281,19 +281,19 @@ fun ManoAlgorithmicNavIcon(
   Canvas(modifier = modifier) {
     val w = size.width
     val h = size.height
-    val strokeW = w * (0.075f + 0.014f * t)
+    val strokeW = w * (0.068f + 0.010f * t)
 
     if (t > 0.05f) {
       drawCircle(
         brush =
           Brush.radialGradient(
             listOf(
-              accentColor.copy(alpha = 0.24f * t),
+              accentColor.copy(alpha = 0.12f * t),
               Color.Transparent,
             )
           ),
         center = Offset(w * 0.5f, h * 0.5f),
-        radius = w * 0.52f,
+        radius = w * 0.48f,
       )
     }
 

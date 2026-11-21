@@ -135,10 +135,13 @@ import com.example.ui.theme.ConciergeDarkMid
 import com.example.ui.theme.ConciergeDarkStart
 import com.example.ui.theme.ConciergeLightMid
 import com.example.ui.theme.DarkAqua
+import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkInk
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceHigh
+import com.example.ui.theme.HairlineBorder
 import com.example.ui.theme.HeroDarkMid
+import com.example.ui.theme.HeroWarmCream
 import com.example.ui.theme.MascotOrbDarkEdge
 import com.example.ui.theme.MascotOrbDarkMid
 import com.example.ui.theme.MutedSlate
@@ -437,7 +440,7 @@ fun HomeScreen(
           if (isDark) {
             Brush.verticalGradient(listOf(DeepScreen, HeroDarkMid, DeepScreen))
           } else {
-            Brush.verticalGradient(listOf(CleanWhite, Color(0xFFFFF9F2), WarmIvory))
+            Brush.verticalGradient(listOf(CleanWhite, HeroWarmCream, WarmIvory))
           }
 
         Column(
@@ -513,28 +516,49 @@ fun HomeScreen(
           ) {
             specializedQuickLinks.forEach { tool ->
               val accent = tool.accentRole.resolveAccentColor()
+              val iconChipBg =
+                lerp(
+                  start = if (isDark) DarkSurfaceHigh else PureWhite,
+                  stop = accent,
+                  fraction = if (isDark) 0.16f else 0.10f,
+                )
               Surface(
                 onClick = tool.onClick,
                 color = if (isDark) DarkSurface else PureWhite,
                 shape = RoundedCornerShape(16.dp),
                 border =
                   BorderStroke(
-                    1.dp,
-                    if (isDark) TealGlow.copy(alpha = 0.28f) else MetallicSilver,
+                    0.9.dp,
+                    if (isDark) DarkBorder else HairlineBorder.copy(alpha = 0.85f),
                   ),
-                shadowElevation = 2.dp,
+                shadowElevation = 1.dp,
                 modifier = Modifier.minimumInteractiveComponentSize().testTag(tool.tag),
               ) {
                 Row(
-                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                   verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(7.dp),
+                  horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                  Mano3DIconArtwork(kind = tool.iconKind, size = 24.dp)
+                  Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                      Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(iconChipBg)
+                        .border(0.75.dp, accent.copy(alpha = if (isDark) 0.28f else 0.18f), RoundedCornerShape(9.dp)),
+                  ) {
+                    Icon(
+                      imageVector = tool.icon,
+                      contentDescription = null,
+                      tint = accent,
+                      modifier = Modifier.size(16.dp),
+                    )
+                  }
                   Text(
                     text = tool.labelFa,
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     color = if (isDark) DarkTextPrimary else DarkInk,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -920,13 +944,13 @@ fun OrbitalMenu(
               val ey = cy + endR * sin(angleRad).toFloat()
               drawLine(
                 brush = Brush.linearGradient(
-                  colors = listOf(accent.copy(alpha = 0.06f), accent.copy(alpha = if (isDark) 0.36f else 0.26f)),
+                  colors = listOf(accent.copy(alpha = 0.04f), accent.copy(alpha = if (isDark) 0.26f else 0.18f)),
                   start = Offset(sx, sy),
                   end = Offset(ex, ey),
                 ),
                 start = Offset(sx, sy),
                 end = Offset(ex, ey),
-                strokeWidth = 1.2.dp.toPx(),
+                strokeWidth = 1.0.dp.toPx(),
                 cap = StrokeCap.Round,
               )
             }
@@ -935,11 +959,11 @@ fun OrbitalMenu(
             val anchorY = cy + orbitRadiusPx * sin(angleRad).toFloat()
             drawCircle(
               brush = Brush.radialGradient(
-                colors = listOf(accent.copy(alpha = if (isDark) 0.18f else 0.12f), Color.Transparent),
+                colors = listOf(accent.copy(alpha = if (isDark) 0.14f else 0.08f), Color.Transparent),
                 center = Offset(anchorX, anchorY),
-                radius = 30.dp.toPx(),
+                radius = 28.dp.toPx(),
               ),
-              radius = 30.dp.toPx(),
+              radius = 28.dp.toPx(),
               center = Offset(anchorX, anchorY),
             )
 
@@ -1108,18 +1132,22 @@ private fun OrbitalCareNode(
       animationSpec = spring(dampingRatio = 0.50f, stiffness = 460f),
       label = "orbitalNodePressSpring",
     )
-  val iconSize = (medallionSize.value * 0.48f).coerceIn(22f, 27f).dp
-  val surfaceBg = lerp(if (isDark) DarkSurfaceHigh else PureWhite, accentColor, if (isDark) 0.20f else 0.14f)
-  val rimBrush =
-    Brush.linearGradient(
-      if (isDark) listOf(PureWhite.copy(alpha = 0.28f), accentColor.copy(alpha = 0.60f))
-      else listOf(accentColor.copy(alpha = 0.45f), accentColor.copy(alpha = 0.85f))
+  val iconSize = (medallionSize.value * 0.44f).coerceIn(22f, 26f).dp
+  val orbSurface =
+    lerp(
+      start = if (isDark) DarkSurfaceHigh else PureWhite,
+      stop = accentColor,
+      fraction = if (isDark) 0.15f else 0.07f,
     )
+  val orbBorderColor = accentColor.copy(alpha = if (isDark) 0.34f else 0.22f)
+  val innerHaloColor = accentColor.copy(alpha = if (isDark) 0.12f else 0.07f)
+  val labelPillBg = if (isDark) DarkSurface.copy(alpha = 0.84f) else PureWhite.copy(alpha = 0.90f)
+  val labelPillBorder = accentColor.copy(alpha = if (isDark) 0.24f else 0.16f)
 
   CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+      verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
       modifier =
         modifier
           .width(nodeWidth)
@@ -1141,53 +1169,55 @@ private fun OrbitalCareNode(
           .testTag(item.testTag),
     ) {
       Surface(
-        color = surfaceBg,
+        color = orbSurface,
         shape = CircleShape,
-        border = BorderStroke(1.4.dp, rimBrush),
-        shadowElevation = 6.dp,
+        border = BorderStroke(1.dp, orbBorderColor),
         modifier =
           Modifier
             .size(medallionSize)
             .shadow(
-              elevation = 8.dp,
+              elevation = if (isDark) 5.dp else 4.dp,
               shape = CircleShape,
-              ambientColor = accentColor.copy(alpha = if (isDark) 0.36f else 0.20f),
-              spotColor = if (isDark) accentColor.copy(alpha = 0.32f) else ShadowSlate.copy(alpha = 0.14f),
+              ambientColor = accentColor.copy(alpha = if (isDark) 0.20f else 0.10f),
+              spotColor = ShadowSlate.copy(alpha = if (isDark) 0.18f else 0.08f),
             ),
       ) {
         Box(
           contentAlignment = Alignment.Center,
-          modifier =
-            Modifier
-              .fillMaxSize()
-              .background(
-                Brush.radialGradient(listOf(accentColor.copy(alpha = if (isDark) 0.26f else 0.15f), surfaceBg))
-              ),
+          modifier = Modifier.fillMaxSize(),
         ) {
-          ManoIconMedallion(
-            icon = item.icon,
-            accentColor = accentColor,
-            iconKind = item.iconKind,
-            containerSize = medallionSize - 9.dp,
-            iconSize = iconSize,
-            cornerRadius = (medallionSize.value / 2f).dp,
-          )
+          Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+              Modifier
+                .size(medallionSize * 0.72f)
+                .clip(CircleShape)
+                .background(innerHaloColor),
+          ) {
+            Icon(
+              imageVector = item.icon,
+              contentDescription = null,
+              tint = accentColor,
+              modifier = Modifier.size(iconSize),
+            )
+          }
         }
       }
 
       Text(
         text = item.titleFa,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         color = if (isDark) DarkTextPrimary else DarkInk,
         textAlign = TextAlign.Center,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
           Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(surfaceBg)
-            .padding(horizontal = 5.dp, vertical = 1.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .background(labelPillBg)
+            .border(0.6.dp, labelPillBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 6.dp, vertical = 1.5.dp),
       )
     }
   }

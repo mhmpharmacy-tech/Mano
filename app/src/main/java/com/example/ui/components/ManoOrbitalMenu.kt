@@ -1276,17 +1276,17 @@ private fun GalacticSatelliteNode(
             if (isCrownLocked) {
               Modifier
                 .shadow(
-                  elevation = 8.dp,
-                  shape = RoundedCornerShape(20.dp),
-                  ambientColor = goldAccent.copy(alpha = 0.35f),
-                  spotColor = itemAccent.copy(alpha = 0.35f),
+                  elevation = 4.dp,
+                  shape = RoundedCornerShape(18.dp),
+                  ambientColor = itemAccent.copy(alpha = 0.18f),
+                  spotColor = itemAccent.copy(alpha = 0.18f),
                 )
                 .border(
-                  width = 2.2.dp,
-                  brush = Brush.linearGradient(listOf(goldAccent, itemAccent)),
-                  shape = RoundedCornerShape(20.dp),
+                  width = 1.4.dp,
+                  brush = Brush.linearGradient(listOf(goldAccent.copy(alpha = 0.7f), itemAccent)),
+                  shape = RoundedCornerShape(18.dp),
                 )
-                .padding(3.dp)
+                .padding(2.5.dp)
             } else {
               Modifier
             }
@@ -1298,19 +1298,19 @@ private fun GalacticSatelliteNode(
           iconKind = item.iconKind,
           containerSize = medallionSize,
           iconSize = iconSize,
-          cornerRadius = if (isCrownLocked) 16.dp else 14.dp,
+          cornerRadius = if (isCrownLocked) 15.dp else 13.dp,
         )
       }
       if (showLabel) {
         Surface(
           color = if (isCrownLocked) itemAccent else pillSurface,
           shape = RoundedCornerShape(50),
-          border = BorderStroke(if (isCrownLocked) 1.dp else 0.8.dp, itemAccent.copy(alpha = if (isCrownLocked) 0.9f else 0.45f)),
+          border = BorderStroke(if (isCrownLocked) 0.9.dp else 0.7.dp, itemAccent.copy(alpha = if (isCrownLocked) 0.85f else 0.25f)),
         ) {
           Text(
             text = item.titleFa,
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = if (isCrownLocked) crownTextColor else MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

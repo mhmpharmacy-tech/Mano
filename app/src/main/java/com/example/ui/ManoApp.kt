@@ -163,10 +163,12 @@ import com.example.ui.components.VisitDraftModalBottomSheet
 import com.example.ui.components.resolveAccentColor
 import com.example.ui.util.ManoSensitiveCacheCleaner
 import com.example.ui.theme.CoralCare
+import com.example.ui.theme.DarkBorder
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.HairlineBorder
 import com.example.ui.theme.LocalManoDarkTheme
 import com.example.ui.theme.MangoCare
+import com.example.ui.theme.MinimalGoldDark
 import com.example.ui.theme.PlumCare
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SageCare
@@ -778,9 +780,9 @@ fun ManoApp(
                   icon = item.icon,
                   accentColor = item.accentRole.resolveAccentColor(),
                   iconKind = item.iconKind,
-                  containerSize = 38.dp,
-                  iconSize = 22.dp,
-                  cornerRadius = 12.dp,
+                  containerSize = 36.dp,
+                  iconSize = 19.dp,
+                  cornerRadius = 11.dp,
                 )
               },
               selected = isItemSelected,
@@ -798,9 +800,9 @@ fun ManoApp(
                 icon = Icons.Rounded.AutoAwesome,
                 accentColor = TopicAccentRole.TEAL.resolveAccentColor(),
                 iconKind = PediatricIconKind.FAMILY,
-                containerSize = 38.dp,
-                iconSize = 22.dp,
-                cornerRadius = 12.dp,
+                containerSize = 36.dp,
+                iconSize = 19.dp,
+                cornerRadius = 11.dp,
               )
             },
             selected = false,
@@ -876,8 +878,9 @@ fun ManoApp(
       BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useNavigationRail = maxWidth >= 720.dp
         val isDark = LocalManoDarkTheme.current
-        val topChipBg = if (isDark) DarkSurface else PureWhite
-        val topChipBorder = if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.30f) else HairlineBorder
+        val topChipBg = if (isDark) DarkSurface.copy(alpha = 0.92f) else PureWhite.copy(alpha = 0.94f)
+        val topChipBorder = if (isDark) DarkBorder else HairlineBorder.copy(alpha = 0.80f)
+        val topChipShadow = ShadowSlate.copy(alpha = if (isDark) 0.16f else 0.07f)
 
         Scaffold(
           containerColor = Color.Transparent,
@@ -898,15 +901,20 @@ fun ManoApp(
                   ) {
                     Surface(
                       color = topChipBg,
-                      shape = RoundedCornerShape(14.dp),
-                      border = BorderStroke(1.dp, topChipBorder),
+                      shape = RoundedCornerShape(13.dp),
+                      border = BorderStroke(0.9.dp, topChipBorder),
                       modifier =
                         Modifier
-                          .size(40.dp)
-                          .shadow(6.dp, RoundedCornerShape(14.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                          .size(38.dp)
+                          .shadow(2.dp, RoundedCornerShape(13.dp), ambientColor = topChipShadow, spotColor = topChipShadow),
                     ) {
                       Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                          Icons.AutoMirrored.Rounded.ArrowBack,
+                          contentDescription = "بازگشت",
+                          tint = TopicAccentRole.TEAL.resolveAccentColor(),
+                          modifier = Modifier.size(19.dp),
+                        )
                       }
                     }
                   }
@@ -917,15 +925,20 @@ fun ManoApp(
                   ) {
                     Surface(
                       color = topChipBg,
-                      shape = RoundedCornerShape(14.dp),
-                      border = BorderStroke(1.dp, topChipBorder),
+                      shape = RoundedCornerShape(13.dp),
+                      border = BorderStroke(0.9.dp, topChipBorder),
                       modifier =
                         Modifier
-                          .size(40.dp)
-                          .shadow(6.dp, RoundedCornerShape(14.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                          .size(38.dp)
+                          .shadow(2.dp, RoundedCornerShape(13.dp), ambientColor = topChipShadow, spotColor = topChipShadow),
                     ) {
                       Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.Menu, contentDescription = "فهرست دسترسی سریع", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                          Icons.Rounded.Menu,
+                          contentDescription = "فهرست دسترسی سریع",
+                          tint = TopicAccentRole.TEAL.resolveAccentColor(),
+                          modifier = Modifier.size(19.dp),
+                        )
                       }
                     }
                   }
@@ -934,16 +947,16 @@ fun ManoApp(
               title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                   Surface(
-                    color = if (isDark) Color(0xFF132238) else Color(0xFFEAF5F7),
+                    color = topChipBg,
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.36f)),
+                    border = BorderStroke(0.9.dp, topChipBorder),
                     modifier =
                       Modifier
-                        .size(38.dp)
-                        .shadow(4.dp, RoundedCornerShape(12.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                        .size(36.dp)
+                        .shadow(2.dp, RoundedCornerShape(12.dp), ambientColor = topChipShadow, spotColor = topChipShadow),
                   ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(3.dp)) {
-                      ManoBrandCrest(size = 32.dp, isDark = isDark)
+                      ManoBrandCrest(size = 30.dp, isDark = isDark)
                     }
                   }
                   ManoKidWordmark(isDark = isDark, fontSize = 16.sp)
@@ -956,19 +969,19 @@ fun ManoApp(
                 ) {
                   Surface(
                     color = topChipBg,
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, topChipBorder),
+                    shape = RoundedCornerShape(13.dp),
+                    border = BorderStroke(0.9.dp, topChipBorder),
                     modifier =
                       Modifier
-                        .size(40.dp)
-                        .shadow(6.dp, RoundedCornerShape(14.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                        .size(38.dp)
+                        .shadow(2.dp, RoundedCornerShape(13.dp), ambientColor = topChipShadow, spotColor = topChipShadow),
                   ) {
                     Box(contentAlignment = Alignment.Center) {
                       Icon(
                         imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
                         contentDescription = if (isDark) "تغییر به حالت روز" else "تغییر به حالت شب",
-                        tint = if (isDark) MangoCare else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
+                        tint = if (isDark) MinimalGoldDark else TopicAccentRole.PLUM.resolveAccentColor(),
+                        modifier = Modifier.size(19.dp),
                       )
                     }
                   }
@@ -979,15 +992,20 @@ fun ManoApp(
                 ) {
                   Surface(
                     color = topChipBg,
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, topChipBorder),
+                    shape = RoundedCornerShape(13.dp),
+                    border = BorderStroke(0.9.dp, topChipBorder),
                     modifier =
                       Modifier
-                        .size(40.dp)
-                        .shadow(6.dp, RoundedCornerShape(14.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                        .size(38.dp)
+                        .shadow(2.dp, RoundedCornerShape(13.dp), ambientColor = topChipShadow, spotColor = topChipShadow),
                   ) {
                     Box(contentAlignment = Alignment.Center) {
-                      Icon(Icons.Rounded.Search, contentDescription = "جست‌وجوی سراسری", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                      Icon(
+                        Icons.Rounded.Search,
+                        contentDescription = "جست‌وجوی سراسری",
+                        tint = TopicAccentRole.TEAL.resolveAccentColor(),
+                        modifier = Modifier.size(19.dp),
+                      )
                     }
                   }
                 }
@@ -997,15 +1015,20 @@ fun ManoApp(
                 ) {
                   Surface(
                     color = topChipBg,
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.40f) else HairlineBorder),
+                    shape = RoundedCornerShape(13.dp),
+                    border = BorderStroke(0.9.dp, topChipBorder),
                     modifier =
                       Modifier
-                        .size(40.dp)
-                        .shadow(6.dp, RoundedCornerShape(14.dp), ambientColor = ShadowSlate.copy(alpha = 0.14f)),
+                        .size(38.dp)
+                        .shadow(2.dp, RoundedCornerShape(13.dp), ambientColor = topChipShadow, spotColor = topChipShadow),
                   ) {
                     Box(contentAlignment = Alignment.Center) {
-                      Icon(Icons.Rounded.PersonOutline, contentDescription = "پروفایل فرزند من", tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(20.dp))
+                      Icon(
+                        Icons.Rounded.PersonOutline,
+                        contentDescription = "پروفایل فرزند من",
+                        tint = TopicAccentRole.SKY.resolveAccentColor(),
+                        modifier = Modifier.size(19.dp),
+                      )
                     }
                   }
                 }
@@ -2180,8 +2203,8 @@ private fun ManoFloatingBottomNavBar(
   onSelectTab: (NavTab) -> Unit,
 ) {
   val isDark = LocalManoDarkTheme.current
-  val pillShape = RoundedCornerShape(32.dp)
-  val borderColor = if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.32f) else HairlineBorder
+  val pillShape = RoundedCornerShape(28.dp)
+  val borderColor = if (isDark) DarkBorder else HairlineBorder.copy(alpha = 0.85f)
 
   Box(
     modifier =
@@ -2192,17 +2215,17 @@ private fun ManoFloatingBottomNavBar(
     contentAlignment = Alignment.Center,
   ) {
     Surface(
-      color = if (isDark) DarkSurface else PureWhite,
+      color = if (isDark) DarkSurface.copy(alpha = 0.96f) else PureWhite.copy(alpha = 0.97f),
       shape = pillShape,
-      border = BorderStroke(1.dp, borderColor),
+      border = BorderStroke(0.9.dp, borderColor),
       modifier =
         Modifier
           .fillMaxWidth()
           .shadow(
-            elevation = 14.dp,
+            elevation = 8.dp,
             shape = pillShape,
-            ambientColor = if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f) else ShadowSlate.copy(alpha = 0.16f),
-            spotColor = if (isDark) SkyCare.copy(alpha = 0.24f) else ShadowSlate.copy(alpha = 0.14f),
+            ambientColor = ShadowSlate.copy(alpha = if (isDark) 0.22f else 0.10f),
+            spotColor = ShadowSlate.copy(alpha = if (isDark) 0.18f else 0.08f),
           ),
     ) {
       Row(
@@ -2221,19 +2244,12 @@ private fun ManoFloatingBottomNavBar(
             )
           val iconScale by
             animateFloatAsState(
-              targetValue = if (selected) 1.12f else 1.0f,
+              targetValue = if (selected) 1.06f else 1.0f,
               animationSpec = spring(),
               label = "navTabScale_${tab.tag}",
             )
-          val activePillBrush =
-            Brush.horizontalGradient(
-              colors =
-                listOf(
-                  tabAccent.copy(alpha = 0.22f),
-                  tabAccent.copy(alpha = 0.12f),
-                )
-            )
-          val itemShape = RoundedCornerShape(24.dp)
+          val activePillColor = tabAccent.copy(alpha = if (isDark) 0.16f else 0.10f)
+          val itemShape = RoundedCornerShape(22.dp)
 
           Box(
             contentAlignment = Alignment.Center,
@@ -2241,7 +2257,7 @@ private fun ManoFloatingBottomNavBar(
               Modifier
                 .weight(1f)
                 .clip(itemShape)
-                .then(if (selected) Modifier.background(activePillBrush) else Modifier)
+                .then(if (selected) Modifier.background(activePillColor) else Modifier)
                 .clickable { onSelectTab(tab) }
                 .minimumInteractiveComponentSize()
                 .padding(vertical = 6.dp, horizontal = 4.dp)
@@ -2255,14 +2271,14 @@ private fun ManoFloatingBottomNavBar(
                 tabTag = tab.tag,
                 selectionProgress = selectionProgress,
                 accentColor = tabAccent,
-                inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp).scale(iconScale),
+                inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                modifier = Modifier.size(23.dp).scale(iconScale),
               )
               Text(
                 text = tab.label,
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                color = if (selected) tabAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                color = if (selected) tabAccent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
               )

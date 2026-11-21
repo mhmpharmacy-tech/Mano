@@ -79,6 +79,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -137,6 +138,24 @@ import com.example.ui.theme.SoftSkyHalo
 import com.example.ui.theme.StrawberryCare
 import com.example.ui.theme.SuccessEmerald
 import com.example.ui.theme.SuccessSurface
+import com.example.ui.theme.MinimalApricot
+import com.example.ui.theme.MinimalApricotDark
+import com.example.ui.theme.MinimalAqua
+import com.example.ui.theme.MinimalAquaDark
+import com.example.ui.theme.MinimalBerry
+import com.example.ui.theme.MinimalBerryDark
+import com.example.ui.theme.MinimalGold
+import com.example.ui.theme.MinimalGoldDark
+import com.example.ui.theme.MinimalLavender
+import com.example.ui.theme.MinimalLavenderDark
+import com.example.ui.theme.MinimalMint
+import com.example.ui.theme.MinimalMintDark
+import com.example.ui.theme.MinimalRose
+import com.example.ui.theme.MinimalRoseDark
+import com.example.ui.theme.MinimalSky
+import com.example.ui.theme.MinimalSkyDark
+import com.example.ui.theme.MinimalTeal
+import com.example.ui.theme.MinimalTealDark
 import com.example.ui.theme.TealGlow
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
@@ -167,15 +186,15 @@ enum class TopicAccentRole {
 fun TopicAccentRole.resolveAccentColor(): Color {
   val isDark = LocalManoDarkTheme.current
   return when (this) {
-    TopicAccentRole.TEAL -> MaterialTheme.colorScheme.primary
-    TopicAccentRole.CORAL -> if (isDark) DarkCoral else CoralCareInk
-    TopicAccentRole.SKY -> if (isDark) DarkSky else SkyCareInk
-    TopicAccentRole.SAGE -> if (isDark) DarkSage else JadeCareInk
-    TopicAccentRole.PLUM -> if (isDark) DarkPlum else PlumCareInk
-    TopicAccentRole.GOLD -> if (isDark) DarkGold else CautionAmber
-    TopicAccentRole.MANGO -> if (isDark) DarkGold else MangoCare
-    TopicAccentRole.AQUA -> if (isDark) DarkSky else AquaCare
-    TopicAccentRole.STRAWBERRY -> if (isDark) DarkCoral else StrawberryCare
+    TopicAccentRole.TEAL -> if (isDark) MinimalTealDark else MinimalTeal
+    TopicAccentRole.CORAL -> if (isDark) MinimalRoseDark else MinimalRose
+    TopicAccentRole.SKY -> if (isDark) MinimalSkyDark else MinimalSky
+    TopicAccentRole.SAGE -> if (isDark) MinimalMintDark else MinimalMint
+    TopicAccentRole.PLUM -> if (isDark) MinimalLavenderDark else MinimalLavender
+    TopicAccentRole.GOLD -> if (isDark) MinimalGoldDark else MinimalGold
+    TopicAccentRole.MANGO -> if (isDark) MinimalApricotDark else MinimalApricot
+    TopicAccentRole.AQUA -> if (isDark) MinimalAquaDark else MinimalAqua
+    TopicAccentRole.STRAWBERRY -> if (isDark) MinimalBerryDark else MinimalBerry
     TopicAccentRole.DANGER -> MaterialTheme.colorScheme.error
   }
 }
@@ -227,76 +246,36 @@ fun ManoIconMedallion(
   icon: ImageVector,
   accentColor: Color,
   modifier: Modifier = Modifier,
-  iconKind: PediatricIconKind? = null,
+  @Suppress("UNUSED_PARAMETER") iconKind: PediatricIconKind? = null,
   containerSize: Dp = 48.dp,
   iconSize: Dp = 24.dp,
   cornerRadius: Dp = 15.dp,
 ) {
   val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(cornerRadius)
-  val borderBrush =
-    Brush.linearGradient(
-      colors =
-        if (isDark) {
-          listOf(PureWhite.copy(alpha = 0.36f), TealGlow.copy(alpha = 0.60f), accentColor.copy(alpha = 0.42f))
-        } else {
-          listOf(PureWhite.copy(alpha = 0.98f), TealGlow.copy(alpha = 0.38f), accentColor.copy(alpha = 0.32f))
-        }
+  val containerTint =
+    lerp(
+      start = if (isDark) DarkSurfaceHigh else PureWhite,
+      stop = accentColor,
+      fraction = if (isDark) 0.15f else 0.09f,
     )
+  val hairlineBorder = accentColor.copy(alpha = if (isDark) 0.28f else 0.18f)
 
   Box(
     contentAlignment = Alignment.Center,
     modifier =
       modifier
         .size(containerSize)
-        .shadow(
-          elevation = if (isDark) 10.dp else 8.dp,
-          shape = shape,
-          ambientColor = if (isDark) TealGlow.copy(alpha = 0.38f) else ShadowSlate.copy(alpha = 0.16f),
-          spotColor = accentColor.copy(alpha = if (isDark) 0.38f else 0.22f),
-        )
         .clip(shape)
-        .background(
-          Brush.linearGradient(
-            colors =
-              if (isDark) {
-                listOf(Color(0xFF1A2D46), DarkSurfaceHigh, Color(0xFF101D30))
-              } else {
-                listOf(PureWhite, Color(0xFFEAF5F7), Color(0xFFDDEFF3))
-              }
-          )
-        )
-        .border(1.25.dp, borderBrush, shape)
-        .drawBehind {
-          // Subtle top-left metallic glass specular reflection arc
-          drawArc(
-            color = PureWhite.copy(alpha = if (isDark) 0.26f else 0.92f),
-            startAngle = 200f,
-            sweepAngle = 110f,
-            useCenter = false,
-            topLeft = Offset(size.width * 0.12f, size.height * 0.08f),
-            size = androidx.compose.ui.geometry.Size(size.width * 0.74f, size.height * 0.38f),
-            style = Stroke(width = 2.4f, cap = StrokeCap.Round),
-          )
-        },
+        .background(containerTint)
+        .border(0.9.dp, hairlineBorder, shape),
   ) {
-    if (iconKind != null) {
-      val artworkSize = (containerSize - 6.dp).coerceAtLeast(iconSize)
-      Mano3DIconArtwork(kind = iconKind, size = artworkSize)
-    } else {
-      Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = accentColor.copy(alpha = 0.30f),
-        modifier = Modifier.size(iconSize).offset(x = 1.2.dp, y = 1.6.dp),
-      )
-      Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = accentColor,
-        modifier = Modifier.size(iconSize),
-      )
-    }
+    Icon(
+      imageVector = icon,
+      contentDescription = null,
+      tint = accentColor,
+      modifier = Modifier.size(iconSize),
+    )
   }
 }
 
@@ -396,15 +375,15 @@ fun ManoBannerFrame(
       colors =
         if (isDark) {
           listOf(
-            TealGlow.copy(alpha = 0.50f),
-            PureWhite.copy(alpha = 0.22f),
-            borderColor.copy(alpha = 0.85f),
+            MinimalTealDark.copy(alpha = 0.28f),
+            PureWhite.copy(alpha = 0.14f),
+            borderColor.copy(alpha = 0.72f),
           )
         } else {
           listOf(
             PureWhite.copy(alpha = 0.92f),
-            TealGlow.copy(alpha = 0.42f),
-            borderColor.copy(alpha = 0.90f),
+            MinimalTeal.copy(alpha = 0.20f),
+            borderColor.copy(alpha = 0.72f),
           )
         }
     )
@@ -412,8 +391,8 @@ fun ManoBannerFrame(
   Surface(
     color = MaterialTheme.colorScheme.surfaceVariant,
     shape = shape,
-    border = BorderStroke(1.3.dp, glassRimBrush),
-    shadowElevation = if (isDark) 4.dp else 3.dp,
+    border = BorderStroke(0.95.dp, glassRimBrush),
+    shadowElevation = if (isDark) 2.dp else 1.5.dp,
     modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio),
   ) {
     Box(modifier = Modifier.fillMaxSize().clip(shape)) {
@@ -424,18 +403,18 @@ fun ManoBannerFrame(
         alignment = Alignment.Center,
         modifier = Modifier.fillMaxSize(),
       )
-      // Subtle frosted-glass top specular sheen for clinical depth
+      // Gentle pastel frosted-glass top mist veil for calm low-contrast depth
       Box(
         modifier =
           Modifier
             .fillMaxWidth()
-            .height(28.dp)
+            .height(24.dp)
             .align(Alignment.TopCenter)
             .background(
               Brush.verticalGradient(
                 colors =
                   listOf(
-                    PureWhite.copy(alpha = if (isDark) 0.14f else 0.24f),
+                    PureWhite.copy(alpha = if (isDark) 0.10f else 0.18f),
                     Color.Transparent,
                   )
               )

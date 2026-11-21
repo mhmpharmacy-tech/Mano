@@ -2,8 +2,13 @@ package com.example.ui.screens
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -67,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -354,6 +360,90 @@ fun Pediatric3DStudioScreen(
   LaunchedEffect(pageLoaded, activeScene, weighingStep) {
     if (pageLoaded && activeScene == "weighing") {
       runJs("window.Mano3D && window.Mano3D.setWeighingStep($weighingStep);")
+    }
+  }
+
+  val appContext = LocalContext.current
+
+  DisposableEffect(pageLoaded, activeScene, lifecycleOwner) {
+    if (!pageLoaded || activeScene != "mano") {
+      onDispose { }
+    } else {
+      val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+      val tiltSensor =
+        sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
+          ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+      if (sensorManager == null || tiltSensor == null) {
+        onDispose { }
+      } else {
+        var baseX: Float? = null
+        var baseY: Float? = null
+        var smoothX = 0f
+        var smoothY = 0f
+        var lastSentX = 0f
+        var lastSentY = 0f
+        var lastSentMs = 0L
+
+        val listener = object : SensorEventListener {
+          override fun onSensorChanged(event: SensorEvent) {
+            val rawX = event.values.getOrNull(0) ?: return
+            val rawY = event.values.getOrNull(1) ?: return
+            if (baseX == null || baseY == null) {
+              baseX = rawX
+              baseY = rawY
+            } else {
+              baseX = baseX!! + (rawX - baseX!!) * 0.015f
+              baseY = baseY!! + (rawY - baseY!!) * 0.015f
+            }
+            val normX = (-(rawX - baseX!!) / 4.2f).coerceIn(-1f, 1f)
+            val normY = (-(rawY - baseY!!) / 4.2f).coerceIn(-1f, 1f)
+            smoothX += (normX - smoothX) * 0.22f
+            smoothY += (normY - smoothY) * 0.22f
+
+            val now = SystemClock.elapsedRealtime()
+            val delta = abs(smoothX - lastSentX) + abs(smoothY - lastSentY)
+            if (now - lastSentMs >= 55L && delta >= 0.012f) {
+              lastSentMs = now
+              lastSentX = smoothX
+              lastSentY = smoothY
+              val gx = String.format(Locale.US, "%.3f", smoothX)
+              val gy = String.format(Locale.US, "%.3f", smoothY)
+              runJs("window.Mano3D && window.Mano3D.setGazeTilt($gx, $gy);")
+            }
+          }
+
+          override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+
+        var registered = false
+        fun registerSensor() {
+          if (!registered) {
+            sensorManager.registerListener(listener, tiltSensor, SensorManager.SENSOR_DELAY_UI)
+            registered = true
+          }
+        }
+        fun unregisterSensor() {
+          if (registered) {
+            sensorManager.unregisterListener(listener)
+            registered = false
+          }
+        }
+
+        registerSensor()
+        val sensorLifecycleObserver = LifecycleEventObserver { _, event ->
+          when (event) {
+            Lifecycle.Event.ON_RESUME -> registerSensor()
+            Lifecycle.Event.ON_PAUSE -> unregisterSensor()
+            else -> Unit
+          }
+        }
+        lifecycleOwner.lifecycle.addObserver(sensorLifecycleObserver)
+        onDispose {
+          lifecycleOwner.lifecycle.removeObserver(sensorLifecycleObserver)
+          unregisterSensor()
+        }
+      }
     }
   }
 
