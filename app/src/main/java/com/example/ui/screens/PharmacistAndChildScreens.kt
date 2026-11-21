@@ -480,8 +480,13 @@ fun AskPharmacistScreen(
                         appendLine("پرسش: ${req.questionSummaryFa}")
                         appendLine("برنامه پیگیری (${req.followUp.scheduleFa}): ${req.followUp.guidanceFa}")
                       }
-                    ManoLinkShareHelper.copyToClipboard(context, "MANO Follow-up", summaryText)
-                    onShowFeedback("خلاصه مشاوره و برنامه پیگیری در حافظه کپی شد.")
+                    val copied = ManoLinkShareHelper.copyToClipboard(
+                      context, "MANO Follow-up", summaryText, sensitive = true,
+                    )
+                    onShowFeedback(
+                      if (copied) "خلاصه کپی شد. اطلاعات سلامت کودک ممکن است در حافظه موقت دستگاه باقی بماند؛ با احتیاط به اشتراک بگذارید."
+                      else "دسترسی به حافظه موقت برای کپی خلاصه امکان‌پذیر نیست."
+                    )
                   },
                   modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("followup_copy_btn_${req.id}"),
                 ) {

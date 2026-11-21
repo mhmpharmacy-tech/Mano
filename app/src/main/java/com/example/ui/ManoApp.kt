@@ -161,6 +161,7 @@ import com.example.ui.components.SeverityAlert
 import com.example.ui.components.TopicAccentRole
 import com.example.ui.components.VisitDraftModalBottomSheet
 import com.example.ui.components.resolveAccentColor
+import com.example.ui.util.ManoSensitiveCacheCleaner
 import com.example.ui.theme.CoralCare
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.HairlineBorder
@@ -317,6 +318,27 @@ fun ManoApp(
       onUnauthenticated = {},
       scope = scope,
     )
+  }
+
+  // Discard ephemeral clinical drafts when the caregiver/account changes. Persistent
+  // offline records remain on this device until the caregiver explicitly erases them.
+  // Cloud ViewModels below are separately keyed by UID.
+  var observedCaregiverUid by remember { mutableStateOf(currentUser?.uid) }
+  LaunchedEffect(currentUser?.uid) {
+    val newUid = currentUser?.uid
+    if (observedCaregiverUid != newUid) {
+      visitDraftVm.resetToIdle()
+      nutritionVm.resetToIdle()
+      syrupScannerVm.reset()
+      safetyTriageAiVm.resetChecklist()
+      safetyTriageAiVm.resetDocumentedQa()
+      viewModel.clearTransientHealthSession()
+      showVisitDraftSheet = false
+      if (!ManoSensitiveCacheCleaner.clear(context)) {
+        viewModel.showToast("فایل‌های موقت حساب قبلی کامل پاک نشدند؛ برای حذف کامل، حافظه برنامه را از تنظیمات دستگاه پاک کنید.")
+      }
+    }
+    observedCaregiverUid = newUid
   }
 
   // Strictly auth-gated Cloud Sync ViewModel: only instantiated and observed while currentUser != null
@@ -1742,7 +1764,15 @@ fun ManoApp(
                     // Export only the current displayed account's child, never a residual offline profile.
                     viewModel.exportChildProfileSummary(effectiveChildProfile)
                   },
-                  onEraseLocalData = viewModel::eraseLocalChildHealthData,
+                  onEraseLocalData = {
+                    visitDraftVm.resetToIdle()
+                    nutritionVm.resetToIdle()
+                    syrupScannerVm.reset()
+                    safetyTriageAiVm.resetChecklist()
+                    safetyTriageAiVm.resetDocumentedQa()
+                    showVisitDraftSheet = false
+                    viewModel.eraseLocalChildHealthData()
+                  },
                   onDeleteProfile = {
                     val activeCloudVm = cloudVm
                     if (currentUser != null && activeCloudVm != null) {

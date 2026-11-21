@@ -1,6 +1,8 @@
 package com.example
 
 import android.content.Context
+import android.content.ClipDescription
+import android.content.ClipboardManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -43,6 +45,9 @@ import com.example.ui.components.RadialTopicItem
 import com.example.ui.components.TopicAccentRole
 import com.example.ui.theme.ManoKidsTheme
 import kotlinx.coroutines.flow.first
+import com.example.ui.util.ManoLinkShareHelper
+import com.example.ui.util.ManoSensitiveCacheCleaner
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -132,6 +137,53 @@ class ManoAuditRemediationTest {
     assertTrue(prefs.savedSyrupScans.first().isEmpty())
     assertEquals(ManoThemeMode.DARK, prefs.themeMode.first())
     assertTrue(com.example.widget.FeverTimelineWidgetStore.readSummary(context).second.contains("ثبت نشده"))
+  }
+
+  @Test
+  fun sensitiveCacheErasure_removesPdfCameraAndSharedImages_butNotOtherAppCache() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val kept = File(context.cacheDir, "unrelated_ui_theme_asset.bin").apply { writeText("keep") }
+    val sensitive = listOf("visit_draft_pdfs", "scanned_syrups", "shared_cards").mapIndexed { index, name ->
+      File(context.cacheDir, "$name/privacy_regression_$index.bin").apply {
+        parentFile?.mkdirs()
+        writeText("synthetic patient data")
+      }
+    }
+    try {
+      assertTrue(sensitive.all { it.exists() })
+      assertTrue(ManoSensitiveCacheCleaner.clear(context))
+      assertTrue(sensitive.none { it.exists() })
+      assertTrue("Nonclinical cache must not be wiped", kept.exists())
+      assertTrue("Cleanup must be idempotent", ManoSensitiveCacheCleaner.clear(context))
+    } finally {
+      kept.delete()
+      sensitive.forEach { it.delete() }
+    }
+  }
+
+  @Test
+  fun sensitiveClipboard_obscuresConsultationPreview_withoutFlaggingPublicLinks() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    assertTrue(ManoLinkShareHelper.copyToClipboard(context, "Health", "Synthetic private care note", sensitive = true))
+    assertTrue(clipboard.primaryClip?.description?.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true)
+    assertTrue(ManoLinkShareHelper.copyToClipboard(context, "Public", "https://manokid.ir"))
+    assertFalse(clipboard.primaryClip?.description?.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true)
+  }
+
+  @Test
+  fun changingCaregiver_clearsUnsavedHealthFormsWithoutRemovingPersistentRecords() = runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val prefs = ManoPreferencesRepository(context)
+    prefs.clearLocalChildHealthData()
+    val vm = com.example.ui.viewmodel.ManoViewModel(ApplicationProvider.getApplicationContext())
+    vm.setAskQuestion("Unsent synthetic child question")
+    vm.setAskConsent(true)
+    assertEquals("Unsent synthetic child question", vm.uiState.value.askPharmacist.questionText)
+    vm.clearTransientHealthSession()
+    assertTrue(vm.uiState.value.askPharmacist.questionText.isEmpty())
+    assertFalse(vm.uiState.value.askPharmacist.consentAccepted)
+    assertNull(vm.uiState.value.exportedProfileJson)
   }
 
   @Test
