@@ -179,6 +179,24 @@ class ExampleRobolectricTest {
     val measurement = "دما: 37.2 درجه، مدت: 6 ساعت"
     composeTestRule.onNodeWithTag("ask_pharmacist_list").performScrollToNode(hasText(measurement, substring = true))
     composeTestRule.onNodeWithText(measurement, substring = true).performScrollTo().assertIsDisplayed()
+    composeTestRule.onNodeWithTag("ask_pharmacist_list").performScrollToNode(hasTestTag("ask_pharmacist_submit"))
+    composeTestRule.onNodeWithText("ذخیره روی این دستگاه").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun parentActionsAreVisibleOnEntryAndGrowthHistoryContainsTheActualReading() {
+    composeTestRule.onNodeWithTag("nav_symptoms").performClick()
+    composeTestRule.onNodeWithTag("symptom_choice_fever").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("nav_faq").performClick()
+    composeTestRule.onNodeWithTag("faq_search_input").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("documented_qa_assistant_card").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("faq_toggle_assistant").performClick()
+    composeTestRule.onNodeWithTag("documented_qa_assistant_card").assertExists()
+    composeTestRule.onNodeWithTag("nav_growth").performClick()
+    composeTestRule.onNodeWithTag("growth_new_weight").assertIsDisplayed().performTextInput("۱۲٫۳")
+    composeTestRule.onNodeWithTag("growth_save_measurement").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("growth_list").performScrollToNode(hasText("وزن: 12.3 کیلوگرم"))
+    composeTestRule.onNodeWithText("وزن: 12.3 کیلوگرم").assertIsDisplayed()
   }
 
   @Test

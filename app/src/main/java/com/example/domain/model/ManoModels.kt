@@ -190,6 +190,7 @@ data class DeviceGuide(
   val sources: List<SourceReference>,
 )
 
+@Serializable
 enum class ConsultationCategory(val labelFa: String) {
   SYMPTOMS("علائم کودک"),
   OTC("داروی بدون نسخه (OTC)"),
@@ -198,6 +199,7 @@ enum class ConsultationCategory(val labelFa: String) {
   SUPPLEMENT("مکمل و ویتامین"),
 }
 
+@Serializable
 enum class ConsultationStatus(val labelFa: String) {
   PENDING("در انتظار دریافت"),
   RECEIVED("دریافت شده"),
@@ -210,11 +212,13 @@ data class ConsentRecord(
   val timestampLabelFa: String,
 )
 
+@Serializable
 data class FollowUpNote(
   val scheduleFa: String,
   val guidanceFa: String,
 )
 
+@Serializable
 data class ConsultationRequestDemo(
   val id: String,
   val category: ConsultationCategory,

@@ -67,8 +67,7 @@ import com.example.ui.components.AgeSelectorRow
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.EmptyState
 import com.example.ui.components.LtrText
-import com.example.ui.components.ManoBannerFrame
-import com.example.ui.components.ManoPoseAvatar
+import com.example.ui.components.ManoFramedIllustration
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
@@ -103,6 +102,7 @@ fun FaqScreen(
   onAskDocumentedQuestion: (String) -> Unit = {},
 ) {
   var assistantQuestionInput by rememberSaveable { mutableStateOf("") }
+  var showAssistant by rememberSaveable { mutableStateOf(false) }
   val sampleQuestions =
     remember {
       listOf(
@@ -121,30 +121,15 @@ fun FaqScreen(
     ) {
       item {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-          SectionCard {
-            ManoBannerFrame(
-              resId = R.drawable.mano_questions_orbit,
-              contentDescription = "مانو و کتابخانه پرسش‌های پرتکرار والدین",
-              aspectRatio = 1.8f,
-              contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-              ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 56.dp)
-              Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("پرسش‌های پرتکرار والدین (FAQ)", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                  text = "موضوع یا پرسش خود را جست‌وجو کنید.",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-              }
-            }
+          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ManoFramedIllustration(R.drawable.mano_questions_orbit, "مانو با کتاب پرسش‌ها", width = 48.dp, aspectRatio = 1f)
+            Text("پرسش‌های والدین", style = MaterialTheme.typography.titleLarge)
           }
-
           OutlinedTextField(
             value = query,
-            onValueChange = onQueryChange,
-            label = { Text("جست‌وجو (تب نوزاد، استامینوفن، شیرخشک، یبوست، پوشک...)") },
+            onValueChange = { showAssistant = false; onQueryChange(it) },
+            label = { Text("پرسش یا موضوع را جست‌وجو کنید") },
+            placeholder = { Text("مثلاً تب، شیرخشک یا یبوست") },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             trailingIcon = {
               if (query.isNotEmpty()) {
@@ -163,8 +148,28 @@ fun FaqScreen(
         }
       }
 
-      // دستیار آموزشی؛ پاسخ هوش مصنوعی (MANO Documented Q&A Assistant)
+      if (PersianNormalizer.isHighRiskQuery(query)) {
+        item {
+          SeverityAlert(
+            severity = AlertSeverity.DANGER,
+            title = "یادآوری فوری ایمنی بالینی",
+            body =
+              "این جست‌وجو شامل موضوع پرخطر است. در تب نوزاد زیر ۳ ماه (≥ ۳۸ درجه)، تنگی نفس، تشنج یا بی‌حالی شدید بلافاصله به اورژانس ۱۱۵ مراجعه کنید.",
+            showCautionMascot = true,
+            actionLabel = "بررسی گام‌به‌گام علائم خطر",
+            onAction = onNavigateSymptoms,
+          )
+        }
+      }
+
       item {
+        androidx.compose.material3.TextButton(onClick = { showAssistant = !showAssistant },
+          modifier = Modifier.testTag("faq_toggle_assistant")) {
+          Text(if (showAssistant) "بستن دستیار آموزشی" else "پرسیدن از دستیار هوش مصنوعی")
+        }
+      }
+      // دستیار آموزشی؛ پاسخ هوش مصنوعی (MANO Documented Q&A Assistant)
+      if (showAssistant) item {
         val sageAccent = manoSemanticAccent(SageCare, DarkSage)
         val dangerAccent = manoSemanticAccent(DangerCrimson, DarkCoral)
         SectionCard(modifier = Modifier.testTag("documented_qa_assistant_card")) {
@@ -204,7 +209,7 @@ fun FaqScreen(
           }
 
           Text(
-            text = "پرسش خود را بنویسید. پاسخ تولیدشده با هوش مصنوعی تأیید علمی مستقل ندارد؛ پاسخ‌های کتاب‌محور و نشانی منابع در فهرست پایین صفحه قرار دارند.",
+            text = "پرسش خود را بنویسید. پاسخ تولیدشده با هوش مصنوعی تأیید علمی مستقل ندارد؛ پاسخ‌های کتاب‌محور و نشانی منابع در فهرست پرسش‌ها آمده‌اند.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
@@ -345,19 +350,6 @@ fun FaqScreen(
         }
       }
 
-      if (PersianNormalizer.isHighRiskQuery(query)) {
-        item {
-          SeverityAlert(
-            severity = AlertSeverity.DANGER,
-            title = "یادآوری فوری ایمنی بالینی",
-            body =
-              "این جست‌وجو شامل موضوع پرخطر است. در تب نوزاد زیر ۳ ماه (≥ ۳۸ درجه)، تنگی نفس، تشنج یا بی‌حالی شدید بلافاصله به اورژانس ۱۱۵ مراجعه کنید.",
-            showCautionMascot = true,
-            actionLabel = "بررسی گام‌به‌گام علائم خطر",
-            onAction = onNavigateSymptoms,
-          )
-        }
-      }
 
       item {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

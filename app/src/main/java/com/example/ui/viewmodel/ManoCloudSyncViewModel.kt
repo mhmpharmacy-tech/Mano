@@ -487,7 +487,7 @@ class ManoCloudSyncViewModel(
           val created = result.getOrThrow()
           _serverConsultations.value =
             (listOf(created) + _serverConsultations.value).distinctBy { it.id }
-          _cloudToastFa.value = "درخواست غیرفوری پس از تایید گذرنامه تریاژ در داروخانه ثبت شد."
+          _cloudToastFa.value = "پرسش به داروخانه ارسال شد. وضعیت آن را در بخش پیگیری ببینید."
           onSuccess()
         } else {
           val err = result.exceptionOrNull()

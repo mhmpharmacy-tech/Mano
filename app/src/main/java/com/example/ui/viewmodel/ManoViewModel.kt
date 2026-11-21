@@ -20,7 +20,7 @@ import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.DeviceGuide
 import com.example.domain.model.DoctorVisitDraft
 import com.example.domain.model.FaqItem
-import com.example.domain.model.FollowUpNote
+import com.example.domain.model.GrowthMeasurement
 import com.example.domain.model.MedicationMonograph
 import com.example.domain.model.MedicationSafetyCategory
 import com.example.domain.model.MilestoneItem
@@ -520,66 +520,39 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     return prepared
   }
 
-  fun submitAskPharmacistDemo(): Boolean {
+  val offlineQuestions = prefs.offlineQuestions
+
+  fun growthHistory(uid: String?) = prefs.growthHistory(uid)
+
+  suspend fun saveGrowthMeasurement(uid: String?, weight: Double?, height: Double?) {
+    prefs.addGrowthMeasurement(uid, GrowthMeasurement(System.currentTimeMillis(), weight, height))
+  }
+
+  private var savingQuestion = false
+
+  suspend fun saveOfflineQuestion(): Boolean {
+    if (savingQuestion) return false
     val validated = validateAskPharmacistForm() ?: return false
     val form = _uiState.value.askPharmacist
-
-    val newReq =
-      ConsultationRequestDemo(
-        id = "LOCAL-${form.requests.size + 101}",
+    savingQuestion = true
+    try {
+      prefs.saveOfflineQuestion(ConsultationRequestDemo(
+        id = "LOCAL-${java.util.UUID.randomUUID()}",
         category = validated.first,
         childAgeBand = validated.second,
         questionSummaryFa = validated.third,
         hasUrgentFlag = false,
         status = ConsultationStatus.PENDING,
-        createdAtLabelFa = "هم‌اکنون (ذخیره‌شده روی دستگاه)",
-        followUp =
-          FollowUpNote(
-            scheduleFa = "ثبت‌شده برای پیگیری",
-            guidanceFa = "برای همگام‌سازی ابری و پیگیری مداوم، با حساب گوگل وارد شوید.",
-          ),
-      )
-
-    _uiState.update {
-      it.copy(
-        askPharmacist =
-          form.copy(
-            questionText = "",
-            validationErrorFa = null,
-            consentAccepted = false,
-            requests = listOf(newReq) + form.requests,
-          ),
-        toastMessageFa = "پرسش پیگیری در حافظه دستگاه ثبت شد.",
-      )
-    }
-    return true
-  }
-
-  fun advanceDemoRequestStatus(id: String) {
-    _uiState.update { state ->
-      val updated =
-        state.askPharmacist.requests.map { req ->
-          if (req.id != id) req
-          else {
-            val nextStatus =
-              when (req.status) {
-                ConsultationStatus.PENDING -> ConsultationStatus.RECEIVED
-                ConsultationStatus.RECEIVED -> ConsultationStatus.REVIEWED
-                ConsultationStatus.REVIEWED -> ConsultationStatus.REVIEWED
-              }
-            val nextNote =
-              if (nextStatus == ConsultationStatus.REVIEWED) {
-                FollowUpNote(
-                  scheduleFa = "بررسی‌شده",
-                  guidanceFa = "پاسخ نهایی تنها پس از بررسی داروساز تاییدشده نمایش داده می‌شود.",
-                )
-              } else {
-                req.followUp
-              }
-            req.copy(status = nextStatus, followUp = nextNote)
-          }
-        }
-      state.copy(askPharmacist = state.askPharmacist.copy(requests = updated))
+        createdAtLabelFa = java.text.DateFormat.getDateTimeInstance().format(java.util.Date()),
+      ))
+      if (_uiState.value.askPharmacist == form) clearAskPharmacistQuestion()
+      showToast("پرسش روی این دستگاه ذخیره شد. به داروخانه ارسال نشده است.")
+      return true
+    } catch (e: java.io.IOException) {
+      showToast("ذخیره پرسش انجام نشد. دوباره تلاش کنید.")
+      return false
+    } finally {
+      savingQuestion = false
     }
   }
 

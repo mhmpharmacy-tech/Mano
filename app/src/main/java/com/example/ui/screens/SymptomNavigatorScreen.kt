@@ -67,7 +67,7 @@ import com.example.ui.components.AlertSeverity
 import com.example.ui.components.ClinicalBulletList
 import com.example.ui.components.ClinicalNote
 import com.example.ui.components.LtrText
-import com.example.ui.components.ManoBannerFrame
+import com.example.ui.components.ManoFramedIllustration
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PharmacistCtaCard
 import com.example.ui.components.ProgressTimeline
@@ -148,43 +148,9 @@ fun SymptomNavigatorScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
       ) {
         item {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-              ) {
-                Surface(
-                  color = MaterialTheme.colorScheme.primaryContainer,
-                  shape = RoundedCornerShape(50),
-                ) {
-                  Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                  ) {
-                    Icon(
-                      imageVector = Icons.Rounded.HealthAndSafety,
-                      contentDescription = null,
-                      tint = MaterialTheme.colorScheme.primary,
-                      modifier = Modifier.size(14.dp),
-                    )
-                    LtrText(text = "MANO Safety Triage", color = MaterialTheme.colorScheme.primary)
-                  }
-                }
-                SourceBadge(reviewStatus = currentFlow.review.status)
-              }
-              Text("هدایتگر گام‌به‌گام علائم کودک", style = MaterialTheme.typography.headlineMedium)
-              Text(
-                text = "ابزار آموزشی، غربالگری علائم هشدار و چک‌لیست هوشمند مراجعه به پزشک متخصص کودکان — بدون تشخیص یا تجویز دارو.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
+          Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("راهنمای علائم کودک", modifier = Modifier.weight(1f),
+              style = MaterialTheme.typography.titleLarge)
             TextButton(
               onClick = { selectedCompanionSymptoms = emptyList(); onReset() },
               modifier = Modifier.minimumInteractiveComponentSize().testTag("wizard_reset_button"),
@@ -208,14 +174,8 @@ fun SymptomNavigatorScreen(
           0 -> {
             item {
               SectionCard {
-                ManoBannerFrame(
-                  resId = R.drawable.mano_symptoms_orbit,
-                  contentDescription = "مانو شناور با دماسنج و نشان توجه برای بررسی علائم",
-                  aspectRatio = 1.5f,
-                  contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                  ManoPoseAvatar(pose = MascotPose.LISTEN, size = 56.dp)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                  ManoFramedIllustration(R.drawable.mano_symptoms_orbit, "مانو با دماسنج", width = 48.dp, aspectRatio = 1f)
                   Text("کدام موضوع یا علامت بیشتر نگرانتان کرده است؟", style = MaterialTheme.typography.titleMedium)
                 }
                 FlowRow(
@@ -231,6 +191,7 @@ fun SymptomNavigatorScreen(
                     )
                   }
                 }
+                SourceBadge(reviewStatus = currentFlow.review.status)
                 Text(currentFlow.subtitleFa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                 HorizontalDivider(color = manoBorderColor())

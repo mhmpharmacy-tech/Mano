@@ -378,6 +378,32 @@ class ManoAuditRemediationTest {
   }
 
   @Test
+  fun growthNotebookScopesMeasurementsAndIncludesDraftsInLocalErasure() = runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val prefs = ManoPreferencesRepository(context)
+    prefs.clearLocalChildHealthData()
+    val first = com.example.domain.model.GrowthMeasurement(1000, 9.5, null)
+    val later = com.example.domain.model.GrowthMeasurement(2000, 9.6, 72.5)
+    prefs.addGrowthMeasurement(null, first)
+    prefs.addGrowthMeasurement(null, later)
+    prefs.addGrowthMeasurement("alice", first)
+    val reopened = ManoPreferencesRepository(context)
+    assertEquals(listOf(later, first), reopened.growthHistory(null).first())
+    assertEquals(listOf(first), reopened.growthHistory("alice").first())
+    assertTrue(reopened.growthHistory("bob").first().isEmpty())
+    val vm = com.example.ui.viewmodel.ManoViewModel(ApplicationProvider.getApplicationContext())
+    vm.setAskAgeBand(AgeBand.PRESCHOOL_3_6Y)
+    vm.setAskQuestion("پرسش من درباره کودک")
+    vm.setAskConsent(true)
+    assertTrue(vm.saveOfflineQuestion())
+    assertEquals("پرسش من درباره کودک", reopened.offlineQuestions.first().single().questionSummaryFa)
+    prefs.clearLocalChildHealthData()
+    assertTrue(reopened.offlineQuestions.first().isEmpty())
+    assertTrue(reopened.growthHistory("alice").first().isEmpty())
+    assertTrue(reopened.growthHistory(null).first().isEmpty())
+  }
+
+  @Test
   fun screeningReferralPreservesConsentBoundaryAndMeasurementsThroughSubmission() {
     val vm = com.example.ui.viewmodel.ManoViewModel(ApplicationProvider.getApplicationContext())
     vm.setAskQuestion("پرسش درباره مراقبت کودک")
@@ -412,8 +438,8 @@ class ManoAuditRemediationTest {
     assertEquals(37.2, payload["temperatureCelsius"])
     assertEquals(6, payload["durationHours"])
     assertEquals(emptyList<String>(), payload["selectedRedFlagIds"])
-    assertTrue(vm.submitAskPharmacistDemo())
-    assertEquals(question, vm.uiState.value.askPharmacist.requests.first().questionSummaryFa)
+    assertTrue(runBlocking { vm.saveOfflineQuestion() })
+    assertEquals(question, runBlocking { vm.offlineQuestions.first() }.first().questionSummaryFa)
     vm.clearSymptomReferral()
     assertNull(vm.uiState.value.askPharmacist.referral)
     assertFalse(vm.uiState.value.askPharmacist.consentAccepted)

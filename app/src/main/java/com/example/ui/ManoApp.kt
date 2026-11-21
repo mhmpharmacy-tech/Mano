@@ -386,13 +386,14 @@ fun ManoApp(
   val effectiveBookmarks = if (currentUser != null) cloudBookmarks else localBookmarkedSlugs
   val effectiveChildProfile =
     if (currentUser != null) (cloudProfileState as? CloudDataState.Success)?.data else localChildProfile
+  val offlineQuestions by viewModel.offlineQuestions.collectAsStateWithLifecycle(initialValue = emptyList())
   val effectiveConsultations =
     if (currentUser != null) {
       val legacyList = (cloudConsultationsState as? CloudDataState.Success)?.data ?: emptyList()
       val merged = (serverConsultations + legacyList).distinctBy { it.id }
       uiState.askPharmacist.copy(requests = merged)
     } else {
-      uiState.askPharmacist
+      uiState.askPharmacist.copy(requests = offlineQuestions)
     }
 
   val activeCloudDoseLogs =
@@ -1339,24 +1340,31 @@ fun ManoApp(
               }
 
               composable<GrowthRoute> {
-                GrowthScreen(
-                  selectedAgeBand = selectedAgeBand,
-                  milestones = viewModel.milestonesForAge(selectedAgeBand),
-                  checkedMilestoneIds = checkedMilestoneIds,
-                  onSelectAgeBand = viewModel::selectAgeBand,
-                  onToggleMilestone = viewModel::toggleMilestoneChecked,
-                  onOpenGrowthArticle = { navController.navigate(TopicDetailRoute("growth-and-development")) },
-                  onOpen3DWeighingGuide = { navController.navigate(Pediatric3DStudioRoute("weighing")) },
-                  childProfile = effectiveChildProfile,
-                  savedHeightCm = effectiveChildHeightCm,
-                  savedNutritionPlansCount = savedNutritionPlans.size,
-                  onOpenNutritionAdvisor = { navController.navigate(NutritionRoute) { launchSingleTop = true } },
-                  vaccineProgressSummaryFa =
-                    vaccineSummary.nextUpcoming?.let { next ->
-                      "${next.definition.milestoneLabelFa}: ${VaccinationScheduleEngine.formatRelativeDueLabelFa(next)}"
-                    } ?: "",
-                  onOpenVaccinesSchedule = { navController.navigate(VaccinesRoute) { launchSingleTop = true } },
-                )
+                val uid = currentUser?.uid
+                androidx.compose.runtime.key(uid) {
+                  val measurements by remember(uid) { viewModel.growthHistory(uid) }
+                    .collectAsStateWithLifecycle(initialValue = emptyList())
+                  GrowthScreen(
+                    history = measurements,
+                    onSaveMeasurement = { weight, height -> viewModel.saveGrowthMeasurement(uid, weight, height) },
+                    selectedAgeBand = selectedAgeBand,
+                    milestones = viewModel.milestonesForAge(selectedAgeBand),
+                    checkedMilestoneIds = checkedMilestoneIds,
+                    onSelectAgeBand = viewModel::selectAgeBand,
+                    onToggleMilestone = viewModel::toggleMilestoneChecked,
+                    onOpenGrowthArticle = { navController.navigate(TopicDetailRoute("growth-and-development")) },
+                    onOpen3DWeighingGuide = { navController.navigate(Pediatric3DStudioRoute("weighing")) },
+                    childProfile = effectiveChildProfile,
+                    savedHeightCm = effectiveChildHeightCm,
+                    savedNutritionPlansCount = savedNutritionPlans.size,
+                    onOpenNutritionAdvisor = { navController.navigate(NutritionRoute) { launchSingleTop = true } },
+                    vaccineProgressSummaryFa =
+                      vaccineSummary.nextUpcoming?.let { next ->
+                        "${next.definition.milestoneLabelFa}: ${VaccinationScheduleEngine.formatRelativeDueLabelFa(next)}"
+                      } ?: "",
+                    onOpenVaccinesSchedule = { navController.navigate(VaccinesRoute) { launchSingleTop = true } },
+                  )
+                }
               }
 
               composable<VaccinesRoute> {
@@ -1664,17 +1672,15 @@ fun ManoApp(
                         )
                       }
                     } else {
-                      if (viewModel.submitAskPharmacistDemo()) finishReferral()
+                      if (currentUser == null) {
+                        scope.launch { if (viewModel.saveOfflineQuestion()) finishReferral() }
+                      } else {
+                        viewModel.showToast("اتصال به داروخانه برقرار نیست. پرسش ارسال نشد.")
+                      }
                     }
                   },
-                  onAdvanceStatus = { id, _ ->
-                    val activeCloudVm = cloudVm
-                    if (currentUser != null && activeCloudVm != null) {
-                      activeCloudVm.refreshServerConsultations(silent = false)
-                    } else {
-                      viewModel.advanceDemoRequestStatus(id)
-                    }
-                  },
+                  onAdvanceStatus = { _, _ -> cloudVm?.refreshServerConsultations(silent = false) },
+                  confirmedIds = serverConsultations.map { it.id }.toSet(),
                   currentUser = currentUser,
                   acceptingPharmacies = acceptingPharmacies,
                   selectedPharmacyId = selectedPharmacyId,
