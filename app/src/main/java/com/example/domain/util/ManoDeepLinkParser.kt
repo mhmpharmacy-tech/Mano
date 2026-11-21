@@ -154,7 +154,7 @@ object ManoDeepLinkParser {
         val rawId = query["pharmacy"]?.trim().orEmpty()
         // A pharmacy query parameter is only a hint; selection requires a
         // live positive match in the server's verified accepting-pharmacy list.
-        val invitedId = rawId.takeIf { it.matches(Regex("^[A-Za-z0-9_-]{1,64}$")) }
+        val invitedId = rawId.takeIf { ManoDomainLinks.isValidPublicPharmacyId(it) }
         DeepLinkResolution(
           route = AskPharmacistRoute(categoryId = cat, invitedPharmacyId = invitedId),
           fallbackNoticeFa = if (rawId.isNotEmpty() && invitedId == null) {
