@@ -663,6 +663,10 @@ test("care card spans delivery, family activity, reply and explicit closure", as
     (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
   await updateCare(store,staff,issue);
   await updateCare(store,staff,issue); // Same request may be retried without duplicating events.
+  await assert.rejects(() => updateCare(store,staff,{...issue,strength:"different strength"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
+  await assert.rejects(() => updateCare(store,staff,{...issue,instructions:"changed instructions"}),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition");
 
   const transact = (who: CallerContext, action: string) =>
     updateCare(store, who, {...ids, action, requestId:action, text:"آزمایشی", confirmed:action === "dose"});
