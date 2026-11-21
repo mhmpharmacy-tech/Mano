@@ -16,6 +16,7 @@ import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.DoctorVisitDraft
 import com.example.domain.model.PublicPharmacyOption
 import com.example.domain.util.ManoDomainLinks
+import com.example.domain.util.PharmacyInvitationPolicy
 import com.example.domain.model.SavedSyrupScan
 import com.example.domain.model.StaffAccessStatus
 import com.example.domain.model.StaffConsultationCase
@@ -159,12 +160,11 @@ class ManoCloudSyncViewModel(
 
   fun selectPharmacy(pharmacyId: String) {
     // Only choices returned by the verified server registry may be selected.
-    val accepted = _acceptingPharmacies.value.any {
-      it.pharmacyId == pharmacyId && it.acceptingCases
-    }
-    if (!accepted) return
+    val verifiedId = PharmacyInvitationPolicy.resolveAcceptingPharmacyId(
+      pharmacyId, _acceptingPharmacies.value,
+    ) ?: return
     _pendingInvitationPharmacyId.value = null
-    _selectedPharmacyId.value = pharmacyId
+    _selectedPharmacyId.value = verifiedId
   }
 
   fun requestPharmacyFromInvitation(pharmacyId: String) {
@@ -182,11 +182,11 @@ class ManoCloudSyncViewModel(
 
   private fun applyVerifiedPharmacyInvitation() {
     val invitedId = _pendingInvitationPharmacyId.value ?: return
-    val accepted = _acceptingPharmacies.value.firstOrNull {
-      it.pharmacyId == invitedId && it.acceptingCases
-    }
-    if (accepted != null) {
-      _selectedPharmacyId.value = accepted.pharmacyId
+    val acceptedId = PharmacyInvitationPolicy.resolveAcceptingPharmacyId(
+      invitedId, _acceptingPharmacies.value,
+    )
+    if (acceptedId != null) {
+      _selectedPharmacyId.value = acceptedId
       _pendingInvitationPharmacyId.value = null
     } else {
       // No fallback to a different pharmacy: parents must explicitly choose it.
