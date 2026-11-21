@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupExpiredConsultationState = exports.revokePharmacyStaff = exports.onboardPharmacyStaff = exports.upsertPharmacyRegistry = exports.reviewConsultationCase = exports.getPharmacyInbox = exports.listParentConsultations = exports.getParentConsultation = exports.submitConsultationCase = exports.issueConsultationTriagePass = exports.listAcceptingPharmacies = void 0;
+exports.updateCareCard = exports.cleanupExpiredConsultationState = exports.revokePharmacyStaff = exports.onboardPharmacyStaff = exports.upsertPharmacyRegistry = exports.reviewConsultationCase = exports.getPharmacyInbox = exports.listParentConsultations = exports.getParentConsultation = exports.submitConsultationCase = exports.issueConsultationTriagePass = exports.listAcceptingPharmacies = void 0;
+const care_1 = require("./care");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const admin_1 = require("./admin");
@@ -150,5 +151,14 @@ exports.cleanupExpiredConsultationState = (0, scheduler_1.onSchedule)({
 }, async () => {
     const { cleanupService } = createServices();
     await cleanupService.purgeExpiredOperationalDocs(250);
+});
+exports.updateCareCard = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
+    try {
+        requireClinicalRelease();
+        return await (0, care_1.updateCare)(new firestoreStore_1.FirestoreBackendStore((0, firestoreStore_1.getNamedFirestore)()), extractCaller(request), request.data ?? {});
+    }
+    catch (err) {
+        return handleError(err);
+    }
 });
 //# sourceMappingURL=index.js.map

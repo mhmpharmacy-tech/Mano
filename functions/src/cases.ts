@@ -87,6 +87,7 @@ export function toParentConsultationView(
   doc: ConsultationCaseDoc,
 ): ParentConsultationView {
   return {
+    ...(doc.careCard ? { careCard: doc.careCard } : {}),
     caseId: doc.caseId,
     pharmacyId: doc.pharmacyId,
     categoryName: doc.categoryName,
@@ -108,6 +109,7 @@ export function toPharmacyInboxCaseView(
   doc: ConsultationCaseDoc,
 ): PharmacyInboxCaseView {
   return {
+    ...(doc.careCard ? { careCard: doc.careCard } : {}),
     caseId: doc.caseId,
     pharmacyId: doc.pharmacyId,
     categoryName: doc.categoryName,

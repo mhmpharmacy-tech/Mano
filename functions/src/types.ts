@@ -81,6 +81,7 @@ export interface ParentClinicalResponse {
 }
 
 export interface ConsultationCaseDoc {
+  careCard?: import("./care").CareCard;
   caseId: string;
   pharmacyId: string;
   parentUid: string;
@@ -133,6 +134,7 @@ export interface RateLimitDoc {
 }
 
 export interface ParentConsultationView {
+  careCard?: import("./care").CareCard;
   caseId: string;
   pharmacyId: string;
   categoryName: ConsultationCategory;
@@ -150,6 +152,7 @@ export interface ParentConsultationView {
 }
 
 export interface PharmacyInboxCaseView {
+  careCard?: import("./care").CareCard;
   caseId: string;
   pharmacyId: string;
   categoryName: ConsultationCategory;

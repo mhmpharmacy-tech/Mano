@@ -40,5 +40,23 @@
     "ui": {
       "enabled": false
     }
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "**/.*",
+      "assets/aistudio/**"
+    ],
+    "headers": [
+      {
+        "source": "/care/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store"
+          }
+        ]
+      }
+    ]
   }
 }

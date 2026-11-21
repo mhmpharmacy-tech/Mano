@@ -1095,6 +1095,7 @@ fun ManoApp(
 
           Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             NavHost(navController = navController, startDestination = HomeRoute) {
+              composable<com.example.ui.navigation.CareCardsRoute> { com.example.ui.screens.CareCardsScreen(currentUser?.uid) }
               composable<HomeRoute> {
                 val uid = currentUser?.uid
                 val history = key(uid) {
@@ -1104,6 +1105,7 @@ fun ManoApp(
                   PreviousCare.latest(uid, localFeverLogs, activeCloudFeverLogs, history)
                 }
                 HomeScreen(
+                  onCareCards = if (uid != null) ({ navController.navigate(com.example.ui.navigation.CareCardsRoute) }) else null,
                   previousCare = previousCare,
                   onContinueCare = { care ->
                     if (care is PreviousCare.Temperature) {

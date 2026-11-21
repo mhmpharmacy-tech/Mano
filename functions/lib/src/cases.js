@@ -42,6 +42,7 @@ const rateLimit_1 = require("./rateLimit");
 const triage_1 = require("./triage");
 function toParentConsultationView(doc) {
     return {
+        ...(doc.careCard ? { careCard: doc.careCard } : {}),
         caseId: doc.caseId,
         pharmacyId: doc.pharmacyId,
         categoryName: doc.categoryName,
@@ -60,6 +61,7 @@ function toParentConsultationView(doc) {
 }
 function toPharmacyInboxCaseView(doc) {
     return {
+        ...(doc.careCard ? { careCard: doc.careCard } : {}),
         caseId: doc.caseId,
         pharmacyId: doc.pharmacyId,
         categoryName: doc.categoryName,
