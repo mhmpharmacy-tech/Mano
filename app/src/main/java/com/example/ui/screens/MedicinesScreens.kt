@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -171,13 +173,15 @@ fun MedicinesScreen(
   onCloudAuthSuccess: () -> Unit = {},
   onCloudAuthError: (String) -> Unit = {},
   onSignedOut: () -> Unit = {},
+  openTemperatureEntry: Boolean = false,
 ) {
   val checklistProgress = remember(checkedMedSafetyIds) { MedicationSafetyChecklistCatalog.evaluateProgress(checkedMedSafetyIds) }
-  var activeSubTab by remember {
+  var focusTemperatureEntry by rememberSaveable { mutableStateOf(openTemperatureEntry) }
+  var activeSubTab by rememberSaveable {
     mutableStateOf(
       when {
         startOnChecklist -> MedicinesSubTab.SAFETY_CHECKLIST
-        startOnTimeline -> MedicinesSubTab.DOSE_LOGBOOK
+        openTemperatureEntry || startOnTimeline -> MedicinesSubTab.DOSE_LOGBOOK
         requestedSubTabKey == "checklist" -> MedicinesSubTab.SAFETY_CHECKLIST
         requestedSubTabKey == "timeline" -> MedicinesSubTab.DOSE_LOGBOOK
         requestedSubTabKey == "syringe" -> MedicinesSubTab.SYRINGE_DOSE_LAB
@@ -246,6 +250,7 @@ fun MedicinesScreen(
 
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
+      state = rememberLazyListState(initialFirstVisibleItemIndex = if (openTemperatureEntry) 1 else 0),
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("medicines_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -585,6 +590,8 @@ fun MedicinesScreen(
         MedicinesSubTab.DOSE_LOGBOOK -> {
           item {
             FeverDoseTimelineCard(
+              focusTemperatureEntry = focusTemperatureEntry,
+              onTemperatureEntryFocused = { focusTemperatureEntry = false },
               snapshot = timelineSnapshot,
               childProfile = childProfile,
               isCloudSynced = currentUser != null,

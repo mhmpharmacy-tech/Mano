@@ -43,15 +43,20 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.text.input.KeyboardType
+import com.example.domain.util.ClinicalNumberInput
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -110,9 +115,8 @@ import com.example.ui.theme.manoSemanticAccent
 import com.example.ui.theme.manoTintedSurface
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun FeverDoseTimelineCard(
   snapshot: FeverDoseTimelineSnapshot,
@@ -126,12 +130,16 @@ fun FeverDoseTimelineCard(
   savedVisitDraftsCount: Int = 0,
   onOpenVisitDraftStudio: () -> Unit = {},
   modifier: Modifier = Modifier,
+  focusTemperatureEntry: Boolean = false,
+  onTemperatureEntryFocused: () -> Unit = {},
 ) {
   val context = LocalContext.current
   val primaryAccent = MaterialTheme.colorScheme.primary
   val shape = RoundedCornerShape(24.dp)
 
-  var tempInput by remember { mutableFloatStateOf(38.1f) }
+  var temperatureText by rememberSaveable { mutableStateOf("") }
+  val tempInput = ClinicalNumberInput.temperature(temperatureText)?.toFloat()
+  val temperatureField = remember { BringIntoViewRequester() }
   var selectedSite by remember { mutableStateOf("زیربغلی") }
   var selectedCaregiver by remember { mutableStateOf("مادر") }
   var timeLabelInput by remember { mutableStateOf("") }
@@ -586,46 +594,25 @@ fun FeverDoseTimelineCard(
 
       // Quick Temperature Logger Form (works offline/local AND cloud-synced)
       Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("timeline_temp_form")) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(Icons.Rounded.DeviceThermostat, contentDescription = null, tint = coralAccent, modifier = Modifier.size(20.dp))
-            Text("ثبت دمای جدید کودک", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-          }
-          Surface(
-            color =
-              if (tempInput >= 38.0f) manoTintedSurface(DangerSurface, DarkCoral, lightAlpha = 1f, darkAlpha = 0.18f)
-              else manoTintedSurface(SuccessSurface, DarkSage, lightAlpha = 1f, darkAlpha = 0.18f),
-            shape = RoundedCornerShape(10.dp),
-          ) {
-            Text(
-              text = FeverDoseTimelineEngine.formatTempC(tempInput),
-              style = MaterialTheme.typography.titleSmall,
-              fontWeight = FontWeight.Bold,
-              color = if (tempInput >= 38.0f) dangerAccent else successAccent,
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp).testTag("timeline_temp_value_label"),
-            )
+        Text("ثبت دمای جدید کودک", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        OutlinedTextField(
+          value = temperatureText,
+          onValueChange = { temperatureText = it },
+          label = { Text("عدد دماسنج (درجهٔ سانتی‌گراد)") },
+          singleLine = true,
+          isError = temperatureText.isNotBlank() && tempInput == null,
+          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+          modifier = Modifier.fillMaxWidth().bringIntoViewRequester(temperatureField).testTag("timeline_temp_input"),
+        )
+        LaunchedEffect(focusTemperatureEntry) {
+          if (focusTemperatureEntry) {
+            withFrameNanos { }
+            temperatureField.bringIntoView()
+            onTemperatureEntryFocused()
           }
         }
 
-        Slider(
-          value = tempInput,
-          onValueChange = { raw ->
-            tempInput = ((raw * 10f).roundToInt() / 10f).coerceIn(35.5f, 41.0f)
-          },
-          valueRange = 35.5f..41.0f,
-          colors =
-            SliderDefaults.colors(
-              thumbColor = if (tempInput >= 38.0f) dangerAccent else primaryAccent,
-              activeTrackColor = if (tempInput >= 38.0f) dangerAccent else primaryAccent,
-            ),
-          modifier = Modifier.fillMaxWidth().testTag("timeline_temp_slider"),
-        )
-
-        if (tempInput > FeverDoseTimelineEngine.HIGH_FEVER_ALERT_THRESHOLD_C) {
+        if (tempInput != null && tempInput > FeverDoseTimelineEngine.HIGH_FEVER_ALERT_THRESHOLD_C) {
           Surface(
             color = manoTintedSurface(DangerSurface, DarkCoral, lightAlpha = 0.72f, darkAlpha = 0.16f),
             shape = RoundedCornerShape(10.dp),
@@ -686,18 +673,21 @@ fun FeverDoseTimelineCard(
         }
 
         Button(
+          enabled = tempInput != null,
           onClick = {
+            val measured = tempInput ?: return@Button
             val formattedTime =
               timeLabelInput.trim().ifEmpty {
                 FeverDoseTimelineEngine.formatHourMinute(System.currentTimeMillis())
               }
             onSaveTempLog(
-              tempInput,
+              measured,
               selectedSite,
               formattedTime,
               selectedCaregiver,
               noteInput.trim(),
             ) {
+              temperatureText = ""
               timeLabelInput = ""
               noteInput = ""
             }

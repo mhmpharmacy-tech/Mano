@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -90,12 +91,13 @@ fun GrowthScreen(
   savedHeightCm: String = "",
   savedNutritionPlansCount: Int = 0,
   onOpenNutritionAdvisor: () -> Unit = {},
+  openHistory: Boolean = false,
   history: List<GrowthMeasurement> = emptyList(),
   onSaveMeasurement: suspend (Double?, Double?) -> Unit,
   vaccineProgressSummaryFa: String = "",
   onOpenVaccinesSchedule: () -> Unit = {},
 ) {
-  var showHistory by rememberSaveable { mutableStateOf(false) }
+  var showHistory by rememberSaveable { mutableStateOf(openHistory) }
   var weight by rememberSaveable { mutableStateOf("") }
   var height by rememberSaveable { mutableStateOf("") }
   var saving by remember { mutableStateOf(false) }
@@ -105,14 +107,16 @@ fun GrowthScreen(
   val cm = ClinicalNumberInput.decimal(height)
   val invalidWeight = weight.isNotBlank() && (kg == null || kg <= 0)
   val invalidHeight = height.isNotBlank() && (cm == null || cm <= 0)
+  val newestFirst = remember(history) { history.sortedByDescending { it.recordedAtMs } }
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
+      state = rememberLazyListState(initialFirstVisibleItemIndex = if (openHistory) 1 else 0),
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("growth_list"),
       contentPadding = PaddingValues(16.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
       item {
-        SectionCard {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoFramedIllustration(R.drawable.mano_growth_orbit, "مانو و اندازه‌گیری رشد", width = 48.dp, aspectRatio = 1f)
             Text("ثبت وزن و قد امروز", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
@@ -158,28 +162,21 @@ fun GrowthScreen(
       }
       if (showHistory) {
         if (history.isEmpty()) item { Text("هنوز اندازه‌ای در این دفتر ثبت نشده است.") }
-        items(history) { measurement ->
-          val date = remember(measurement.recordedAtMs) {
-            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT,
-              java.util.Locale.forLanguageTag("fa-IR")).format(java.util.Date(measurement.recordedAtMs))
-          }
-          SectionCard {
-            Text(date, style = MaterialTheme.typography.labelLarge)
-            Text(listOfNotNull(measurement.weightKg?.let { "وزن: $it کیلوگرم" },
-              measurement.heightCm?.let { "قد: $it سانتی‌متر" }).joinToString("   •   "))
+        items(newestFirst) { measurement ->
+          Column(modifier = Modifier.fillMaxWidth().testTag("growth_history_row"), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(remember(measurement.recordedAtMs) { measurementTimeFa(measurement.recordedAtMs) }, style = MaterialTheme.typography.labelLarge)
+            Text(remember(measurement) { measurement.summaryFa() })
           }
         }
       }
 
       item {
-        SeverityAlert(
-          severity = AlertSeverity.INFO,
-          title = "نقاط عطف جایگزین غربالگری تخصصی نیستند",
-          body =
-            "چک‌لیست رشد صرفاً برای آگاهی و گفت‌وگوی بهتر والدین با پزشک است و هیچ تشخیص یا برچسب‌زنی تکاملی (مانند ADHD یا اختلال یادگیری) انجام نمی‌دهد.",
-          actionLabel = "مطالعه مقاله کامل رشد و تکامل",
-          onAction = onOpenGrowthArticle,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+          Text("مهارت‌های رشدی کودک", style = MaterialTheme.typography.titleMedium)
+          Text("این فهرست برای پیگیری و گفت‌وگو با پزشک است. ارزیابی تخصصی رشد به معاینه نیاز دارد.",
+            style = MaterialTheme.typography.bodyMedium)
+          TextButton(onClick = onOpenGrowthArticle) { Text("دربارهٔ رشد و تکامل") }
+        }
       }
 
       item {

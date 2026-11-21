@@ -102,6 +102,7 @@ fun FaqScreen(
   onAskDocumentedQuestion: (String) -> Unit = {},
 ) {
   var assistantQuestionInput by rememberSaveable { mutableStateOf("") }
+  var showFilters by rememberSaveable { mutableStateOf(false) }
   var showAssistant by rememberSaveable { mutableStateOf(false) }
   val sampleQuestions =
     remember {
@@ -352,6 +353,21 @@ fun FaqScreen(
 
 
       item {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
+          modifier = Modifier.fillMaxWidth()) {
+          Text("${measurementNumberFa(faqs.size.toDouble())} پرسش", style = MaterialTheme.typography.labelLarge)
+          androidx.compose.material3.TextButton(onClick = { showFilters = !showFilters },
+            modifier = Modifier.testTag("faq_toggle_filters")) {
+            val selected = listOfNotNull(selectedCategory?.labelFa, selectedAgeBand?.labelFa).joinToString("، ")
+            Text(when {
+              showFilters -> "بستن فیلترها"
+              selected.isNotEmpty() -> "فیلترها: $selected"
+              else -> "فیلتر سن و موضوع"
+            })
+          }
+        }
+      }
+      if (showFilters) item {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
           item {
             FilterChip(
@@ -372,16 +388,8 @@ fun FaqScreen(
         }
       }
 
-      item {
+      if (showFilters) item {
         AgeSelectorRow(selectedAgeBand = selectedAgeBand, onSelect = onAgeSelect)
-      }
-
-      item {
-        Text(
-          text = "تعداد نتایج: ${faqs.size} پرسش",
-          style = MaterialTheme.typography.labelLarge,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
       }
 
       if (faqs.isEmpty()) {
@@ -405,10 +413,9 @@ fun FaqScreen(
             onClick = { onToggleExpand(faq.id) },
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, if (expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
             modifier = Modifier.fillMaxWidth().testTag("faq_card_${faq.id}"),
           ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
               Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -428,21 +435,10 @@ fun FaqScreen(
                 )
               }
 
-              Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 1f, darkAlpha = 0.16f), shape = RoundedCornerShape(8.dp)) {
-                  Text(
-                    text = faq.category.labelFa,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                  )
-                }
-                SourceBadge(reviewStatus = faq.review.status)
-              }
-
+              HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
               AnimatedVisibility(visible = expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                  HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                  SourceBadge(reviewStatus = faq.review.status)
                   Text("خلاصه:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                   Text(faq.summaryFa, style = MaterialTheme.typography.bodyMedium)
 
