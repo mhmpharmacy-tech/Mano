@@ -3,7 +3,7 @@ import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut} f
 import {initializeAppCheck,ReCaptchaEnterpriseProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check.js";
 import {getFunctions,httpsCallable} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
 const $=id=>document.getElementById(id);
-const labels={send:"ارسال کارت",open:"مشاهدهٔ خانواده",dose:"ثبت مصرف",question:"پرسش خانواده",reply:"پاسخ داروساز",checkin:"گزارش پیگیری",close:"پایان پیگیری"};
+const labels={send:"ارسال کارت",open:"مشاهدهٔ خانواده",dose:"گزارش مصرف توسط والد",question:"پرسش خانواده",reply:"پاسخ داروساز",checkin:"گزارش پیگیری",close:"پایان پیگیری"};
 function node(parent,tag,text){const el=document.createElement(tag);el.textContent=text;parent.append(el);return el}
 try {
   const config=await (await fetch("/__/firebase/init.json")).json();
@@ -35,22 +35,34 @@ try {
           const button=node(section,"button",kind==="send"?"تأیید و ارسال به خانواده":labels[kind]);
           let requestId=crypto.randomUUID();
           button.onclick=async()=>{
+            if(kind==="send"&&!window.confirm("پاسخ پرونده توسط داروساز تأیید شده است؟ ارسال کارت فقط پس از بازبینی نهایی مجاز است."))return;
+            if(kind==="dose"&&!window.confirm("آیا مصرف دارو را گزارش می‌کنید؟ این گزینه فقط زمان ثبت در سامانه را ذخیره می‌کند؛ مقدار یا زمان واقعی مصرف ثبت و تأیید نمی‌شود."))return;
             const values=Object.fromEntries(Object.entries(inputs).map(([k,v])=>[k,v.value.trim()]));
             if(Object.values(values).some(v=>!v)){ $("status").textContent="لطفاً همهٔ فیلدها را تکمیل کنید.";return }
             button.disabled=true;
-            try{await call("updateCareCard",{pharmacyId:row.pharmacyId,caseId:row.caseId,action:kind,requestId,confirmed:kind==="send",...values});if(epoch===revision)await load()}
+            try{await call("updateCareCard",{pharmacyId:row.pharmacyId,caseId:row.caseId,action:kind,requestId,confirmed:kind==="send"||kind==="dose",...values});if(epoch===revision)await load()}
             catch{button.disabled=false;$("status").textContent="ثبت تأیید نشد. دوباره تلاش کنید."}
           };
         }
         function input(title){const label=node(section,"label",title);return node(label,"textarea","")}
-        if(!card){action("send",{child:input("نام کودک"),medicine:input("نام فرآورده"),strength:input("غلظت یا قدرت"),instructions:input("دستور تأییدشده"),followUp:input("موعد پیگیری")});continue}
+        if(!card){
+          if(staff && row.status==="REVIEWED" && row.parentResponse?.attestationConfirmed===true){
+            action("send",{child:input("نام کودک"),medicine:input("نام فرآورده"),strength:input("غلظت یا قدرت"),instructions:input("دستور تأییدشده"),followUp:input("موعد پیگیری")});
+          }else{
+            node(section,"p","کارت مراقبت فقط پس از بررسی و تأیید نهایی داروساز در پرونده قابل صدور است.");
+          }
+          continue;
+        }
         const details=node(section,"details","");node(details,"summary","مشاهدهٔ کارت");
         node(details,"p",[card.strength,card.instructions,"پیگیری در "+card.followUp].join("\n"));
         details.ontoggle=async()=>{if(details.open&&!staff&&!card.openedAt){try{await call("updateCareCard",{pharmacyId:row.pharmacyId,caseId:row.caseId,requestId:crypto.randomUUID(),action:"open"})}catch{$("status").textContent="ثبت مشاهده تأیید نشد."}}};
         for(const e of card.events)node(details,"p",labels[e.action]+" · "+new Date(e.at).toLocaleString("fa-IR")+" "+e.text);
         if(card.closedAt)continue;
         if(staff){action("reply",{text:input("پاسخ به خانواده")});action("close")}
-        else{action("dose");action("question",{text:input("سؤال دربارهٔ دارو")});action("checkin",{text:input("نتیجهٔ پیگیری")})}
+        else{
+          node(details,"p","گزارش مصرف فقط زمان ثبت در سامانه را نشان می‌دهد و جایگزین دفتر دقیق دوز نیست.");
+          action("dose");action("question",{text:input("سؤال دربارهٔ دارو")});action("checkin",{text:input("نتیجهٔ پیگیری")});
+        }
       }
       if(!$("cards").children.length)$("status").textContent="هنوز کارتی برای نمایش وجود ندارد.";
     } catch {if(epoch===revision)$("status").textContent="دریافت پرونده‌ها ممکن نشد."}
