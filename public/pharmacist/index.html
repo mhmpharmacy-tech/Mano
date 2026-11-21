@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f6765">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'; img-src 'self' data:">
+  <title>معرفی داروخانه در مانوکید | MANOKID</title>
+  <style>
+    :root{color-scheme:light;--teal:#0f6765;--teal2:#09615a;--ink:#253948;--muted:#506573;--line:#d6e5e4;--cream:#f8fbf9;--lilac:#f1edf9}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Tahoma,"Noto Sans Arabic",system-ui,sans-serif;background:radial-gradient(circle at 10% 5%,#e3f4ee,transparent 46%),radial-gradient(circle at 90% 100%,#f0ecfb,transparent 45%),var(--cream);color:var(--ink);line-height:1.95}
+    .wrap{max-width:750px;margin:0 auto;padding:30px 18px 60px}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:34px}
+    .mark{display:grid;place-items:center;background:#fff;border:2px solid #b9ded7;color:var(--teal2);border-radius:18px;width:49px;height:49px;font-size:24px;font-weight:800;box-shadow:0 3px 14px #126b6c12}
+    .brand-copy{line-height:1.3}.brand-copy strong{display:block;font-size:16px;letter-spacing:.06em}.brand-copy small{color:var(--muted);font-size:12px}
+    main{background:#fff;border:1px solid var(--line);border-radius:25px;padding:clamp(24px,5vw,42px);box-shadow:0 15px 55px #224f4c12}
+    .eyebrow{display:inline-block;background:#e2f2ed;color:var(--teal2);border-radius:30px;padding:4px 14px;font-size:12px;font-weight:700}
+    h1{font-size:clamp(23px,5vw,32px);line-height:1.55;margin:18px 0}
+    h2{font-size:17px;margin:22px 0 8px}
+    p{margin:12px 0;color:var(--muted)}
+    .invitation{background:#f0f7f5;border:1px solid #c8e2de;border-radius:16px;padding:17px;margin:24px 0}
+    .invitation strong{display:block;color:var(--teal2)}
+    .id{font-family:ui-monospace,monospace;direction:ltr;unicode-bidi:plaintext;display:block;margin-top:5px;word-break:break-all;font-size:14px}
+    .note{margin:17px 0 24px;border-right:4px solid #745ca4;border-radius:8px;background:var(--lilac);padding:12px 16px;font-size:13px}
+    .note p{margin:0;color:#493e66}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+    button,a.button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;border-radius:13px;font-family:inherit;font-weight:700;font-size:14px;padding:10px 18px;cursor:pointer;text-decoration:none}
+    button.primary{background:var(--teal);color:#fff;border:2px solid var(--teal)}
+    button.secondary,a.button{background:#fff;border:2px solid var(--line);color:var(--teal2)}
+    button:focus-visible,a:focus-visible{outline:3px solid #7f70bb;outline-offset:3px}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:25px}
+    .fact{background:#f8faf9;border-radius:13px;padding:12px;font-size:12px;line-height:1.8}
+    .fact strong{display:block;color:var(--ink);font-size:13px}
+    .status{min-height:1.4em;font-size:13px;color:var(--teal2)}
+    footer{font-size:12px;color:var(--muted);text-align:center;margin-top:22px}
+    @media(max-width:560px){.facts{grid-template-columns:1fr}.actions>*{flex:1 1 100%}.wrap{padding-top:18px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="brand" aria-label="MANOKID">
+      <span class="mark" aria-hidden="true">M</span>
+      <span class="brand-copy"><strong>MANOKID</strong><small>همراه خانواده، در کنار داروساز</small></span>
+    </header>
+    <main>
+      <span class="eyebrow">معرفی داروخانه • نسخه آزمایشی صفحه فرود</span>
+      <h1>ارتباط آگاهانه با داروخانه منتخب شما</h1>
+      <p>مانوکید آموزش‌های عمومی سلامت کودک را در کنار امکان انتخاب داروخانه برای پرسش‌های <strong>غیرفوری</strong> فراهم می‌کند. انتخاب داروخانه، به‌معنی پذیرش قطعی درخواست یا تضمین پاسخ نیست.</p>
+      <section class="invitation" aria-labelledby="invite-heading">
+        <strong id="invite-heading">وضعیت لینک معرفی</strong>
+        <span id="pharmacy-status" role="status">در حال بررسی شناسه عمومی لینک…</span>
+        <span class="id" id="pharmacy-id" hidden></span>
+      </section>
+      <section class="note" aria-label="ایمنی">
+        <p><strong>موارد فوری:</strong> تب ۳۸ درجه یا بیشتر در نوزاد زیر سه ماه، دشواری تنفس، تشنج و کاهش هوشیاری نیاز به ارزیابی فوری دارند. برای این موارد منتظر پاسخ داروخانه نمانید.</p>
+      </section>
+      <h2>چگونه ادامه دهم؟</h2>
+      <p>اگر اپلیکیشن مانوکید را روی Android نصب دارید، می‌توانید با دکمه زیر بازکردن برنامه را امتحان کنید. اگر نصب یا تأیید App Links کامل نباشد، ممکن است بازشدن برنامه امکان‌پذیر نباشد.</p>
+      <div class="actions">
+        <button class="primary" id="open-app" type="button" disabled>باز کردن در اپلیکیشن Android</button>
+        <button class="secondary" id="copy-link" type="button" disabled>کپی لینک معرفی</button>
+        <a class="button" href="/">صفحه اصلی مانوکید</a>
+      </div>
+      <p class="status" id="feedback" role="status" aria-live="polite"></p>
+      <div class="facts" aria-label="اطلاعات ضروری">
+        <div class="fact"><strong>آموزش رایگان عمومی</strong>نیازی به ارسال اطلاعات حساس کودک در این صفحه نیست.</div>
+        <div class="fact"><strong>حق انتخاب والد</strong>انتخاب نهایی داروخانه تنها پس از بررسی وضعیت آن در برنامه انجام می‌شود.</div>
+        <div class="fact"><strong>محرمانگی</strong>این صفحه هیچ داده پزشکی، نام کودک یا شناسه حسابی جمع‌آوری نمی‌کند.</div>
+      </div>
+    </main>
+    <footer>MANOKID • این صفحه فقط برای استقرار و آزمون آماده شده و تا تأیید دامنه و الزامات انتشار نباید به‌طور عمومی تبلیغ شود.</footer>
+  </div>
+  <noscript><p class="wrap">برای استفاده از دکمه‌های این صفحه، JavaScript مرورگر را فعال کنید. لینک معرفی به‌تنهایی اعتبار حرفه‌ای یا پذیرش داروخانه را تأیید نمی‌کند.</p></noscript>
+  <script>
+    (() => {
+      'use strict';
+      const elements = {
+        status: document.getElementById('pharmacy-status'),
+        id: document.getElementById('pharmacy-id'),
+        open: document.getElementById('open-app'),
+        copy: document.getElementById('copy-link'),
+        feedback: document.getElementById('feedback')
+      };
+      const query = new URLSearchParams(window.location.search);
+      const candidates = query.getAll('pharmacy');
+      const id = candidates.length === 1 && /^[A-Za-z0-9_-]{1,64}$/.test(candidates[0])
+        ? candidates[0] : null;
+      if (!id) {
+        elements.status.textContent = 'شناسه داروخانه موجود نیست یا معتبر نیست. از لینک اصلی داروخانه استفاده کنید.';
+        elements.feedback.textContent = 'هیچ داروخانه‌ای از طریق این صفحه تأیید یا انتخاب نشده است.';
+        return;
+      }
+      const url = 'https://manokid.ir/pharmacist?pharmacy=' + encodeURIComponent(id);
+      elements.id.textContent = 'ID: ' + id;
+      elements.id.hidden = false;
+      elements.status.textContent = 'شناسه عمومی معرفی دریافت شد؛ اعتبار و پذیرش داروخانه فقط داخل اپ و از سرور بررسی می‌شود.';
+      elements.open.disabled = false;
+      elements.copy.disabled = false;
+      elements.copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(url);
+          elements.feedback.textContent = 'لینک عمومی معرفی کپی شد.';
+        } catch {
+          elements.feedback.textContent = 'کپی خودکار ممکن نشد؛ لینک را از نوار آدرس مرورگر کپی کنید.';
+        }
+      });
+      elements.open.addEventListener('click', () => {
+        // An explicit user gesture; never auto-launch, track, or force install.
+        const intent = 'intent://manokid.ir/pharmacist?pharmacy=' + encodeURIComponent(id) +
+          '#Intent;scheme=https;package=com.aistudio.manokids.rnkvpx;end';
+        elements.feedback.textContent = 'در حال تلاش برای بازکردن برنامه نصب‌شده…';
+        window.location.assign(intent);
+      });
+    })();
+  </script>
+</body>
+</html>
