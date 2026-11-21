@@ -615,6 +615,9 @@ fun AskPharmacistScreen(
             onAcknowledgeReceived = onAcknowledgeStaffCaseReceived,
             onSubmitReview = onSubmitStaffCaseReview,
           onShowFeedback = onShowFeedback,
+          pharmacyDisplayNameFa = acceptingPharmacies.firstOrNull {
+            it.pharmacyId == staffAccess.pharmacyId
+          }?.displayNameFa,
           )
         }
       } else if (isFollowUpFirst) {
