@@ -113,6 +113,7 @@ import androidx.compose.ui.zIndex
 import com.example.R
 import com.example.data.ManoHapticIntensity
 import com.example.domain.model.AgeBand
+import com.example.domain.model.PreviousCare
 import com.example.domain.model.Article
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineSnapshot
@@ -303,6 +304,8 @@ fun HomeScreen(
   onNavigateSyrupScanner: () -> Unit = {},
   savedSyrupScansCount: Int = 0,
   onNavigateEcosystemPillar: (ManoEcosystemPillar) -> Unit = {},
+  previousCare: PreviousCare? = null,
+  onContinueCare: (PreviousCare) -> Unit = {},
   scrollToTopTrigger: Int = 0,
   hapticIntensity: ManoHapticIntensity = ManoHapticIntensity.MEDIUM,
 ) {
@@ -465,6 +468,10 @@ fun HomeScreen(
             }
           }
 
+          if (previousCare != null) {
+            ContinueCareRow(previousCare, onClick = { onContinueCare(previousCare) })
+          }
+
           OrbitalMenu(
             items = orbitalPrimaryItems,
             modifier = Modifier.fillMaxWidth(),
@@ -539,6 +546,32 @@ fun HomeScreen(
       }
 
       item { Spacer(modifier = Modifier.height(6.dp)) }
+    }
+  }
+}
+
+@Composable
+private fun ContinueCareRow(care: PreviousCare, onClick: () -> Unit) {
+  val date = remember(care.recordedAtMs) { measurementTimeFa(care.recordedAtMs) }
+  val summary = remember(care) {
+    when (care) {
+      is PreviousCare.Temperature -> "آخرین دما: ${measurementNumberFa(care.celsius)} درجه"
+      is PreviousCare.Growth -> care.measurement.summaryFa()
+    }
+  }
+  Surface(
+    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.48f),
+    shape = RoundedCornerShape(18.dp),
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+  ) {
+    Column(modifier = Modifier.clickable(role = Role.Button, onClick = onClick)
+      .testTag("home_continue_care").padding(horizontal = 16.dp, vertical = 12.dp),
+      verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Text("ادامهٔ مراقبت قبلی", style = MaterialTheme.typography.titleMedium)
+      Text(summary, style = MaterialTheme.typography.bodyMedium)
+      Text("زمان ثبت: $date", style = MaterialTheme.typography.bodySmall)
+      Text(if (care is PreviousCare.Temperature) "ثبت دمای جدید" else "دیدن سابقهٔ رشد",
+        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
     }
   }
 }

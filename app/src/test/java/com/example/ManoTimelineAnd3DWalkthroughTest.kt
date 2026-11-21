@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -276,11 +278,13 @@ class ManoTimelineAnd3DWalkthroughTest {
     composeTestRule.onNodeWithTag("timeline_feed_item_temp_tf1").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("timeline_feed_item_dose_df1").performScrollTo().assertIsDisplayed()
 
+    composeTestRule.onNodeWithTag("timeline_save_temp_btn").assertIsNotEnabled()
+    composeTestRule.onNodeWithTag("timeline_temp_input").performScrollTo().performTextInput("۳۷٫۶")
     composeTestRule.onNodeWithTag("caregiver_chip_پدر").performScrollTo().performClick()
     composeTestRule.onNodeWithTag("timeline_save_temp_btn").performScrollTo().performClick()
     composeTestRule.waitForIdle()
 
-    assertNotNull(savedTemp)
+    assertEquals(37.6f, savedTemp)
     assertEquals("پدر", savedCaregiver)
   }
 

@@ -1,5 +1,9 @@
 package com.example
 
+import com.example.data.ManoPreferencesRepository
+import com.example.domain.model.GrowthMeasurement
+import com.example.domain.util.TimelineTempPoint
+import kotlinx.coroutines.runBlocking
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
@@ -33,6 +37,40 @@ class ExampleRobolectricTest {
     kotlinx.coroutines.runBlocking {
       com.example.data.ManoPreferencesRepository(ApplicationProvider.getApplicationContext())
         .setGalacticOrbitSelection("", "")
+    }
+  }
+
+  @Test
+  @Config(sdk = [36], qualifiers = "fa-rIR-w411dp-h915dp-xhdpi")
+  fun continueCareUsesLatestActualMeasurementAndOpensItsAction() {
+    val prefs = ManoPreferencesRepository(ApplicationProvider.getApplicationContext())
+    val now = System.currentTimeMillis()
+    fun awaitTag(tag: String) {
+      composeTestRule.waitUntil(10_000L) {
+        composeTestRule.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
+      }
+    }
+    runBlocking { prefs.clearLocalChildHealthData() }
+    composeTestRule.onNodeWithTag("home_continue_care").assertDoesNotExist()
+    try {
+      runBlocking { prefs.addGrowthMeasurement(null, GrowthMeasurement(now - 120_000L, 12.5, null)) }
+      awaitTag("home_continue_care")
+      composeTestRule.onNodeWithTag("home_continue_care").assertIsDisplayed().performClick()
+      awaitTag("growth_history_row")
+      composeTestRule.onNodeWithTag("growth_history_row").assertIsDisplayed()
+      runBlocking { prefs.addLocalFeverLog(TimelineTempPoint("recent", 37.2f, now, "", "", "", "", false)) }
+      composeTestRule.onNodeWithTag("nav_home").performClick()
+      awaitTag("home_continue_care")
+      composeTestRule.onNodeWithTag("home_continue_care").assertIsDisplayed().performClick()
+      awaitTag("timeline_temp_input")
+      composeTestRule.onNodeWithTag("timeline_temp_input").assertIsDisplayed()
+      composeTestRule.onNodeWithTag("nav_home").performClick()
+      runBlocking { prefs.clearLocalChildHealthData() }
+      composeTestRule.waitUntil(10_000L) {
+        composeTestRule.onAllNodes(hasTestTag("home_continue_care")).fetchSemanticsNodes().isEmpty()
+      }
+    } finally {
+      runBlocking { prefs.clearLocalChildHealthData() }
     }
   }
 
@@ -187,7 +225,13 @@ class ExampleRobolectricTest {
   fun parentActionsAreVisibleOnEntryAndGrowthHistoryContainsTheActualReading() {
     composeTestRule.onNodeWithTag("nav_symptoms").performClick()
     composeTestRule.onNodeWithTag("symptom_choice_fever").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("companion_symptom_chip_0").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("symptom_toggle_companions").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("companion_symptom_chip_0").performScrollTo().performClick()
     composeTestRule.onNodeWithTag("nav_faq").performClick()
+    composeTestRule.onNodeWithTag("faq_toggle_filters").performClick()
+    composeTestRule.onNodeWithText("بستن فیلترها").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("faq_toggle_filters").performClick()
     composeTestRule.onNodeWithTag("faq_search_input").assertIsDisplayed()
     composeTestRule.onNodeWithTag("documented_qa_assistant_card").assertDoesNotExist()
     composeTestRule.onNodeWithTag("faq_toggle_assistant").performClick()
@@ -195,8 +239,8 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("nav_growth").performClick()
     composeTestRule.onNodeWithTag("growth_new_weight").assertIsDisplayed().performTextInput("۱۲٫۳")
     composeTestRule.onNodeWithTag("growth_save_measurement").performScrollTo().performClick()
-    composeTestRule.onNodeWithTag("growth_list").performScrollToNode(hasText("وزن: 12.3 کیلوگرم"))
-    composeTestRule.onNodeWithText("وزن: 12.3 کیلوگرم").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("growth_list").performScrollToNode(hasText("وزن: ۱۲٫۳ کیلوگرم"))
+    composeTestRule.onNodeWithText("وزن: ۱۲٫۳ کیلوگرم").assertIsDisplayed()
   }
 
   @Test

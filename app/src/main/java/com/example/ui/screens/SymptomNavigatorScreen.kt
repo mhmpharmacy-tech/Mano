@@ -130,6 +130,7 @@ fun SymptomNavigatorScreen(
         "کشیدن گوش یا گوش‌درد",
       )
     }
+  var showCompanions by rememberSaveable { mutableStateOf(false) }
   var selectedCompanionSymptoms by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
   androidx.compose.runtime.LaunchedEffect(wizard, selectedCompanionSymptoms) {
@@ -152,7 +153,7 @@ fun SymptomNavigatorScreen(
             Text("راهنمای علائم کودک", modifier = Modifier.weight(1f),
               style = MaterialTheme.typography.titleLarge)
             TextButton(
-              onClick = { selectedCompanionSymptoms = emptyList(); onReset() },
+              onClick = { selectedCompanionSymptoms = emptyList(); showCompanions = false; onReset() },
               modifier = Modifier.minimumInteractiveComponentSize().testTag("wizard_reset_button"),
             ) {
               Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -173,10 +174,10 @@ fun SymptomNavigatorScreen(
           // Step 0: Choose symptom
           0 -> {
             item {
-              SectionCard {
+              Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                   ManoFramedIllustration(R.drawable.mano_symptoms_orbit, "مانو با دماسنج", width = 48.dp, aspectRatio = 1f)
-                  Text("کدام موضوع یا علامت بیشتر نگرانتان کرده است؟", style = MaterialTheme.typography.titleMedium)
+                  Text("کدام علامت بیشتر نگرانتان کرده؟", style = MaterialTheme.typography.titleMedium)
                 }
                 FlowRow(
                   horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -194,15 +195,15 @@ fun SymptomNavigatorScreen(
                 SourceBadge(reviewStatus = currentFlow.review.status)
                 Text(currentFlow.subtitleFa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                HorizontalDivider(color = manoBorderColor())
-
-                Text(
-                  text = "علائم همراه (اختیاری — برای دقت بیشتر چک‌لیست هوشمند ویزیت متخصص کودکان):",
-                  style = MaterialTheme.typography.labelLarge,
-                  fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.primary,
-                )
-                FlowRow(
+                TextButton(onClick = { showCompanions = !showCompanions },
+                  modifier = Modifier.testTag("symptom_toggle_companions")) {
+                  Text(when {
+                    showCompanions -> "بستن فهرست علائم همراه"
+                    selectedCompanionSymptoms.isEmpty() -> "افزودن علامت همراه (اختیاری)"
+                    else -> "علائم همراه: ${selectedCompanionSymptoms.joinToString("، ")}"
+                  })
+                }
+                if (showCompanions) FlowRow(
                   horizontalArrangement = Arrangement.spacedBy(6.dp),
                   verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
@@ -227,7 +228,7 @@ fun SymptomNavigatorScreen(
           // Step 1: Age + optional temperature & duration
           1 -> {
             item {
-              SectionCard {
+              Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                   ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 56.dp)
                   Column {

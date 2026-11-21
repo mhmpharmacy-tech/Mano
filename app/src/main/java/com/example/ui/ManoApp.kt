@@ -174,6 +174,7 @@ import com.example.ui.theme.SkyCare
 import com.example.ui.navigation.AskPharmacistRoute
 import com.example.ui.navigation.DevicesRoute
 import com.example.ui.navigation.FaqRoute
+import com.example.domain.model.PreviousCare
 import com.example.ui.navigation.GrowthRoute
 import com.example.ui.navigation.HomeRoute
 import com.example.ui.navigation.InfoRoute
@@ -1073,7 +1074,25 @@ fun ManoApp(
           Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             NavHost(navController = navController, startDestination = HomeRoute) {
               composable<HomeRoute> {
+                val uid = currentUser?.uid
+                val history = key(uid) {
+                  remember(uid) { viewModel.growthHistory(uid) }.collectAsStateWithLifecycle(initialValue = emptyList()).value
+                }
+                val previousCare = remember(uid, localFeverLogs, activeCloudFeverLogs, history) {
+                  PreviousCare.latest(uid, localFeverLogs, activeCloudFeverLogs, history)
+                }
                 HomeScreen(
+                  previousCare = previousCare,
+                  onContinueCare = { care ->
+                    if (care is PreviousCare.Temperature) {
+                      openMedicinesTimelineTab = true
+                      navController.navigate(MedicinesRoute)
+                      navController.currentBackStackEntry?.savedStateHandle?.set("open_temperature_entry", true)
+                    } else {
+                      navController.navigate(GrowthRoute)
+                      navController.currentBackStackEntry?.savedStateHandle?.set("open_growth_history", true)
+                    }
+                  },
                   selectedAgeBand = selectedAgeBand,
                   bookmarkedSlugs = effectiveBookmarks,
                   articles = viewModel.allArticles,
@@ -1260,8 +1279,9 @@ fun ManoApp(
                 )
               }
 
-              composable<MedicinesRoute> {
+              composable<MedicinesRoute> { entry ->
                 MedicinesScreen(
+                  openTemperatureEntry = entry.savedStateHandle.get<Boolean>("open_temperature_entry") == true,
                   query = uiState.medicineSearchQuery,
                   medications = viewModel.filteredMedications(),
                   allMedicationsCatalog = viewModel.allMedications,
@@ -1339,12 +1359,13 @@ fun ManoApp(
                 )
               }
 
-              composable<GrowthRoute> {
+              composable<GrowthRoute> { entry ->
                 val uid = currentUser?.uid
                 androidx.compose.runtime.key(uid) {
                   val measurements by remember(uid) { viewModel.growthHistory(uid) }
                     .collectAsStateWithLifecycle(initialValue = emptyList())
                   GrowthScreen(
+                    openHistory = entry.savedStateHandle.get<Boolean>("open_growth_history") == true,
                     history = measurements,
                     onSaveMeasurement = { weight, height -> viewModel.saveGrowthMeasurement(uid, weight, height) },
                     selectedAgeBand = selectedAgeBand,
