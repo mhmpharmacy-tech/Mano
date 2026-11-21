@@ -200,7 +200,9 @@ class ManoPreferencesRepository(private val context: Context) {
 
   fun growthHistory(uid: String?): Flow<List<GrowthMeasurement>> =
     context.manoDataStore.data.map { prefs ->
-      prefs[Keys.growth(uid)]?.let { json.decodeFromString<List<GrowthMeasurement>>(it) }.orEmpty()
+      prefs[Keys.growth(uid)]?.let { raw ->
+        runCatching { json.decodeFromString<List<GrowthMeasurement>>(raw) }.getOrNull()
+      }.orEmpty()
     }
 
   suspend fun addGrowthMeasurement(uid: String?, measure: GrowthMeasurement) {
@@ -209,18 +211,24 @@ class ManoPreferencesRepository(private val context: Context) {
     require(measure.heightCm == null || measure.heightCm.isFinite() && measure.heightCm > 0)
     val key = Keys.growth(uid)
     context.manoDataStore.edit { prefs ->
-      val previous = prefs[key]?.let { json.decodeFromString<List<GrowthMeasurement>>(it) }.orEmpty()
+      val previous = prefs[key]?.let { raw ->
+        runCatching { json.decodeFromString<List<GrowthMeasurement>>(raw) }.getOrNull()
+      }.orEmpty()
       prefs[key] = json.encodeToString(listOf(measure) + previous)
     }
   }
 
   val offlineQuestions: Flow<List<ConsultationRequestDemo>> = context.manoDataStore.data.map { prefs ->
-    prefs[Keys.OFFLINE_QUESTIONS]?.let { json.decodeFromString<List<ConsultationRequestDemo>>(it) }.orEmpty()
+    prefs[Keys.OFFLINE_QUESTIONS]?.let { raw ->
+      runCatching { json.decodeFromString<List<ConsultationRequestDemo>>(raw) }.getOrNull()
+    }.orEmpty()
   }
 
   suspend fun saveOfflineQuestion(draft: ConsultationRequestDemo) {
     context.manoDataStore.edit { prefs ->
-      val previous = prefs[Keys.OFFLINE_QUESTIONS]?.let { json.decodeFromString<List<ConsultationRequestDemo>>(it) }.orEmpty()
+      val previous = prefs[Keys.OFFLINE_QUESTIONS]?.let { raw ->
+        runCatching { json.decodeFromString<List<ConsultationRequestDemo>>(raw) }.getOrNull()
+      }.orEmpty()
       prefs[Keys.OFFLINE_QUESTIONS] = json.encodeToString(listOf(draft) + previous.filter { it.id != draft.id })
     }
   }
