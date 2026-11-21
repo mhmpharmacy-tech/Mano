@@ -4,17 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>مانو کید • استودیو سه‌بعدی</title>
+  <link rel="stylesheet" href="./typography.css" />
+  <link rel="stylesheet" href="./frosted-banners.css" />
   <style>
     :root {
       --bg-top: #f3fbff;
       --bg-bottom: #f8fcfb;
       --halo-a: rgba(98, 206, 194, 0.10);
       --halo-b: rgba(114, 184, 232, 0.08);
-      --hud-bg: rgba(255, 255, 255, 0.82);
-      --hud-border: rgba(74, 168, 158, 0.20);
-      --hud-ink: #16404a;
-      --card-bg: #ffffff;
-      --card-muted: #436770;
+      --hud-ink: var(--ink-primary);
+      --card-muted: var(--ink-secondary);
       --accent: #229c90;
     }
 
@@ -23,11 +22,8 @@
       --bg-bottom: #0d242d;
       --halo-a: rgba(108, 224, 214, 0.09);
       --halo-b: rgba(102, 178, 238, 0.08);
-      --hud-bg: rgba(16, 39, 47, 0.82);
-      --hud-border: rgba(112, 224, 214, 0.22);
-      --hud-ink: #ebfaf7;
-      --card-bg: #10272f;
-      --card-muted: #b8d6d1;
+      --hud-ink: var(--ink-primary);
+      --card-muted: var(--ink-secondary);
       --accent: #6fe3d6;
     }
 
@@ -43,7 +39,6 @@
       overflow: hidden;
       background: linear-gradient(165deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
       touch-action: none;
-      font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
       transition: background 0.35s ease;
     }
 
@@ -70,24 +65,15 @@
       position: fixed;
       bottom: 14px;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate3d(-50%, 0, 0);
       z-index: 2;
       pointer-events: none;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 7px 14px;
-      border-radius: 999px;
-      background: var(--hud-bg);
-      border: 1px solid var(--hud-border);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      padding: 7px 15px;
       color: var(--hud-ink);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0;
       white-space: nowrap;
-      box-shadow: 0 4px 14px rgba(18, 56, 66, 0.06);
     }
 
     .hud-dot {
@@ -123,7 +109,7 @@
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      border: 3px solid var(--hud-border);
+      border: 3px solid var(--glass-border);
       border-top-color: var(--accent);
       animation: spin 1s linear infinite;
     }
@@ -147,45 +133,37 @@
       max-width: 340px;
       width: 100%;
       padding: 22px 20px;
-      border-radius: 22px;
-      background: var(--card-bg);
-      border: 1px solid var(--hud-border);
-      box-shadow: 0 12px 30px rgba(10, 48, 56, 0.12);
-      text-align: center;
       color: var(--hud-ink);
     }
 
-    .fallback-card h3 {
+    .fallback-card .type-card-title {
       margin: 0 0 8px;
-      font-size: 16px;
     }
 
-    .fallback-card p {
+    .fallback-card .type-body-supporting {
       margin: 0;
-      font-size: 13px;
-      line-height: 1.7;
       color: var(--card-muted);
     }
   </style>
 </head>
 <body>
-  <div class="stage-backdrop-glow" aria-hidden="true"></div>
+  <div class="stage-backdrop-glow frosted-ambient-halo" aria-hidden="true"></div>
   <canvas id="mano-stage" aria-label="صحنه تعاملی سه‌بعدی مانو کید"></canvas>
 
-  <div class="stage-hud-pill" aria-hidden="true">
+  <div class="stage-hud-pill frosted-banner frosted-banner--pill frosted-float--centered frosted-float--gentle type-caption-medium" aria-hidden="true">
     <span class="hud-dot"></span>
     <span>چرخش با لمس • بزرگ‌نمایی • ضربه روی مانو</span>
   </div>
 
   <div id="stage-loader" aria-label="در حال آماده‌سازی صحنه سه‌بعدی">
-    <div class="loader-orb"></div>
-    <span style="font-size: 13px; font-weight: 600;">در حال آماده‌سازی استودیو مانو کید...</span>
+    <div class="turquoise-progress-ring" role="progressbar" aria-label="در حال بارگذاری"></div>
+    <span class="type-compact-title">در حال آماده‌سازی استودیو مانو کید...</span>
   </div>
 
   <div id="webgl-fallback" role="alert">
-    <div class="fallback-card">
-      <h3>نمایشگر سه‌بعدی در این دستگاه فعال نیست</h3>
-      <p>پشتیبانی WebGL در مرورگر داخلی غیرفعال است؛ راهنماها و نمودارهای دوبعدی برنامه همچنان کاملاً در دسترس هستند.</p>
+    <div class="fallback-card frosted-banner frosted-banner--card frosted-float frosted-float--slow align-clinical-center">
+      <h3 class="type-card-title">نمایشگر سه‌بعدی در این دستگاه فعال نیست</h3>
+      <p class="type-body-supporting">پشتیبانی WebGL در مرورگر داخلی غیرفعال است؛ راهنماها و نمودارهای دوبعدی برنامه همچنان کاملاً در دسترس هستند.</p>
     </div>
   </div>
   <script type="module" src="./scene.js"></script>

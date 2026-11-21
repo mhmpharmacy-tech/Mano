@@ -513,17 +513,6 @@ fun InteractiveOralSyringeLabCard(
         }
       }
 
-      if (onOpen3DWithDose != null && !doseResult.isBlocked && doseResult.recommendedMl > 0f) {
-        Button(
-          onClick = { onOpen3DWithDose(doseResult.recommendedMl) },
-          modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("syringe_open_3d_dose_btn"),
-        ) {
-          Icon(Icons.Rounded.ViewInAr, contentDescription = null, modifier = Modifier.size(18.dp))
-          Spacer(Modifier.width(6.dp))
-          Text("نمایش و تمرین ${LiquidDoseVisualizerEngine.formatMl(doseResult.recommendedMl)} در صحنه سه‌بعدی")
-        }
-      }
-
       if (onLogRecommendedDose != null && !doseResult.isBlocked && doseResult.recommendedMl > 0f) {
         OutlinedButton(
           onClick = {

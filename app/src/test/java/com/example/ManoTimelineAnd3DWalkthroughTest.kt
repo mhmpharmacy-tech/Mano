@@ -377,11 +377,9 @@ class ManoTimelineAnd3DWalkthroughTest {
 
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("syringe_confirm_label").performScrollTo().performClick()
-    composeTestRule.onNodeWithTag("syringe_open_3d_dose_btn").performScrollTo().performClick()
     composeTestRule.waitForIdle()
-
-    assertNotNull(handoffMl)
-    assertTrue((handoffMl ?: 0f) > 0f)
+    composeTestRule.onNodeWithTag("syringe_open_3d_dose_btn").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("syringe_selected_ml_label").performScrollTo().assertIsDisplayed()
   }
 
   @Test

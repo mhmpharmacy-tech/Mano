@@ -65,7 +65,10 @@ import com.example.ui.components.InteractiveOralSyringeLabCard
 import com.example.ui.components.InteractiveThermometerLabCard
 import com.example.ui.components.LtrText
 import com.example.ui.components.ManoBannerFrame
+import com.example.ui.components.ManoCircularProgressSize
 import com.example.ui.components.ManoFramedIllustration
+import com.example.ui.components.ManoHealthRingTone
+import com.example.ui.components.ManoHealthStatusRingCard
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PharmacistCtaCard
 import com.example.ui.components.SectionCard
@@ -73,6 +76,7 @@ import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
 import com.example.ui.components.WhoGrowthChartCard
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.DarkSky
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
@@ -112,8 +116,8 @@ fun GrowthScreen(
     LazyColumn(
       state = rememberLazyListState(initialFirstVisibleItemIndex = if (openHistory) 1 else 0),
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("growth_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -171,10 +175,27 @@ fun GrowthScreen(
       }
 
       item {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Text("مهارت‌های رشدی کودک", style = MaterialTheme.typography.titleMedium)
-          Text("این فهرست برای پیگیری و گفت‌وگو با پزشک است. ارزیابی تخصصی رشد به معاینه نیاز دارد.",
-            style = MaterialTheme.typography.bodyMedium)
+        val visibleCheckedCount =
+          remember(milestones, checkedMilestoneIds) {
+            milestones.count { it.id in checkedMilestoneIds }
+          }
+        val milestoneProgress =
+          if (milestones.isNotEmpty()) {
+            (visibleCheckedCount.toFloat() / milestones.size.toFloat()).coerceIn(0f, 1f)
+          } else {
+            0f
+          }
+        Column(verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.cardItemGap)) {
+          ManoHealthStatusRingCard(
+            title = "مهارت‌های رشدی کودک",
+            subtitle = "این فهرست برای پیگیری و گفت‌وگو با پزشک است. ارزیابی تخصصی رشد به معاینه نیاز دارد.",
+            progress = milestoneProgress,
+            valueText = "$visibleCheckedCount/${milestones.size}",
+            subLabel = "مهارت",
+            ringSize = ManoCircularProgressSize.LARGE,
+            tone = if (milestoneProgress >= 1f && milestones.isNotEmpty()) ManoHealthRingTone.EMERALD else ManoHealthRingTone.TURQUOISE,
+            modifier = Modifier.testTag("growth_milestones_progress_ring"),
+          )
           TextButton(onClick = onOpenGrowthArticle) { Text("دربارهٔ رشد و تکامل") }
         }
       }
@@ -277,8 +298,8 @@ fun SkinScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         SectionCard {
@@ -389,8 +410,8 @@ fun DevicesScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("devices_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         SectionCard {
@@ -409,12 +430,6 @@ fun DevicesScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
             }
-          }
-          OutlinedButton(
-            onClick = onNavigate3DStudio,
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("devices_open_3d_btn"),
-          ) {
-            Text("نمای سه‌بعدی تعاملی میز مراقبت و سرنگ (3D)")
           }
         }
       }

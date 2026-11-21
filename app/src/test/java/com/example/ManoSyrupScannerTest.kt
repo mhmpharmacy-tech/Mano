@@ -363,20 +363,14 @@ class ManoSyrupScannerTest {
     composeTestRule.onNodeWithTag("scanner_mixup_alert").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("scanner_autofill_3d_btn").performScrollTo().assertIsNotEnabled()
 
-    // 4. Confirm label -> auto-fill button unlocks -> click launches 3D Studio with scanned bottle banner
+    // 4. Confirm label -> auto-fill button unlocks -> click launches 2D Fever Dose Calculator with scanned bottle
     composeTestRule.onNodeWithTag("scanner_parent_confirm_checkbox").performScrollTo().performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("scanner_autofill_3d_btn").performScrollTo().assertIsEnabled().performClick()
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("studio_3d_scanned_bottle_banner").assertIsDisplayed()
-    composeTestRule
-      .onNode(
-        hasText("قطره استامینوفن", substring = true) and
-          hasAnyAncestor(hasTestTag("studio_3d_scanned_bottle_banner"))
-      )
-      .assertIsDisplayed()
+    composeTestRule.onNodeWithTag("fever_dose_calculator_screen").assertIsDisplayed()
+    composeTestRule.onNodeWithText("قطره استامینوفن", substring = true).assertIsDisplayed()
   }
 
   @Test

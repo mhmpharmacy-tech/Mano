@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 
 class ManoCloudRepository(
   private val db: FirebaseFirestore,
@@ -100,39 +101,43 @@ class ManoCloudRepository(
     val uid = requireUserId()
     val docRef = db.collection("users").document(uid).collection("profiles").document(PRIMARY_PROFILE_DOC_ID)
     return try {
-      val existingSnapshot = docRef.get().await()
-      if (existingSnapshot.exists()) {
-        val updates =
-          mapOf(
-            "aliasFa" to profile.aliasFa.take(60),
-            "birthDateOrAgeFa" to profile.birthDateOrAgeFa.take(60),
-            "ageBandId" to profile.ageBand.id,
-            "weightKgText" to profile.weightKgText.take(20),
-            "weightDateFa" to profile.weightDateFa.take(40),
-            "allergiesFa" to profile.allergiesFa.take(300),
-            "currentMedsFa" to profile.currentMedsFa.take(300),
-            "consentGranted" to profile.consentGranted,
-            "updatedAt" to FieldValue.serverTimestamp(),
-          )
-        docRef.update(updates).await()
-      } else {
-        val payload =
-          mapOf(
-            "userId" to uid,
-            "aliasFa" to profile.aliasFa.take(60),
-            "birthDateOrAgeFa" to profile.birthDateOrAgeFa.take(60),
-            "ageBandId" to profile.ageBand.id,
-            "weightKgText" to profile.weightKgText.take(20),
-            "weightDateFa" to profile.weightDateFa.take(40),
-            "allergiesFa" to profile.allergiesFa.take(300),
-            "currentMedsFa" to profile.currentMedsFa.take(300),
-            "consentGranted" to profile.consentGranted,
-            "createdAt" to FieldValue.serverTimestamp(),
-            "updatedAt" to FieldValue.serverTimestamp(),
-          )
-        docRef.set(payload).await()
+      withTimeout(6_000L) {
+        val existingSnapshot = docRef.get().await()
+        if (existingSnapshot.exists()) {
+          val updates =
+            mapOf(
+              "aliasFa" to profile.aliasFa.take(60),
+              "birthDateOrAgeFa" to profile.birthDateOrAgeFa.take(60),
+              "ageBandId" to profile.ageBand.id,
+              "weightKgText" to profile.weightKgText.take(20),
+              "weightDateFa" to profile.weightDateFa.take(40),
+              "allergiesFa" to profile.allergiesFa.take(300),
+              "currentMedsFa" to profile.currentMedsFa.take(300),
+              "consentGranted" to profile.consentGranted,
+              "updatedAt" to FieldValue.serverTimestamp(),
+            )
+          docRef.update(updates).await()
+        } else {
+          val payload =
+            mapOf(
+              "userId" to uid,
+              "aliasFa" to profile.aliasFa.take(60),
+              "birthDateOrAgeFa" to profile.birthDateOrAgeFa.take(60),
+              "ageBandId" to profile.ageBand.id,
+              "weightKgText" to profile.weightKgText.take(20),
+              "weightDateFa" to profile.weightDateFa.take(40),
+              "allergiesFa" to profile.allergiesFa.take(300),
+              "currentMedsFa" to profile.currentMedsFa.take(300),
+              "consentGranted" to profile.consentGranted,
+              "createdAt" to FieldValue.serverTimestamp(),
+              "updatedAt" to FieldValue.serverTimestamp(),
+            )
+          docRef.set(payload).await()
+        }
       }
       Result.success(Unit)
+    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+      Result.failure(IllegalStateException("اتصال به سرور در زمان مناسب برقرار نشد (حالت آفلاین)."))
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
@@ -206,8 +211,12 @@ class ManoCloudRepository(
         "updatedAt" to FieldValue.serverTimestamp(),
       )
     return try {
-      docRef.set(payload).await()
+      withTimeout(6_000L) {
+        docRef.set(payload).await()
+      }
       Result.success(docRef.id)
+    } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+      Result.failure(IllegalStateException("اتصال به سرور در زمان مناسب برقرار نشد (حالت آفلاین)."))
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {

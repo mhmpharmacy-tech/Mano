@@ -33,7 +33,9 @@ import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoHealthRingTone
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -72,6 +74,7 @@ import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.DangerCrimson
 import com.example.ui.theme.DangerSurface
 import com.example.ui.theme.DarkCoral
@@ -117,8 +120,8 @@ fun FaqScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("faq_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -245,10 +248,10 @@ fun FaqScreen(
             modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("documented_qa_submit_btn"),
           ) {
             if (documentedQaState is DocumentedQaUiState.Loading) {
-              CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary,
+              ManoTurquoiseLoadingRing(
+                size = ManoCircularProgressSize.COMPACT,
+                tone = ManoHealthRingTone.ON_PRIMARY,
+                contentDescriptionFa = "در حال تولید پاسخ آموزشی",
               )
               Spacer(Modifier.width(8.dp))
               Text("در حال تولید پاسخ آموزشی...")

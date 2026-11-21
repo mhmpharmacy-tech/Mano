@@ -32,7 +32,6 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -82,6 +81,7 @@ import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
 import com.example.ui.theme.manoElevatedSurface
 import com.example.ui.theme.manoSemanticAccent
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.manoTintedSurface
 import com.example.ui.util.CachedVisitPdf
 import com.example.ui.viewmodel.SymptomWizardState
@@ -99,18 +99,20 @@ fun VisitDraftEntryBannerCard(
   modifier: Modifier = Modifier,
 ) {
   val primary = MaterialTheme.colorScheme.primary
+  val spacing = ManoTheme.spacing
   val plumAccent = manoSemanticAccent(PlumCare, DarkPlum)
   val sageAccent = manoSemanticAccent(SageCare, DarkSage)
   Surface(
     color = manoTintedSurface(Color(0xFFF3FBF9), DarkPrimary, lightAlpha = 1f, darkAlpha = 0.14f),
-    shape = RoundedCornerShape(18.dp),
-    border = BorderStroke(1.dp, primary.copy(alpha = 0.28f)),
-    modifier = modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(20.dp),
+    border = BorderStroke(1.dp, primary.copy(alpha = 0.24f)),
+    shadowElevation = 2.dp,
+    modifier = modifier.fillMaxWidth().manoFloatingGlass(intensity = 0.70f, enableSheen = true),
   ) {
-    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = Modifier.padding(spacing.cardPadding), verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap)) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing.inlineGap),
       ) {
         ManoIconMedallion(
           icon = Icons.Rounded.AutoAwesome,
@@ -120,11 +122,10 @@ fun VisitDraftEntryBannerCard(
           iconSize = 22.dp,
           cornerRadius = 13.dp,
         )
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.textPairGap)) {
           Text(
             text = "پیش‌نویس هوشمند ویزیت پزشک",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
+            style = ManoTheme.typeScale.cardTitle.copy(fontWeight = FontWeight.Bold),
             color = primary,
           )
           Text(
@@ -136,8 +137,8 @@ fun VisitDraftEntryBannerCard(
       }
 
       FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
+        verticalArrangement = Arrangement.spacedBy(spacing.chipGap),
       ) {
         VisitContextPill("${snapshot.tempPoints.size} ثبت دما")
         VisitContextPill("${snapshot.dosePoints.size} نوبت دارو")
@@ -363,7 +364,12 @@ fun VisitDraftStudioContent(
         ) {
           Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-              CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp, color = plumAccent)
+              ManoTurquoiseLoadingRing(
+                size = ManoCircularProgressSize.COMPACT,
+                diameter = 22.dp,
+                strokeWidth = 2.4.dp,
+                contentDescriptionFa = "در حال نگارش پیش‌نویس هوشمند ویزیت",
+              )
               Text("در حال نگارش پیش‌نویس هوشمند ویزیت...", style = MaterialTheme.typography.labelLarge, color = plumAccent)
             }
             if (draftUiState.partialTextFa.isNotBlank()) {
@@ -556,7 +562,12 @@ fun VisitDraftStudioContent(
                       horizontalArrangement = Arrangement.spacedBy(8.dp),
                       modifier = Modifier.testTag("visit_draft_pdf_loading"),
                     ) {
-                      CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = plumAccent)
+                      ManoTurquoiseLoadingRing(
+                        size = ManoCircularProgressSize.COMPACT,
+                        diameter = 18.dp,
+                        strokeWidth = 2.dp,
+                        contentDescriptionFa = "در حال ساخت فایل PDF",
+                      )
                       Text("در حال ساخت فایل PDF و ذخیره در حافظه موقت...", style = MaterialTheme.typography.labelSmall, color = plumAccent)
                     }
                   }

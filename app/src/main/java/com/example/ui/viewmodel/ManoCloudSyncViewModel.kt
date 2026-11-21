@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.FeverLogCloud
 import com.example.data.ManoCloudRepository
+import com.example.data.ManoPreferencesRepository
 import com.example.data.MedicationDoseLogCloud
+import com.example.data.PendingOfflineConsultation
+import com.example.data.ScopedPendingChildProfile
 import com.example.data.UrgentTriageBlockedException
 import com.example.domain.model.AgeBand
 import com.example.domain.model.SymptomReferral
@@ -14,6 +17,7 @@ import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.ConsultationRequestDemo
 import com.example.domain.model.ConsultationStatus
 import com.example.domain.model.DoctorVisitDraft
+import com.example.domain.model.FollowUpNote
 import com.example.domain.model.PublicPharmacyOption
 import com.example.domain.util.ManoDomainLinks
 import com.example.domain.util.PharmacyInvitationPolicy
@@ -43,7 +47,54 @@ sealed interface CloudDataState<out T> {
 class ManoCloudSyncViewModel(
   private val repository: ManoCloudRepository,
   private val currentUserId: String,
+  private val prefs: ManoPreferencesRepository? = null,
 ) : ViewModel() {
+
+  private val _inMemoryScopedProfile = MutableStateFlow<ScopedPendingChildProfile?>(null)
+
+  val scopedLocalProfileRecord: StateFlow<ScopedPendingChildProfile?> =
+    prefs?.scopedChildProfile(currentUserId)
+      ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+      ?: _inMemoryScopedProfile.asStateFlow()
+
+  private val _inMemoryPendingConsultations = MutableStateFlow<List<PendingOfflineConsultation>>(emptyList())
+
+  val scopedPendingConsultationsRaw: StateFlow<List<PendingOfflineConsultation>> =
+    prefs?.scopedPendingConsultations(currentUserId)
+      ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+      ?: _inMemoryPendingConsultations.asStateFlow()
+
+  val scopedPendingConsultations: StateFlow<List<ConsultationRequestDemo>> =
+    scopedPendingConsultationsRaw
+      .map { list ->
+        list.map { item ->
+          ConsultationRequestDemo(
+            id = item.id,
+            category = ConsultationCategory.entries.firstOrNull { it.name == item.categoryName } ?: ConsultationCategory.SYMPTOMS,
+            childAgeBand = AgeBand.entries.firstOrNull { it.id == item.ageBandId } ?: AgeBand.TODDLER_1_3Y,
+            questionSummaryFa = item.questionSummaryFa,
+            hasUrgentFlag = false,
+            status = ConsultationStatus.PENDING,
+            createdAtLabelFa = "${item.createdAtLabelFa} • در صف ارسال آفلاین",
+            followUp =
+              FollowUpNote(
+                scheduleFa = "ذخیره‌شده روی گوشی (آفلاین)",
+                guidanceFa = "این پرسش به‌طور ایمن روی گوشی ذخیره شده است و به محض اتصال پایدار به اینترنت برای داروساز ارسال می‌شود.",
+              ),
+          )
+        }
+      }
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+  private val _inMemoryPendingDoses = MutableStateFlow<List<TimelineDosePoint>>(emptyList())
+
+  val scopedPendingDoseLogs: StateFlow<List<TimelineDosePoint>> =
+    prefs?.scopedPendingDoseLogs(currentUserId)
+      ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+      ?: _inMemoryPendingDoses.asStateFlow()
+
+  private val _isSyncingOfflineQueue = MutableStateFlow(false)
+  val isSyncingOfflineQueue: StateFlow<Boolean> = _isSyncingOfflineQueue.asStateFlow()
 
   val childProfileState: StateFlow<CloudDataState<ChildProfileDemo?>> =
     repository
@@ -144,6 +195,7 @@ class ManoCloudSyncViewModel(
   init {
     refreshServerConsultations(silent = true)
     refreshStaffStatusAndInbox(silent = true)
+    syncPendingOfflineQueue(silent = true)
   }
 
   fun clearCloudToast() {
@@ -368,10 +420,26 @@ class ManoCloudSyncViewModel(
 
   fun saveChildProfile(profile: ChildProfileDemo) {
     viewModelScope.launch {
+      // 1. Offline-first immediate save scoped strictly to currentUserId so the user is NEVER blocked by connectivity.
+      val localRecord =
+        ScopedPendingChildProfile(
+          profile = profile,
+          pendingCloudSync = true,
+          savedAtEpochMs = System.currentTimeMillis(),
+        )
+      _inMemoryScopedProfile.value = localRecord
+      prefs?.saveScopedChildProfile(currentUserId, profile, pendingCloudSync = true)
+
+      // 2. Attempt cloud sync right away; keep local copy if offline/unavailable.
       val result = repository.saveChildProfile(profile)
-      _cloudToastFa.value =
-        if (result.isSuccess) "پروفایل کودک با موفقیت در فضای ابری ذخیره و همگام‌سازی شد."
-        else "خطا در ذخیره پروفایل ابری: ${result.exceptionOrNull()?.localizedMessage ?: "لطفاً دوباره تلاش کنید."}"
+      if (result.isSuccess) {
+        _inMemoryScopedProfile.value = localRecord.copy(pendingCloudSync = false)
+        prefs?.saveScopedChildProfile(currentUserId, profile, pendingCloudSync = false)
+        _cloudToastFa.value = "پروفایل کودک با موفقیت ذخیره و با فضای ابری همگام‌سازی شد."
+      } else {
+        _cloudToastFa.value =
+          "پروفایل کودک روی گوشی ذخیره شد و پس از برقراری اینترنت، به‌صورت خودکار با ابر همگام می‌شود."
+      }
     }
   }
 
@@ -379,8 +447,16 @@ class ManoCloudSyncViewModel(
     viewModelScope.launch {
       val result = repository.deleteChildProfile()
       if (result.isSuccess) {
+        _inMemoryScopedProfile.value = null
+        prefs?.clearScopedChildProfile(currentUserId)
         onDeleted()
         _cloudToastFa.value = "پروفایل کودک از فضای ابری و دستگاه حذف شد."
+      } else if (_inMemoryScopedProfile.value?.pendingCloudSync == true || scopedLocalProfileRecord.value?.pendingCloudSync == true) {
+        // Profile existed only locally while offline: allow clean local deletion.
+        _inMemoryScopedProfile.value = null
+        prefs?.clearScopedChildProfile(currentUserId)
+        onDeleted()
+        _cloudToastFa.value = "پروفایل آفلاین از حافظه این حساب حذف شد."
       } else {
         _cloudToastFa.value = "خطا در حذف پروفایل ابری؛ حذف محلی نیز انجام نشد."
       }
@@ -397,6 +473,7 @@ class ManoCloudSyncViewModel(
     onDone: () -> Unit = {},
   ) {
     viewModelScope.launch {
+      val now = System.currentTimeMillis()
       val result =
         repository.addDoseLog(
           medicationSlug = medicationSlug,
@@ -405,12 +482,125 @@ class ManoCloudSyncViewModel(
           volumeMlText = volumeMlText,
           givenAtLabelFa = givenAtLabelFa,
           noteFa = noteFa,
+          administeredAtMs = now,
         )
       if (result.isSuccess) {
         _cloudToastFa.value = "نوبت مصرف دارو در دفترچه ابری ثبت شد."
         onDone()
       } else {
-        _cloudToastFa.value = "خطا در ثبت نوبت مصرف دارو: ${result.exceptionOrNull()?.localizedMessage ?: "نامشخص"}"
+        val offlineDose =
+          TimelineDosePoint(
+            id = "pending_dose_${currentUserId.take(6)}_$now",
+            medicationSlug = medicationSlug,
+            medicationNameFa = medicationNameFa,
+            dosageFormFa = dosageFormFa,
+            volumeMlText = volumeMlText,
+            timestampMs = com.example.domain.util.FeverDoseTimelineEngine.resolveDoseTimeMs(givenAtLabelFa, now) ?: now,
+            givenAtLabelFa = givenAtLabelFa.trim().ifEmpty { com.example.domain.util.FeverDoseTimelineEngine.formatHourMinute(now) },
+            noteFa = noteFa.trim(),
+            isSyncedCloud = false,
+          )
+        _inMemoryPendingDoses.value = listOf(offlineDose) + _inMemoryPendingDoses.value
+        prefs?.addScopedPendingDoseLog(currentUserId, offlineDose)
+        _cloudToastFa.value = "نوبت مصرف دارو روی گوشی ثبت شد و پس از اتصال به اینترنت با ابر همگام می‌شود."
+        onDone()
+      }
+    }
+  }
+
+  fun syncPendingOfflineQueue(silent: Boolean = false) {
+    if (_isSyncingOfflineQueue.value) return
+    viewModelScope.launch {
+      _isSyncingOfflineQueue.value = true
+      var syncedCount = 0
+      var remainingCount = 0
+      try {
+        val pendingProfile = scopedLocalProfileRecord.value ?: _inMemoryScopedProfile.value
+        if (pendingProfile != null && pendingProfile.pendingCloudSync) {
+          val res = repository.saveChildProfile(pendingProfile.profile)
+          if (res.isSuccess) {
+            syncedCount++
+            _inMemoryScopedProfile.value = pendingProfile.copy(pendingCloudSync = false)
+            prefs?.saveScopedChildProfile(currentUserId, pendingProfile.profile, pendingCloudSync = false)
+          } else {
+            remainingCount++
+          }
+        }
+
+        val pendingDoses = scopedPendingDoseLogs.value.ifEmpty { _inMemoryPendingDoses.value }
+        pendingDoses.forEach { dose ->
+          val res =
+            repository.addDoseLog(
+              medicationSlug = dose.medicationSlug.ifBlank { "custom-medication" },
+              medicationNameFa = dose.medicationNameFa.ifBlank { "دارو" },
+              dosageFormFa = dose.dosageFormFa.ifBlank { "شربت" },
+              volumeMlText = dose.volumeMlText.ifBlank { "-" },
+              givenAtLabelFa = dose.givenAtLabelFa.ifBlank { "هم‌اکنون" },
+              noteFa = dose.noteFa,
+              administeredAtMs = dose.timestampMs,
+            )
+          if (res.isSuccess) {
+            syncedCount++
+            _inMemoryPendingDoses.value = _inMemoryPendingDoses.value.filterNot { it.id == dose.id }
+            prefs?.removeScopedPendingDoseLog(currentUserId, dose.id)
+          } else {
+            remainingCount++
+          }
+        }
+
+        val pendingConsults = scopedPendingConsultationsRaw.value.ifEmpty { _inMemoryPendingConsultations.value }
+        if (pendingConsults.isNotEmpty()) {
+          if (_acceptingPharmacies.value.isEmpty()) {
+            repository.fetchAcceptingPharmaciesFromServer().getOrNull()?.let { list ->
+              _acceptingPharmacies.value = list
+            }
+          }
+          val targetPharmacyId =
+            _selectedPharmacyId.value ?: _acceptingPharmacies.value.firstOrNull { it.acceptingCases }?.pharmacyId
+          if (targetPharmacyId != null) {
+            pendingConsults.forEach { item ->
+              val cat = ConsultationCategory.entries.firstOrNull { it.name == item.categoryName } ?: ConsultationCategory.SYMPTOMS
+              val band = AgeBand.entries.firstOrNull { it.id == item.ageBandId } ?: AgeBand.TODDLER_1_3Y
+              val res =
+                repository.submitTrustedConsultationViaServer(
+                  preferredPharmacyId = targetPharmacyId,
+                  category = cat,
+                  ageBand = band,
+                  questionSummaryFa = item.questionSummaryFa,
+                  hasUrgentFlag = false,
+                  consentAccepted = true,
+                  referral = null,
+                )
+              if (res.isSuccess) {
+                syncedCount++
+                val created = res.getOrThrow()
+                _serverConsultations.value = (listOf(created) + _serverConsultations.value).distinctBy { it.id }
+                _inMemoryPendingConsultations.value = _inMemoryPendingConsultations.value.filterNot { it.id == item.id }
+                prefs?.removeScopedPendingConsultation(currentUserId, item.id)
+              } else {
+                remainingCount++
+              }
+            }
+          } else {
+            remainingCount += pendingConsults.size
+          }
+        }
+
+        if (!silent) {
+          _cloudToastFa.value =
+            when {
+              syncedCount > 0 && remainingCount == 0 ->
+                "همگام‌سازی کامل شد ($syncedCount مورد با ابر همگام گردید)."
+              syncedCount > 0 && remainingCount > 0 ->
+                "$syncedCount مورد همگام شد؛ $remainingCount مورد همچنان در انتظار اتصال پایدار است."
+              remainingCount > 0 ->
+                "اتصال به سرور برقرار نیست؛ اطلاعات شما همچنان ایمن روی گوشی نگهداری می‌شوند."
+              else ->
+                "همه اطلاعات شما با ابر همگام است."
+            }
+        }
+      } finally {
+        _isSyncingOfflineQueue.value = false
       }
     }
   }
@@ -469,6 +659,13 @@ class ManoCloudSyncViewModel(
     onSuccess: () -> Unit = {},
   ) {
     if (_isSubmittingConsultation.value) return
+    if (hasUrgentFlag) {
+      val urgentMsg =
+        "در صورت وجود علائم هشدار فوری، مشاوره آنلاین جایگزین معاینه فوری نیست؛ لطفاً بلافاصله با اورژانس ۱۱۵ تماس بگیرید."
+      _serverConsultationErrorFa.value = urgentMsg
+      _cloudToastFa.value = urgentMsg
+      return
+    }
     _isSubmittingConsultation.value = true
     _serverConsultationErrorFa.value = null
     viewModelScope.launch {
@@ -491,14 +688,30 @@ class ManoCloudSyncViewModel(
           onSuccess()
         } else {
           val err = result.exceptionOrNull()
-          val msg =
-            if (err is UrgentTriageBlockedException) {
-              "${err.titleFa}: ${err.summaryFa}"
-            } else {
-              err?.localizedMessage ?: "خطا در ثبت امن درخواست مشاوره."
-            }
-          _serverConsultationErrorFa.value = msg
-          _cloudToastFa.value = msg
+          if (err is UrgentTriageBlockedException) {
+            val msg = "${err.titleFa}: ${err.summaryFa}"
+            _serverConsultationErrorFa.value = msg
+            _cloudToastFa.value = msg
+          } else {
+            // Offline or unreachable server: queue non-urgent consultation locally scoped to currentUserId!
+            val now = System.currentTimeMillis()
+            val pendingItem =
+              PendingOfflineConsultation(
+                id = "OFFLINE-CASE-${java.util.UUID.randomUUID()}",
+                categoryName = category.name,
+                ageBandId = ageBand.id,
+                questionSummaryFa = questionSummaryFa.take(600),
+                createdAtLabelFa = com.example.domain.util.FeverDoseTimelineEngine.formatHourMinute(now),
+                savedAtEpochMs = now,
+                pendingCloudSync = true,
+              )
+            _inMemoryPendingConsultations.value = listOf(pendingItem) + _inMemoryPendingConsultations.value
+            prefs?.addScopedPendingConsultation(currentUserId, pendingItem)
+            _serverConsultationErrorFa.value = null
+            _cloudToastFa.value =
+              "اتصال به سرور برقرار نبود؛ پرسش شما ایمن روی گوشی ذخیره شد و پس از اتصال به اینترنت با ابر همگام می‌شود."
+            onSuccess()
+          }
         }
       } finally {
         _isSubmittingConsultation.value = false

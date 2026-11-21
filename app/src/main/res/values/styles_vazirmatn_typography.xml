@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Base Clinical-Minimal Vazirmatn TextAppearance -->
+    <style name="TextAppearance.Mano.Vazirmatn" parent="android:TextAppearance.Material">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- Headings (تیترها): ExtraBold 800 -> Bold 700 -> SemiBold 600 -->
+    <style name="TextAppearance.Mano.Vazirmatn.DisplayHero">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_extrabold</item>
+        <item name="android:textSize">34sp</item>
+        <item name="android:lineSpacingMultiplier">1.35</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.Heading1">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_bold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:lineSpacingMultiplier">1.42</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.Heading2">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_bold</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:lineSpacingMultiplier">1.45</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.SectionTitle">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_bold</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:lineSpacingMultiplier">1.50</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.CardTitle">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_semibold</item>
+        <item name="android:textSize">15.5sp</item>
+        <item name="android:lineSpacingMultiplier">1.55</item>
+    </style>
+
+    <!-- Body (متون بدنه): Regular 400 -> Medium 500 -->
+    <style name="TextAppearance.Mano.Vazirmatn.BodyLarge">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn</item>
+        <item name="android:textSize">15.5sp</item>
+        <item name="android:lineSpacingMultiplier">1.74</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.BodyStandard">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.75</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.BodyEmphasis">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_medium</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.71</item>
+    </style>
+
+    <!-- Captions (توضیحات، متادیتا و پاورقی): Regular 400 -> Medium 500 -> SemiBold 600 -->
+    <style name="TextAppearance.Mano.Vazirmatn.Caption">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn</item>
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:lineSpacingMultiplier">1.68</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.CaptionMedium">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_medium</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:lineSpacingMultiplier">1.50</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.CaptionOverline">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn_semibold</item>
+        <item name="android:textSize">11.5sp</item>
+        <item name="android:lineSpacingMultiplier">1.48</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
+    <style name="TextAppearance.Mano.Vazirmatn.CaptionMicro">
+        <item name="android:fontFamily" tools:targetApi="o">@font/vazirmatn</item>
+        <item name="android:textSize">11.5sp</item>
+        <item name="android:lineSpacingMultiplier">1.56</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+</resources>

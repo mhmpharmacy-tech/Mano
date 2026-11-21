@@ -82,6 +82,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.R
 import com.example.data.ManoHapticIntensity
 import com.example.data.ManoWebGlQuality
 import com.example.domain.model.AgeBand
@@ -89,6 +90,7 @@ import com.example.domain.model.ChildProfileDemo
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.LiquidDoseVisualizerEngine
 import com.example.domain.util.LiquidFormulationId
+import com.example.ui.components.manoFloatingGlass
 import com.example.ui.util.ManoHaptics
 import com.example.ui.theme.CautionAmber
 import com.example.ui.theme.CautionSurface
@@ -275,6 +277,7 @@ fun Pediatric3DStudioScreen(
     )
   }
   var pageLoaded by remember { mutableStateOf(false) }
+  var eyeTrackingEnabled by remember { mutableStateOf(true) }
 
   val isTargetMatched =
     syncedTargetMl != null && abs(syringeMl - syncedTargetMl) <= 0.25f
@@ -363,10 +366,16 @@ fun Pediatric3DStudioScreen(
     }
   }
 
+  LaunchedEffect(pageLoaded, eyeTrackingEnabled) {
+    if (pageLoaded) {
+      runJs("window.Mano3D && window.Mano3D.setEyeTrackingEnabled($eyeTrackingEnabled);")
+    }
+  }
+
   val appContext = LocalContext.current
 
-  DisposableEffect(pageLoaded, activeScene, lifecycleOwner) {
-    if (!pageLoaded || activeScene != "mano") {
+  DisposableEffect(pageLoaded, activeScene, eyeTrackingEnabled, lifecycleOwner) {
+    if (!pageLoaded || activeScene != "mano" || !eyeTrackingEnabled) {
       onDispose { }
     } else {
       val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -540,6 +549,22 @@ fun Pediatric3DStudioScreen(
                 val uri: Uri = request?.url ?: return null
                 if (uri.host != ASSET_VIRTUAL_HOST) return null
                 val rawPath = uri.path ?: return null
+                if (rawPath.startsWith("/res/font/")) {
+                  val fontResId =
+                    when (rawPath) {
+                      "/res/font/vazirmatn.ttf" -> R.font.vazirmatn
+                      "/res/font/vazirmatn_medium.ttf" -> R.font.vazirmatn_medium
+                      "/res/font/vazirmatn_semibold.ttf" -> R.font.vazirmatn_semibold
+                      "/res/font/vazirmatn_bold.ttf" -> R.font.vazirmatn_bold
+                      "/res/font/vazirmatn_extrabold.ttf" -> R.font.vazirmatn_extrabold
+                      else -> return null
+                    }
+                  return runCatching {
+                    val stream = ctx.resources.openRawResource(fontResId)
+                    val headers = mapOf("Access-Control-Allow-Origin" to "*")
+                    WebResourceResponse("font/ttf", null, 200, "OK", headers, stream)
+                  }.getOrNull()
+                }
                 if (!rawPath.startsWith("/assets/")) return null
                 val assetPath = rawPath.removePrefix("/assets/")
                 return runCatching {
@@ -584,6 +609,7 @@ fun Pediatric3DStudioScreen(
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, borderColor),
         shadowElevation = 6.dp,
+        modifier = Modifier.manoFloatingGlass(intensity = 0.55f, enableSheen = true),
       ) {
         Row(
           modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
@@ -617,7 +643,10 @@ fun Pediatric3DStudioScreen(
               1.dp,
               if (isTargetMatched) successAccent.copy(alpha = 0.4f) else cautionAccent.copy(alpha = 0.4f),
             ),
-          modifier = Modifier.testTag("studio_3d_target_sync_banner"),
+          modifier =
+            Modifier
+              .manoFloatingGlass(intensity = 0.45f, enableSheen = true)
+              .testTag("studio_3d_target_sync_banner"),
         ) {
           Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -652,7 +681,10 @@ fun Pediatric3DStudioScreen(
           color = manoTintedSurface(SuccessSurface, DarkSage, lightAlpha = 0.94f, darkAlpha = 0.24f),
           shape = RoundedCornerShape(14.dp),
           border = BorderStroke(1.dp, successAccent.copy(alpha = 0.45f)),
-          modifier = Modifier.testTag("studio_3d_scanned_bottle_banner"),
+          modifier =
+            Modifier
+              .manoFloatingGlass(intensity = 0.45f, enableSheen = true)
+              .testTag("studio_3d_scanned_bottle_banner"),
         ) {
           val concText = matchedFormulation?.concentrationLabelFa?.let { " • $it" }.orEmpty()
           Text(
@@ -1010,10 +1042,21 @@ fun Pediatric3DStudioScreen(
                 Row(
                   modifier = Modifier.fillMaxWidth(),
                   verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.SpaceBetween,
+                  horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                  FilterChip(
+                    selected = eyeTrackingEnabled,
+                    onClick = { eyeTrackingEnabled = !eyeTrackingEnabled },
+                    label = {
+                      Text(
+                        text = if (eyeTrackingEnabled) "تعقیب نگاه فعال" else "تعقیب نگاه خاموش",
+                        style = MaterialTheme.typography.labelSmall,
+                      )
+                    },
+                    modifier = Modifier.minimumInteractiveComponentSize().testTag("studio_3d_eye_tracking_chip"),
+                  )
                   Text(
-                    text = "روی مانو یا کاراکترهای رنگی مدار ضربه بزنید تا با متریال PBR برجسته شوند.",
+                    text = "با لمس یا حرکت گوشی، نگاه مانو شما را دنبال می‌کند.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
@@ -1040,7 +1083,7 @@ private fun partDescriptionFa(partId: String): String {
     "scale_lcd" -> "نمایشگر ترازو: پیش از گذاشتن کودک عدد را روی 0.00 kg صفر (Tare) کنید"
     "blanket" -> "زیرانداز سبک و نرم: قبل از صفر کردن ترازو روی کفه قرار دهید"
     "mannequin" -> "مانکن سه‌بعدی کودک: با لباس سبک و در مرکز حلقه ترازو قرار می‌گیرد"
-    "mano" -> "مانو اصلی (پرسلن مات و شال نعنایی): لمس شما لبخند و واکنش آرام ایجاد می‌کند"
+    "mano" -> "مانو کید (بدنه شیشه‌ای-سرامیکی معلق با حلقه مداری فیروزه‌ای): لمس یا حرکت گوشی نگاه و لبخند او را همراه می‌کند"
     "mano_drug" -> "Mano Drug (سبز یشمی): پایش ایمنی دارو و دوز دقیق mL"
     "mano_growth" -> "Mano Growth (آبی): پایش رشد، قد و وزن بر اساس منحنی WHO"
     "mano_skin" -> "Mano Skin (مرجانی): مراقبت ملایم پوست و پیشگیری از سوختگی پوشک"

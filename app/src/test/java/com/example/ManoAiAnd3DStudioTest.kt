@@ -174,8 +174,7 @@ class ManoAiAnd3DStudioTest {
     composeTestRule.onNodeWithTag("share_active_card_btn").performScrollTo().assertIsDisplayed()
     composeTestRule.onNodeWithTag("edit_active_card_input").performScrollTo().performTextReplacement("رنگ سبز ملایم")
     composeTestRule.onNodeWithTag("edit_active_card_btn").performScrollTo().assertIsDisplayed()
-    composeTestRule.onNodeWithTag("studio_open_3d_btn").performScrollTo().performClick()
-    assertTrue(navigated3D)
+    composeTestRule.onNodeWithTag("studio_open_3d_btn").assertDoesNotExist()
   }
 
   @Test
@@ -216,10 +215,11 @@ class ManoAiAnd3DStudioTest {
     }
 
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_3d"))
-    composeTestRule.onNodeWithTag("home_tool_3d").performClick()
+    composeTestRule.onNodeWithTag("home_tool_3d").assertDoesNotExist()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_fever_dose_quick_card"))
+    composeTestRule.onNodeWithTag("home_fever_dose_quick_card").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("fever_dose_calculator_screen").assertIsDisplayed()
     composeTestRule.onNodeWithTag("topbar_back").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_list").assertIsDisplayed()
@@ -437,12 +437,13 @@ class ManoAiAnd3DStudioTest {
       }
 
       composeTestRule.waitForIdle()
-      composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_3d"))
-      composeTestRule.onNodeWithTag("home_tool_3d").performClick()
+      composeTestRule.onNodeWithTag("home_tool_3d").assertDoesNotExist()
+      composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_fever_dose_quick_card"))
+      composeTestRule.onNodeWithTag("home_fever_dose_quick_card").performClick()
       composeTestRule.waitForIdle()
 
-      // Confirm we entered Pediatric 3D Studio
-      composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
+      // Confirm we entered the 2D Fever Dose Calculator
+      composeTestRule.onNodeWithTag("fever_dose_calculator_screen").assertIsDisplayed()
 
       // Tap bottom-bar Home tab directly -> returns to Home without needing Back button
       composeTestRule.onNodeWithTag("nav_home").performClick()

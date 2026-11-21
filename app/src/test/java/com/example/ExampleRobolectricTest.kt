@@ -400,11 +400,12 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("home_tool_comparison").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_pharmacy"))
     composeTestRule.onNodeWithTag("home_tool_pharmacy").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_tool_3d").assertDoesNotExist()
 
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_3d"))
-    composeTestRule.onNodeWithTag("home_tool_3d").performClick()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_fever_dose_quick_card"))
+    composeTestRule.onNodeWithTag("home_fever_dose_quick_card").performClick()
     composeTestRule.waitForIdle()
-    composeTestRule.onNodeWithTag("pediatric_3d_studio_screen").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("fever_dose_calculator_screen").assertIsDisplayed()
 
     composeTestRule.onNodeWithTag("nav_home").performClick()
     composeTestRule.waitForIdle()

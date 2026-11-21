@@ -174,18 +174,15 @@ fun MedicationChecklistHeaderCard(
             modifier = Modifier.testTag("med_safety_status_headline"),
           )
         }
-        Surface(
-          color = statusAccent.copy(alpha = 0.14f),
-          shape = RoundedCornerShape(50),
-        ) {
-          Text(
-            text = "${progress.checkedCount}/${progress.totalCount}",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = statusAccent,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp).testTag("med_safety_count_badge"),
-          )
-        }
+        ManoHealthProgressRing(
+          progress = animatedFraction,
+          size = ManoCircularProgressSize.LARGE,
+          tone = if (progress.isAllCriticalReady) ManoHealthRingTone.EMERALD else ManoHealthRingTone.TURQUOISE,
+          valueText = "${progress.checkedCount}/${progress.totalCount}",
+          subLabel = if (progress.isAllCriticalReady) "آماده" else "ایمنی",
+          contentDescriptionFa = "وضعیت چک‌لیست ایمنی دارو: ${progress.checkedCount} از ${progress.totalCount}",
+          modifier = Modifier.testTag("med_safety_count_badge"),
+        )
       }
 
       LinearProgressIndicator(
@@ -193,7 +190,7 @@ fun MedicationChecklistHeaderCard(
         color = statusAccent,
         trackColor = statusAccent.copy(alpha = 0.14f),
         strokeCap = StrokeCap.Round,
-        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).testTag("med_safety_progress_bar"),
+        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).testTag("med_safety_progress_bar"),
       )
 
       Text(

@@ -85,12 +85,16 @@ import com.example.domain.util.VaccinationScheduleEngine
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.LtrText
 import com.example.ui.components.ManoBannerFrame
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoHealthProgressRing
+import com.example.ui.components.ManoHealthRingTone
 import com.example.ui.components.ManoIconMedallion
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.CoralCare
 import com.example.ui.theme.DangerCrimson
 import com.example.ui.theme.DarkCoral
@@ -154,8 +158,8 @@ fun VaccinesScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("vaccines_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       // HERO & PROGRESS OVERVIEW CARD
       item {
@@ -193,29 +197,45 @@ fun VaccinesScreen(
           Spacer(Modifier.height(4.dp))
           Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(ManoTheme.spacing.inlineGap),
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            Text(
-              text =
+            ManoHealthProgressRing(
+              progress = progressRatio,
+              size = ManoCircularProgressSize.LARGE,
+              tone = if (progressRatio >= 1f) ManoHealthRingTone.EMERALD else ManoHealthRingTone.TURQUOISE,
+              subLabel = "تکمیل",
+              contentDescriptionFa =
                 "پیشرفت واکسن‌های اصلی: ${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())} از ${VaccinationScheduleEngine.toPersianDigits(summary.totalCoreCount.toString())} نوبت",
-              style = MaterialTheme.typography.labelLarge,
-              color = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.testTag("vaccine_progress_ring"),
             )
-            if (isCloudSignedIn) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-              ) {
-                Icon(Icons.Rounded.CloudDone, contentDescription = null, modifier = Modifier.size(16.dp), tint = sageAccent)
-                Text("همگام ابری", style = MaterialTheme.typography.labelSmall, color = sageAccent)
+            Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.textPairGap),
+            ) {
+              Text(
+                text =
+                  "پیشرفت واکسن‌های اصلی: ${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())} از ${VaccinationScheduleEngine.toPersianDigits(summary.totalCoreCount.toString())} نوبت",
+                style = ManoTheme.typeScale.actionLabel,
+                color = MaterialTheme.colorScheme.primary,
+              )
+              if (isCloudSignedIn) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                  Icon(Icons.Rounded.CloudDone, contentDescription = null, modifier = Modifier.size(15.dp), tint = sageAccent)
+                  Text("همگام ابری فعال", style = ManoTheme.typeScale.chipLabel, color = sageAccent)
+                }
+              } else {
+                Text(
+                  text = "وضعیت نوبت‌های اصلی ایمن‌سازی کودک",
+                  style = ManoTheme.typeScale.cardSubtitle,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
               }
             }
           }
-          LinearProgressIndicator(
-            progress = { progressRatio },
-            modifier = Modifier.fillMaxWidth().height(8.dp),
-          )
 
           FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),

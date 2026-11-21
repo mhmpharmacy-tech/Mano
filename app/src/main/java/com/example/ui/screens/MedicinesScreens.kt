@@ -45,7 +45,8 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Vaccines
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -110,6 +111,7 @@ import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
 import com.example.ui.theme.CautionAmber
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.CautionSurface
 import com.example.ui.theme.CoralCare
 import com.example.ui.theme.DarkCoral
@@ -252,8 +254,8 @@ fun MedicinesScreen(
     LazyColumn(
       state = rememberLazyListState(initialFirstVisibleItemIndex = if (openTemperatureEntry) 1 else 0),
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("medicines_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -753,7 +755,10 @@ fun MedicinesScreen(
           if (currentUser != null && doseLogsState is CloudDataState.Loading) {
             item {
               Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                ManoTurquoiseLoadingRing(
+                  size = ManoCircularProgressSize.MEDIUM,
+                  contentDescriptionFa = "در حال بارگذاری دفترچه ابری دارو",
+                )
               }
             }
           } else if (currentUser != null && doseLogsState is CloudDataState.Error) {
@@ -892,8 +897,8 @@ fun MedicineDetailScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("medicine_detail_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         Row(

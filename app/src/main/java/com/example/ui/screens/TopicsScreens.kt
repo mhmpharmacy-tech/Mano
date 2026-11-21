@@ -71,6 +71,7 @@ import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.DarkGold
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
@@ -135,8 +136,8 @@ fun TopicsScreen(
     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
       LazyColumn(
         modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = ManoTheme.spacing.screenContentPadding,
+        verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
       ) {
         item {
           SectionCard {
@@ -225,9 +226,6 @@ fun TopicsScreen(
           OutlinedButton(onClick = onNavigateDevices, modifier = Modifier.weight(1f).minimumInteractiveComponentSize()) {
             Text("وسایل مراقبتی")
           }
-          OutlinedButton(onClick = onNavigate3DStudio, modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("topics_open_3d_btn")) {
-            Text("نمایش سه‌بعدی")
-          }
         }
       }
 
@@ -289,8 +287,8 @@ fun TopicDetailScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         Row(

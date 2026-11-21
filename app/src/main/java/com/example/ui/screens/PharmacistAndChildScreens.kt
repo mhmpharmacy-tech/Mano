@@ -41,7 +41,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoHealthRingTone
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -97,6 +99,7 @@ import com.example.ui.components.SourceBadge
 import com.example.ui.components.SymptomChip
 import com.example.ui.auth.CloudSyncAuthCard
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.CautionAmber
 import com.example.ui.theme.CautionSurface
 import com.example.ui.theme.DangerCrimson
@@ -153,6 +156,9 @@ fun AskPharmacistScreen(
   onSubmitStaffCaseReview: (pharmacyId: String, caseId: String, internalNote: String?, parentReply: String, pharmacistAttestation: Boolean) -> Unit = { _, _, _, _, _ -> },
   initialMode: String = "parent",
   onShowFeedback: (String) -> Unit = {},
+  pendingOfflineConsultationsCount: Int = 0,
+  isSyncingOfflineQueue: Boolean = false,
+  onRetryOfflineSync: () -> Unit = {},
 ) {
   val normalizedInitial =
     remember(initialMode) {
@@ -283,26 +289,60 @@ fun AskPharmacistScreen(
           Text("این پرسش روی همین دستگاه ذخیره می‌شود. داروساز آن را دریافت نمی‌کند.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else if (selectedPharmacyId == null) {
+        } else if (selectedPharmacyId == null && acceptingPharmacies.isNotEmpty()) {
           Text("برای ارسال واقعی، ابتدا یک داروخانه پذیرش‌گر تأییدشده را انتخاب کنید.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
             modifier = Modifier.testTag("pharmacy_required_notice"))
+        } else if (selectedPharmacyId == null && acceptingPharmacies.isEmpty()) {
+          Text("فهرست آنلاین داروخانه‌ها فعلاً در دسترس نیست؛ پرسش شما به‌صورت ایمن روی گوشی ذخیره می‌شود و پس از اتصال به اینترنت همگام می‌گردد.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testTag("offline_consultation_queue_notice"))
         }
+        val canSubmitOfflineFallback = currentUser != null && acceptingPharmacies.isEmpty()
         Button(
           onClick = onSubmit,
-          enabled = !isSubmitting && (currentUser == null || selectedPharmacyId != null),
+          enabled = !isSubmitting && (currentUser == null || selectedPharmacyId != null || canSubmitOfflineFallback),
           modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("ask_pharmacist_submit"),
         ) {
           if (isSubmitting) {
-            CircularProgressIndicator(
-              modifier = Modifier.size(18.dp),
-              strokeWidth = 2.dp,
-              color = MaterialTheme.colorScheme.onPrimary,
+            ManoTurquoiseLoadingRing(
+              size = ManoCircularProgressSize.COMPACT,
+              tone = ManoHealthRingTone.ON_PRIMARY,
+              contentDescriptionFa = "در حال بررسی تریاژ و ثبت",
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text("در حال بررسی تریاژ و ثبت...")
           } else {
-            Text(if (currentUser != null) "ارسال به داروخانه" else "ذخیره روی این دستگاه")
+            Text(
+              when {
+                currentUser == null -> "ذخیره روی این دستگاه"
+                canSubmitOfflineFallback -> "ذخیره در صف ارسال آفلاین"
+                else -> "ارسال به داروخانه"
+              }
+            )
+          }
+        }
+        if (currentUser != null && pendingOfflineConsultationsCount > 0) {
+          Surface(
+            color = manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 1f, darkAlpha = 0.18f),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, manoSemanticAccent(CautionAmber, DarkGold).copy(alpha = 0.45f)),
+            modifier = Modifier.fillMaxWidth().testTag("ask_offline_queue_banner"),
+          ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              Text(
+                text = "$pendingOfflineConsultationsCount پرسش در صف ارسال آفلاین ذخیره شده است.",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+              )
+              OutlinedButton(
+                onClick = onRetryOfflineSync,
+                enabled = !isSyncingOfflineQueue,
+                modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("ask_retry_sync_btn"),
+              ) {
+                Text(if (isSyncingOfflineQueue) "در حال همگام‌سازی..." else "همگام‌سازی و ارسال با اینترنت")
+              }
+            }
           }
         }
       }
@@ -511,8 +551,8 @@ fun AskPharmacistScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("ask_pharmacist_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         SectionCard(modifier = Modifier.testTag("mano_connect_header_card")) {
@@ -649,6 +689,9 @@ fun MyChildScreen(
   onSignedOut: () -> Unit = {},
   onOpenNutritionAdvisor: () -> Unit = {},
   onOpenVaccinesSchedule: () -> Unit = {},
+  pendingCloudSync: Boolean = false,
+  isSyncingOfflineQueue: Boolean = false,
+  onRetryCloudSync: () -> Unit = {},
 ) {
   var alias by remember(profile) { mutableStateOf(profile?.aliasFa ?: "") }
   var birthOrAge by remember(profile) { mutableStateOf(profile?.birthDateOrAgeFa ?: "") }
@@ -710,8 +753,8 @@ fun MyChildScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("my_child_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         SectionCard {
@@ -750,6 +793,38 @@ fun MyChildScreen(
           onAuthError = onCloudAuthError,
           onSignedOut = onSignedOut,
         )
+      }
+
+      if (currentUser != null && pendingCloudSync) {
+        item {
+          Surface(
+            color = manoTintedSurface(CautionSurface, DarkGold, lightAlpha = 1f, darkAlpha = 0.18f),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, manoSemanticAccent(CautionAmber, DarkGold).copy(alpha = 0.5f)),
+            modifier = Modifier.fillMaxWidth().testTag("child_profile_offline_sync_banner"),
+          ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              Text(
+                text = "پرونده کودک روی گوشی ذخیره شد (در انتظار همگام‌سازی ابری)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+              )
+              Text(
+                text = "حتی بدون اینترنت می‌توانید از تمام ابزارهای مانو با همین پرونده استفاده کنید. پس از اتصال به اینترنت، پرونده به‌صورت خودکار یا با دکمه زیر با ابر همگام می‌شود.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+              OutlinedButton(
+                onClick = onRetryCloudSync,
+                enabled = !isSyncingOfflineQueue,
+                modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("child_profile_retry_sync_btn"),
+              ) {
+                Text(if (isSyncingOfflineQueue) "در حال همگام‌سازی با ابر..." else "همگام‌سازی الان با ابر")
+              }
+            }
+          }
+        }
       }
 
       item {
@@ -939,8 +1014,8 @@ fun InfoScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("info_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
         Text("درباره مانو، تنظیمات دستگاه و اتصال دامنه", style = MaterialTheme.typography.headlineMedium)
@@ -978,7 +1053,7 @@ fun InfoScreen(
                 Text("تنظیم شدت بازخورد لرزشی (Haptic)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
               }
               Text(
-                text = "شدت لرزش هنگام لمس شخصیت مانو در صفحه خانه و آزمایشگاه سه‌بعدی را متناسب با موتور لرزش گوشی فیزیکی خود تنظیم کنید.",
+                text = "شدت لرزش هنگام لمس شخصیت مانو و تعامل‌های کلیدی را متناسب با موتور لرزش گوشی فیزیکی خود تنظیم کنید.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
@@ -1022,39 +1097,6 @@ fun InfoScreen(
           }
 
           item {
-            SectionCard(modifier = Modifier.testTag("info_webgl_tuning_card")) {
-              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Rounded.Speed, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text("سرعت و کیفیت موتور سه‌بعدی (WebGL)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-              }
-              Text(
-                text = "در گوشی‌های میان‌رده، انتخاب حالت «میان‌رده / روان» یا «خودکار» تراکم ذرات و وضوح رندر را برای نرخ فریم پایدار و مصرف باتری کمتر بهینه می‌کند.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-              FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-              ) {
-                ManoWebGlQuality.entries.forEach { profile ->
-                  SymptomChip(
-                    label = profile.labelFa,
-                    selected = webGlQuality == profile,
-                    onClick = { onSelectWebGlQuality(profile) },
-                    modifier = Modifier.testTag("webgl_quality_${profile.id}"),
-                  )
-                }
-              }
-              Text(
-                text = "پروفایل فعال: ${webGlQuality.labelFa} — ${webGlQuality.summaryFa}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-              )
-            }
-          }
-
-          item {
             SectionCard(modifier = Modifier.testTag("info_release_checklist_card")) {
               val sageAccent = manoSemanticAccent(SageCare, DarkSage)
               Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1065,7 +1107,7 @@ fun InfoScreen(
                 "مرور نهایی متن‌های فارسی راهنما، هشدارهای نوزاد زیر ۳ ماه و ارجاع اورژانس ۱۱۵",
                 "بررسی زنده فایل /.well-known/assetlinks.json روی manokid.ir و manokid.com بدون ریدایرکت",
                 "جایگزینی اثر انگشت SHA-256 کلید انتشار (Play App Signing) روی سرور دامنه",
-                "تست شدت لرزش و روانی آزمایشگاه سه‌بعدی WebGL روی یک گوشی میان‌رده فیزیکی",
+                "بررسی عملکرد ماشین‌حساب ۶ مرحله‌ای تب‌بر و ذخیره‌سازی آفلاین پرونده کودک در حالت قطع اینترنت",
               ).forEach { checklistItem ->
                 Text("• $checklistItem", style = MaterialTheme.typography.bodySmall)
               }
@@ -1238,7 +1280,10 @@ fun InfoScreen(
                 modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("verify_assetlinks_btn"),
               ) {
                 if (isVerifyingDomains) {
-                  CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                  ManoTurquoiseLoadingRing(
+                    size = ManoCircularProgressSize.COMPACT,
+                    contentDescriptionFa = "در حال بررسی زنده سرورها",
+                  )
                   Spacer(Modifier.width(8.dp))
                   Text("در حال بررسی زنده سرورها...")
                 } else {

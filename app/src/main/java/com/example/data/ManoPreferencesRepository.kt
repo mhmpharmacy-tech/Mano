@@ -23,8 +23,27 @@ import com.example.domain.util.TimelineDosePoint
 import com.example.domain.util.TimelineTempPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
+@Serializable
+data class ScopedPendingChildProfile(
+  val profile: ChildProfileDemo,
+  val pendingCloudSync: Boolean = true,
+  val savedAtEpochMs: Long = 0L,
+)
+
+@Serializable
+data class PendingOfflineConsultation(
+  val id: String,
+  val categoryName: String,
+  val ageBandId: String,
+  val questionSummaryFa: String,
+  val createdAtLabelFa: String,
+  val savedAtEpochMs: Long = 0L,
+  val pendingCloudSync: Boolean = true,
+)
 
 private val Context.manoDataStore: DataStore<Preferences> by preferencesDataStore(name = "mano_ui_prefs")
 
@@ -79,7 +98,13 @@ class ManoPreferencesRepository(private val context: Context) {
     val LOCAL_CHILD_PROFILE_JSON = stringPreferencesKey("local_child_profile_json")
     val OFFLINE_QUESTIONS = stringPreferencesKey("offline_question_drafts")
     const val GROWTH_PREFIX = "growth_measurements_"
+    const val SCOPED_PROFILE_PREFIX = "scoped_child_profile_uid_"
+    const val SCOPED_PENDING_CONSULT_PREFIX = "scoped_pending_consultations_uid_"
+    const val SCOPED_PENDING_DOSES_PREFIX = "scoped_pending_dose_logs_uid_"
     fun growth(uid: String?) = stringPreferencesKey(GROWTH_PREFIX + (uid?.let { "user_$it" } ?: "guest"))
+    fun scopedProfile(uid: String) = stringPreferencesKey(SCOPED_PROFILE_PREFIX + uid)
+    fun scopedPendingConsultations(uid: String) = stringPreferencesKey(SCOPED_PENDING_CONSULT_PREFIX + uid)
+    fun scopedPendingDoses(uid: String) = stringPreferencesKey(SCOPED_PENDING_DOSES_PREFIX + uid)
     val LOCAL_FEVER_LOGS_JSON = stringPreferencesKey("local_fever_logs_json")
     val LOCAL_DOSE_LOGS_JSON = stringPreferencesKey("local_dose_logs_json")
     val CHECKED_MILESTONE_IDS = stringSetPreferencesKey("checked_milestone_ids")
@@ -251,6 +276,108 @@ class ManoPreferencesRepository(private val context: Context) {
         json.decodeFromString<List<TimelineDosePoint>>(raw).sortedByDescending { it.timestampMs }
       }.getOrDefault(emptyList())
     }
+
+  fun scopedChildProfile(uid: String): Flow<ScopedPendingChildProfile?> =
+    context.manoDataStore.data.map { prefs ->
+      val raw = prefs[Keys.scopedProfile(uid)].orEmpty()
+      if (raw.isBlank()) null
+      else runCatching { json.decodeFromString<ScopedPendingChildProfile>(raw) }.getOrNull()
+    }
+
+  suspend fun saveScopedChildProfile(
+    uid: String,
+    profile: ChildProfileDemo,
+    pendingCloudSync: Boolean,
+  ) {
+    val key = Keys.scopedProfile(uid)
+    val record =
+      ScopedPendingChildProfile(
+        profile = profile,
+        pendingCloudSync = pendingCloudSync,
+        savedAtEpochMs = System.currentTimeMillis(),
+      )
+    context.manoDataStore.edit { prefs ->
+      prefs[key] = json.encodeToString(record)
+    }
+  }
+
+  suspend fun clearScopedChildProfile(uid: String) {
+    context.manoDataStore.edit { prefs ->
+      prefs.remove(Keys.scopedProfile(uid))
+    }
+  }
+
+  fun scopedPendingConsultations(uid: String): Flow<List<PendingOfflineConsultation>> =
+    context.manoDataStore.data.map { prefs ->
+      val raw = prefs[Keys.scopedPendingConsultations(uid)].orEmpty()
+      if (raw.isBlank()) emptyList()
+      else runCatching {
+        json.decodeFromString<List<PendingOfflineConsultation>>(raw).sortedByDescending { it.savedAtEpochMs }
+      }.getOrDefault(emptyList())
+    }
+
+  suspend fun addScopedPendingConsultation(uid: String, item: PendingOfflineConsultation) {
+    val key = Keys.scopedPendingConsultations(uid)
+    context.manoDataStore.edit { prefs ->
+      val current =
+        prefs[key]
+          ?.takeIf { it.isNotBlank() }
+          ?.let { runCatching { json.decodeFromString<List<PendingOfflineConsultation>>(it) }.getOrNull() }
+          .orEmpty()
+          .filterNot { it.id == item.id }
+      val updated = (listOf(item) + current).sortedByDescending { it.savedAtEpochMs }.take(25)
+      prefs[key] = json.encodeToString(updated)
+    }
+  }
+
+  suspend fun removeScopedPendingConsultation(uid: String, itemId: String) {
+    val key = Keys.scopedPendingConsultations(uid)
+    context.manoDataStore.edit { prefs ->
+      val current =
+        prefs[key]
+          ?.takeIf { it.isNotBlank() }
+          ?.let { runCatching { json.decodeFromString<List<PendingOfflineConsultation>>(it) }.getOrNull() }
+          .orEmpty()
+      val updated = current.filterNot { it.id == itemId }
+      if (updated.isEmpty()) prefs.remove(key) else prefs[key] = json.encodeToString(updated)
+    }
+  }
+
+  fun scopedPendingDoseLogs(uid: String): Flow<List<TimelineDosePoint>> =
+    context.manoDataStore.data.map { prefs ->
+      val raw = prefs[Keys.scopedPendingDoses(uid)].orEmpty()
+      if (raw.isBlank()) emptyList()
+      else runCatching {
+        json.decodeFromString<List<TimelineDosePoint>>(raw).sortedByDescending { it.timestampMs }
+      }.getOrDefault(emptyList())
+    }
+
+  suspend fun addScopedPendingDoseLog(uid: String, point: TimelineDosePoint) {
+    val key = Keys.scopedPendingDoses(uid)
+    context.manoDataStore.edit { prefs ->
+      val current =
+        prefs[key]
+          ?.takeIf { it.isNotBlank() }
+          ?.let { runCatching { json.decodeFromString<List<TimelineDosePoint>>(it) }.getOrNull() }
+          .orEmpty()
+          .filterNot { it.id == point.id }
+      val updated = (listOf(point) + current).sortedByDescending { it.timestampMs }.take(40)
+      prefs[key] = json.encodeToString(updated)
+    }
+  }
+
+  suspend fun removeScopedPendingDoseLog(uid: String, doseId: String) {
+    val key = Keys.scopedPendingDoses(uid)
+    context.manoDataStore.edit { prefs ->
+      val current =
+        prefs[key]
+          ?.takeIf { it.isNotBlank() }
+          ?.let { runCatching { json.decodeFromString<List<TimelineDosePoint>>(it) }.getOrNull() }
+          .orEmpty()
+      val updated = current.filterNot { it.id == doseId }
+      if (updated.isEmpty()) prefs.remove(key) else prefs[key] = json.encodeToString(updated)
+    }
+  }
 
   val checkedMilestoneIds: Flow<Set<String>> =
     context.manoDataStore.data.map { prefs -> prefs[Keys.CHECKED_MILESTONE_IDS] ?: emptySet() }
@@ -558,7 +685,12 @@ class ManoPreferencesRepository(private val context: Context) {
         Keys.VACCINE_REMINDER_ENABLED,
         Keys.VACCINE_REMINDER_LEAD_DAYS,
       ).forEach { prefs.remove(it) }
-      prefs.asMap().keys.filter { it.name.startsWith(Keys.GROWTH_PREFIX) }.forEach { prefs.remove(it) }
+      prefs.asMap().keys.filter {
+        it.name.startsWith(Keys.GROWTH_PREFIX) ||
+          it.name.startsWith(Keys.SCOPED_PROFILE_PREFIX) ||
+          it.name.startsWith(Keys.SCOPED_PENDING_CONSULT_PREFIX) ||
+          it.name.startsWith(Keys.SCOPED_PENDING_DOSES_PREFIX)
+      }.forEach { prefs.remove(it) }
     }
   }
 

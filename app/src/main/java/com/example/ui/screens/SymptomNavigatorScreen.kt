@@ -31,7 +31,9 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoHealthRingTone
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -77,6 +79,7 @@ import com.example.ui.components.SourceBadge
 import com.example.ui.components.SymptomChip
 import com.example.ui.components.VisitDraftEntryBannerCard
 import com.example.ui.theme.CautionAmber
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.CautionSurface
 import com.example.ui.theme.DangerCrimson
 import com.example.ui.theme.DangerSurface
@@ -149,8 +152,8 @@ fun SymptomNavigatorScreen(
     Column(modifier = Modifier.fillMaxSize().widthIn(max = 840.dp)) {
       LazyColumn(
         modifier = Modifier.weight(1f).fillMaxWidth().imePadding().testTag("symptom_navigator_list"),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = ManoTheme.spacing.screenContentPadding,
+        verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
       ) {
         item {
           Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -587,10 +590,10 @@ private fun GeminiPediatricianSafetyChecklistCard(
       modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("generate_safety_checklist_btn"),
     ) {
       if (checklistState is SafetyChecklistUiState.Loading) {
-        CircularProgressIndicator(
-          modifier = Modifier.size(18.dp),
-          strokeWidth = 2.dp,
-          color = MaterialTheme.colorScheme.onPrimary,
+        ManoTurquoiseLoadingRing(
+          size = ManoCircularProgressSize.COMPACT,
+          tone = ManoHealthRingTone.ON_PRIMARY,
+          contentDescriptionFa = "در حال تنظیم چک‌لیست ایمنی",
         )
         Spacer(Modifier.width(8.dp))
         Text("در حال تنظیم چک‌لیست ایمنی با Gemini...")

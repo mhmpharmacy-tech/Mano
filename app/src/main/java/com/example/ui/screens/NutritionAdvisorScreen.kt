@@ -39,7 +39,8 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -87,6 +88,7 @@ import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SymptomChip
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.DarkGold
 import com.example.ui.theme.DarkSage
 import com.example.ui.theme.DarkSky
@@ -291,8 +293,8 @@ fun NutritionAdvisorScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("nutrition_advisor_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       // Hero Header Card
       item {
@@ -428,15 +430,6 @@ fun NutritionAdvisorScreen(
             )
           }
 
-          OutlinedButton(
-            onClick = onOpen3DWeighingGuide,
-            modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("nutrition_open_3d_weighing_btn"),
-          ) {
-            Icon(Icons.Rounded.MonitorWeight, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("راهنمای سه‌بعدی وزن‌کشی دقیق کودک")
-          }
-
           OutlinedTextField(
             value = allergiesFa,
             onValueChange = { allergiesFa = it },
@@ -508,7 +501,10 @@ fun NutritionAdvisorScreen(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-              CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+              ManoTurquoiseLoadingRing(
+                size = ManoCircularProgressSize.SMALL,
+                contentDescriptionFa = "در حال طراحی برنامه غذایی سالم",
+              )
               Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                   text = "در حال طراحی برنامه غذایی سالم و متناسب با رشد...",

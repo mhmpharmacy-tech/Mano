@@ -22,7 +22,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoHealthRingTone
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -277,10 +279,11 @@ fun CloudSyncAuthCard(
           modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("google_signin_button"),
         ) {
           if (isLoading) {
-            CircularProgressIndicator(
-              modifier = Modifier.size(20.dp),
-              color = MaterialTheme.colorScheme.onPrimary,
-              strokeWidth = 2.dp,
+            ManoTurquoiseLoadingRing(
+              size = ManoCircularProgressSize.COMPACT,
+              tone = ManoHealthRingTone.ON_PRIMARY,
+              diameter = 20.dp,
+              contentDescriptionFa = "در حال اتصال به گوگل",
             )
             Spacer(Modifier.width(8.dp))
             Text("در حال اتصال به گوگل...")

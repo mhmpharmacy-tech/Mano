@@ -99,6 +99,8 @@ fun ManoKidsTheme(
   CompositionLocalProvider(
     LocalLayoutDirection provides LayoutDirection.Rtl,
     LocalManoDarkTheme provides darkTheme,
+    LocalManoTypeScale provides DefaultManoTypeScale,
+    LocalManoSpacing provides DefaultManoSpacing,
   ) {
     MaterialTheme(
       colorScheme = colorScheme,

@@ -20,7 +20,9 @@ import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoHealthRingTone
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -363,7 +365,10 @@ fun PharmacistStaffPanelContent(
           modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("staff_refresh_inbox_btn"),
         ) {
           if (isLoadingInbox) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            ManoTurquoiseLoadingRing(
+              size = ManoCircularProgressSize.COMPACT,
+              contentDescriptionFa = "در حال دریافت صندوق داروخانه",
+            )
             Spacer(Modifier.width(8.dp))
             Text("در حال دریافت صندوق داروخانه...")
           } else {
@@ -500,7 +505,11 @@ private fun StaffInboxCaseCard(
           modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("staff_receive_btn_${item.caseId}"),
         ) {
           if (isBusy) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            ManoTurquoiseLoadingRing(
+              size = ManoCircularProgressSize.COMPACT,
+              tone = ManoHealthRingTone.ON_PRIMARY,
+              contentDescriptionFa = "در حال پذیرش پرونده",
+            )
             Spacer(Modifier.width(8.dp))
           }
           Text("پذیرش پرونده و ثبت وضعیت «دریافت شده»")
@@ -577,7 +586,11 @@ private fun StaffInboxCaseCard(
           modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("staff_review_submit_btn_${item.caseId}"),
         ) {
           if (isBusy) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            ManoTurquoiseLoadingRing(
+              size = ManoCircularProgressSize.COMPACT,
+              tone = ManoHealthRingTone.ON_PRIMARY,
+              contentDescriptionFa = "در حال ثبت پاسخ نهایی",
+            )
             Spacer(Modifier.width(8.dp))
           }
           Text("ثبت پاسخ نهایی و قفل کردن پرونده")

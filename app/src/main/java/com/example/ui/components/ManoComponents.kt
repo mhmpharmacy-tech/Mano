@@ -79,6 +79,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -154,6 +155,7 @@ import com.example.ui.theme.MinimalRose
 import com.example.ui.theme.MinimalRoseDark
 import com.example.ui.theme.MinimalSky
 import com.example.ui.theme.MinimalSkyDark
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.MinimalTeal
 import com.example.ui.theme.MinimalTealDark
 import com.example.ui.theme.TealGlow
@@ -289,7 +291,7 @@ fun LtrText(
     Text(
       text = text,
       modifier = modifier,
-      style = MaterialTheme.typography.bodySmall,
+      style = ManoTheme.typeScale.latinTechnical,
       color = color,
     )
   }
@@ -366,34 +368,54 @@ fun ManoBannerFrame(
   modifier: Modifier = Modifier,
   cornerRadius: Dp = 18.dp,
   contentScale: ContentScale = ContentScale.Crop,
+  floatingEnabled: Boolean = true,
 ) {
   val isDark = LocalManoDarkTheme.current
   val shape = RoundedCornerShape(cornerRadius)
   val borderColor = manoBorderColor()
+  val tiltState = LocalManoDeviceTilt.current
+  var scrollNormalized by remember { mutableFloatStateOf(0f) }
+  val smoothInnerScroll by
+    animateFloatAsState(
+      targetValue = scrollNormalized,
+      animationSpec = spring(dampingRatio = 0.82f, stiffness = 130f),
+      label = "bannerInnerScrollParallax",
+    )
   val glassRimBrush =
     Brush.linearGradient(
       colors =
         if (isDark) {
           listOf(
-            MinimalTealDark.copy(alpha = 0.28f),
-            PureWhite.copy(alpha = 0.14f),
+            MinimalTealDark.copy(alpha = 0.30f),
+            PureWhite.copy(alpha = 0.16f),
             borderColor.copy(alpha = 0.72f),
           )
         } else {
           listOf(
-            PureWhite.copy(alpha = 0.92f),
-            MinimalTeal.copy(alpha = 0.20f),
+            PureWhite.copy(alpha = 0.94f),
+            MinimalTeal.copy(alpha = 0.22f),
             borderColor.copy(alpha = 0.72f),
           )
         }
     )
 
+  val floatingModifier =
+    if (floatingEnabled) {
+      Modifier.manoFloatingGlass(
+        intensity = 1f,
+        enableSheen = true,
+        onScrollNormalized = { norm -> scrollNormalized = norm },
+      )
+    } else {
+      Modifier
+    }
+
   Surface(
     color = MaterialTheme.colorScheme.surfaceVariant,
     shape = shape,
     border = BorderStroke(0.95.dp, glassRimBrush),
-    shadowElevation = if (isDark) 2.dp else 1.5.dp,
-    modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio),
+    shadowElevation = if (isDark) 3.dp else 2.dp,
+    modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio).then(floatingModifier),
   ) {
     Box(modifier = Modifier.fillMaxSize().clip(shape)) {
       Image(
@@ -401,20 +423,36 @@ fun ManoBannerFrame(
         contentDescription = contentDescription,
         contentScale = contentScale,
         alignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+          Modifier
+            .fillMaxSize()
+            .then(
+              if (floatingEnabled) {
+                Modifier.graphicsLayer {
+                  // Subtle multi-plane inner artwork parallax inside the overscanned frosted-glass window
+                  val tilt = tiltState.value
+                  scaleX = 1.05f
+                  scaleY = 1.05f
+                  translationX = (-tilt.tiltX * 5.2f).dp.toPx()
+                  translationY = ((-tilt.tiltY * 4.2f) + (smoothInnerScroll * 5.5f)).dp.toPx()
+                }
+              } else {
+                Modifier
+              }
+            ),
       )
       // Gentle pastel frosted-glass top mist veil for calm low-contrast depth
       Box(
         modifier =
           Modifier
             .fillMaxWidth()
-            .height(24.dp)
+            .height(26.dp)
             .align(Alignment.TopCenter)
             .background(
               Brush.verticalGradient(
                 colors =
                   listOf(
-                    PureWhite.copy(alpha = if (isDark) 0.10f else 0.18f),
+                    PureWhite.copy(alpha = if (isDark) 0.12f else 0.22f),
                     Color.Transparent,
                   )
               )
@@ -443,7 +481,11 @@ fun ManoFramedIllustration(
     shape = shape,
     border = BorderStroke(1.3.dp, accentColor.copy(alpha = 0.28f)),
     shadowElevation = 3.dp,
-    modifier = modifier.width(width).aspectRatio(aspectRatio),
+    modifier =
+      modifier
+        .width(width)
+        .aspectRatio(aspectRatio)
+        .manoFloatingGlass(intensity = 0.68f, enableSheen = true),
   ) {
     Box(
       contentAlignment = Alignment.Center,
@@ -487,6 +529,7 @@ fun SourceBadge(
     }
   val label = if (isDemo) "نیازمند بررسی" else reviewStatus.labelFa
 
+  val spacing = ManoTheme.spacing
   Surface(
     color = bg,
     shape = RoundedCornerShape(50),
@@ -495,7 +538,7 @@ fun SourceBadge(
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+      modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),
     ) {
       Icon(
         imageVector = if (reviewStatus == ReviewStatus.APPROVED && !isDemo) Icons.Rounded.VerifiedUser else Icons.Rounded.Schedule,
@@ -503,10 +546,11 @@ fun SourceBadge(
         tint = fg,
         modifier = Modifier.size(14.dp),
       )
-      Spacer(Modifier.width(4.dp))
+      Spacer(Modifier.width(spacing.xxs))
       Text(
         text = label,
         style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
         color = fg,
         maxLines = 2,
       )
@@ -554,16 +598,17 @@ fun SeverityAlert(
     }
   val actionTextColor = if (isDark) DarkBackground else PureWhite
 
+  val spacing = ManoTheme.spacing
   Surface(
     color = bg,
-    shape = RoundedCornerShape(16.dp),
+    shape = RoundedCornerShape(18.dp),
     border = BorderStroke(1.5.dp, fg.copy(alpha = 0.45f)),
     modifier = modifier.fillMaxWidth(),
   ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = Modifier.padding(spacing.cardPadding), verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap)) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing.inlineGap),
       ) {
         if (showCautionMascot && severity == AlertSeverity.DANGER) {
           // Strict clinical rule: never use cheerful celebratory pose on emergency warnings
@@ -581,15 +626,14 @@ fun SeverityAlert(
         }
         Text(
           text = title,
-          style = MaterialTheme.typography.titleMedium,
+          style = ManoTheme.typeScale.clinicalAlertTitle,
           color = fg,
-          fontWeight = FontWeight.ExtraBold,
           modifier = Modifier.weight(1f),
         )
       }
       Text(
         text = body,
-        style = MaterialTheme.typography.bodyMedium,
+        style = ManoTheme.typeScale.clinicalBodyCompact,
         color = MaterialTheme.colorScheme.onSurface,
       )
       if (actionLabel != null && onAction != null) {
@@ -612,10 +656,11 @@ fun AgeSelectorRow(
   includeAllOption: Boolean = true,
   modifier: Modifier = Modifier,
 ) {
+  val spacing = ManoTheme.spacing
   LazyRow(
     modifier = modifier.fillMaxWidth(),
-    contentPadding = PaddingValues(horizontal = 4.dp),
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
+    contentPadding = PaddingValues(horizontal = spacing.xxs),
+    horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
   ) {
     if (includeAllOption) {
       item {
@@ -682,13 +727,14 @@ fun TopicCard(
         .minimumInteractiveComponentSize()
         .testTag(testTag),
   ) {
+    val spacing = ManoTheme.spacing
     Column(
-      modifier = Modifier.fillMaxWidth().padding(14.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier.fillMaxWidth().padding(spacing.cardPaddingCompact),
+      verticalArrangement = Arrangement.spacedBy(spacing.xs),
     ) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing.xs),
       ) {
         Box(
           modifier =
@@ -745,11 +791,12 @@ fun SymptomChip(
     border = BorderStroke(if (selected) 1.5.dp else 1.dp, border),
     modifier = modifier.clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).minimumInteractiveComponentSize(),
   ) {
+    val spacing = ManoTheme.spacing
     Text(
       text = label,
       style = MaterialTheme.typography.labelLarge,
       color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-      modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+      modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.sm),
     )
   }
 }
@@ -783,13 +830,14 @@ fun ArticleCard(
         )
         .testTag("article_card_${article.slug}"),
   ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val spacing = ManoTheme.spacing
+    Column(modifier = Modifier.padding(spacing.cardPadding), verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap)) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier.fillMaxWidth(),
       ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs), verticalAlignment = Alignment.CenterVertically) {
           Surface(
             color = manoTintedSurface(AquaSurface, MaterialTheme.colorScheme.primary, darkAlpha = 0.16f),
             shape = RoundedCornerShape(8.dp),
@@ -798,7 +846,7 @@ fun ArticleCard(
               text = article.category.labelFa,
               style = MaterialTheme.typography.labelSmall,
               color = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+              modifier = Modifier.padding(horizontal = spacing.xs, vertical = spacing.xxs),
             )
           }
           SourceBadge(reviewStatus = article.review.status)
@@ -817,12 +865,12 @@ fun ArticleCard(
 
       Text(
         text = article.titleFa,
-        style = MaterialTheme.typography.titleMedium,
+        style = ManoTheme.typeScale.cardTitle.copy(fontWeight = FontWeight.Bold),
         color = MaterialTheme.colorScheme.onSurface,
       )
       Text(
         text = article.shortAnswerFa,
-        style = MaterialTheme.typography.bodyMedium,
+        style = ManoTheme.typeScale.clinicalBodyCompact,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,
@@ -898,7 +946,8 @@ fun MedicineCard(
         )
         .testTag("medicine_card_${medication.slug}"),
   ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val spacing = ManoTheme.spacing
+    Column(modifier = Modifier.padding(spacing.cardPadding), verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap)) {
       Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top,
@@ -906,7 +955,7 @@ fun MedicineCard(
       ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(10.dp),
+          horizontalArrangement = Arrangement.spacedBy(spacing.inlineGap),
           modifier = Modifier.weight(1f),
         ) {
           Box(
@@ -927,16 +976,16 @@ fun MedicineCard(
             iconSize = 26.dp,
             cornerRadius = 14.dp,
           )
-          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.textPairGap)) {
             Text(
               text = medication.nameFa,
-              style = MaterialTheme.typography.titleMedium,
+              style = ManoTheme.typeScale.cardTitle.copy(fontWeight = FontWeight.Bold),
               color = MaterialTheme.colorScheme.onSurface,
             )
             LtrText(text = medication.genericNameEn, color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(spacing.xs))
         Surface(
           color = accentTint.copy(alpha = 0.10f),
           shape = RoundedCornerShape(50),
@@ -946,7 +995,7 @@ fun MedicineCard(
             text = medication.category.labelFa,
             style = MaterialTheme.typography.labelSmall,
             color = accentTint,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),
           )
         }
       }
@@ -961,8 +1010,8 @@ fun MedicineCard(
       ) {
         Row(
           verticalAlignment = Alignment.Top,
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+          horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+          modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.sm),
         ) {
           Icon(
             imageVector = Icons.Rounded.WarningAmber,
@@ -1012,17 +1061,18 @@ fun ClinicalBulletList(
   modifier: Modifier = Modifier,
   textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium,
 ) {
-  Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+  val spacing = ManoTheme.spacing
+  Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
     items.forEach { point ->
       Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(9.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing.xs),
       ) {
         Box(
           modifier =
             Modifier
-              .padding(top = 9.dp)
+              .padding(top = 10.dp)
               .size(6.dp)
               .clip(CircleShape)
               .background(bulletColor)
@@ -1046,13 +1096,14 @@ fun ClinicalNote(
   reviewStatus: ReviewStatus = ReviewStatus.APPROVED,
   modifier: Modifier = Modifier,
 ) {
+  val spacing = ManoTheme.spacing
   Card(
-    shape = RoundedCornerShape(18.dp),
+    shape = RoundedCornerShape(20.dp),
     colors = CardDefaults.cardColors(containerColor = manoTintedSurface(AquaSurface, MaterialTheme.colorScheme.primary, lightAlpha = 0.6f, darkAlpha = 0.14f)),
     border = BorderStroke(1.dp, manoBorderColor()),
     modifier = modifier.fillMaxWidth(),
   ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = Modifier.padding(spacing.cardPadding), verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap)) {
       Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -1119,10 +1170,10 @@ fun PharmacistCtaCard(
               radius = size.width * 0.45f,
             )
           }
-          .padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
+          .padding(ManoTheme.spacing.cardPadding),
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.cardItemGap),
     ) {
-      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ManoTheme.spacing.inlineGap)) {
         Box(
           contentAlignment = Alignment.Center,
           modifier =
@@ -1212,18 +1263,19 @@ fun ConsentBox(
     border = BorderStroke(1.dp, manoSemanticAccent(AccentGold, DarkGold).copy(alpha = 0.5f)),
     modifier = modifier.fillMaxWidth(),
   ) {
+    val spacing = ManoTheme.spacing
     Row(
       verticalAlignment = Alignment.Top,
       modifier =
         Modifier
           .clickable { onCheckedChange(!checked) }
-          .padding(12.dp)
+          .padding(spacing.cardPaddingCompact)
           .minimumInteractiveComponentSize()
           .testTag("consent_checkbox_row"),
     ) {
       Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-      Spacer(Modifier.width(8.dp))
-      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Spacer(Modifier.width(spacing.xs))
+      Column(verticalArrangement = Arrangement.spacedBy(spacing.textPairGap)) {
         Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
         Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
@@ -1281,10 +1333,11 @@ fun EmptyState(
     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     modifier = modifier.fillMaxWidth(),
   ) {
+    val spacing = ManoTheme.spacing
     Column(
-      modifier = Modifier.padding(24.dp).fillMaxWidth(),
+      modifier = Modifier.padding(spacing.xl).fillMaxWidth(),
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(12.dp),
+      verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap),
     ) {
       ManoPoseAvatar(pose = pose, size = 84.dp)
       Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
@@ -1404,11 +1457,12 @@ fun RadialTopicSelector(
 
     // Always keep direct accessible grid tiles available when standard mode is active
     if (!useRadialView) {
-      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+      val spacing = ManoTheme.spacing
+      Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
         topics.chunked(2).forEach { pair ->
           Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
           ) {
             pair.forEach { item ->
               TopicCard(
@@ -1478,9 +1532,9 @@ fun CoreNavigationCard(
               radius = size.height * 1.15f,
             )
           }
-          .padding(16.dp),
+          .padding(ManoTheme.spacing.cardPadding),
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(12.dp),
+      horizontalArrangement = Arrangement.spacedBy(ManoTheme.spacing.inlineGap),
     ) {
       // Thin refined colored accent strip beside the 3D icon medallion
       Box(
@@ -1511,8 +1565,7 @@ fun CoreNavigationCard(
         ) {
           Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            style = ManoTheme.typeScale.cardTitle.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1605,8 +1658,8 @@ fun SectionCard(
               radius = size.width * 0.58f,
             )
           }
-          .padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(10.dp),
+          .padding(ManoTheme.spacing.cardPadding),
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.cardItemGap),
       content = content,
     )
   }

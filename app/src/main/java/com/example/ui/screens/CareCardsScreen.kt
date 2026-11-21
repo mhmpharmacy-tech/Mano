@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.ui.theme.ManoTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.CancellationException
@@ -43,7 +44,14 @@ private fun CareCardsContent(uid: String?) {
       message = if (rows.isEmpty()) "هنوز کارتی موجود نیست." else ""
     } catch (e: CancellationException) { throw e } catch (e: Exception) { message = "دریافت کارت‌ها ممکن نشد." }
   }
-  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+  val spacing = ManoTheme.spacing
+  Column(
+    Modifier
+      .fillMaxSize()
+      .verticalScroll(rememberScrollState())
+      .padding(spacing.screenContentPadding),
+    verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap),
+  ) {
     Text("کارت‌های مراقبت", style = MaterialTheme.typography.headlineSmall)
     if (uid == null) Text("از قسمت حساب کاربری وارد شوید.") else TextButton(onClick = { refresh++ }) { Text("به‌روزرسانی") }
     if (message.isNotEmpty()) Text(message)

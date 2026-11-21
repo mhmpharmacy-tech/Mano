@@ -47,7 +47,8 @@ import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -96,6 +97,7 @@ import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.CautionAmber
 import com.example.ui.theme.CautionSurface
 import com.example.ui.theme.CoralCare
@@ -232,8 +234,8 @@ fun SyrupScannerScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).testTag("syrup_scanner_list"),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
+      contentPadding = ManoTheme.spacing.screenContentPadding,
+      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       // HERO BANNER & CHILD CONTEXT CARD
       item {
@@ -412,7 +414,7 @@ fun SyrupScannerScreen(
             SeverityAlert(
               severity = AlertSeverity.INFO,
               title = "تطبیق اجباری توسط والد پیش از پر شدن سرنگ",
-              body = "تشخیص تصویری فقط کمک‌آموزشی است. قبل از انتقال خودکار عدد mL به سرنگ سه‌بعدی، می‌توانید نام دارو و غلظت (mg و mL) را مستقیماً ویرایش و تایید کنید.",
+              body = "تشخیص تصویری فقط کمک‌آموزشی است. قبل از انتقال خودکار عدد mL به ماشین‌حساب سرنگ دوبعدی، می‌توانید نام دارو و غلظت (mg و mL) را مستقیماً ویرایش و تایید کنید.",
               showCautionMascot = false,
             )
           }
@@ -426,7 +428,12 @@ fun SyrupScannerScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
               ) {
-                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                ManoTurquoiseLoadingRing(
+                  size = ManoCircularProgressSize.SMALL,
+                  diameter = 34.dp,
+                  strokeWidth = 3.dp,
+                  contentDescriptionFa = "در حال خواندن برچسب دارو",
+                )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                   Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = primaryAccent, modifier = Modifier.size(18.dp))
@@ -801,13 +808,13 @@ fun SyrupScannerScreen(
                       .minimumInteractiveComponentSize()
                       .testTag("scanner_autofill_3d_btn"),
                 ) {
-                  Icon(Icons.Rounded.ViewInAr, contentDescription = null, modifier = Modifier.size(18.dp))
+                  Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                   Spacer(Modifier.width(8.dp))
                   val labelMl = preview?.recommendedMl ?: 0f
                   Text(
                     text =
                       if (ext.canAutoFillSyringe) {
-                        "تایید و پر کردن سرنگ سه‌بعدی (${LiquidDoseVisualizerEngine.formatMl(labelMl)})"
+                        "تایید و انتقال به سرنگ دوبعدی (${LiquidDoseVisualizerEngine.formatMl(labelMl)})"
                       } else {
                         "پر کردن سرنگ در دسترس نیست؛ سن، وزن و غلظت را بررسی کنید"
                       },

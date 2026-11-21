@@ -513,15 +513,6 @@ fun WhoGrowthChartCard(
         reviewStatus = ReviewStatus.NEEDS_CLINICAL_REVIEW,
       )
       LtrText(text = "WHO Child Growth Standards (2006) — who.int/tools/child-growth-standards")
-
-      OutlinedButton(
-        onClick = onOpen3DWeighingGuide,
-        modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("growth_open_3d_weighing_btn"),
-      ) {
-        Icon(Icons.Rounded.MonitorWeight, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text("راهنمای سه‌بعدی وزن‌کشی صحیح با مانکن کودک")
-      }
     }
   }
 }

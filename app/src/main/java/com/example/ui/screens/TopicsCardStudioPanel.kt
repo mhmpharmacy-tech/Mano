@@ -32,7 +32,8 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoTurquoiseLoadingRing
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +62,7 @@ import com.example.ui.components.AlertSeverity
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.theme.AquaSurface
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.DarkSky
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
@@ -102,8 +104,8 @@ fun TopicsCardStudioPanel(
 
   LazyColumn(
     modifier = Modifier.fillMaxSize().testTag("topics_ai_studio_list"),
-    contentPadding = PaddingValues(16.dp),
-    verticalArrangement = Arrangement.spacedBy(14.dp),
+    contentPadding = ManoTheme.spacing.screenContentPadding,
+    verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
   ) {
     item {
       SectionCard {
@@ -122,14 +124,6 @@ fun TopicsCardStudioPanel(
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
           }
-        }
-        OutlinedButton(
-          onClick = onOpen3DStudio,
-          modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("studio_open_3d_btn"),
-        ) {
-          Icon(Icons.Rounded.ViewInAr, contentDescription = null, modifier = Modifier.size(18.dp))
-          Spacer(Modifier.width(6.dp))
-          Text("باز کردن آزمایشگاه سه‌بعدی مانو (3D)")
         }
       }
     }
@@ -240,7 +234,10 @@ fun TopicsCardStudioPanel(
               contentAlignment = Alignment.Center,
             ) {
               Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator()
+                ManoTurquoiseLoadingRing(
+                  size = ManoCircularProgressSize.MEDIUM,
+                  contentDescriptionFa = state.statusTextFa,
+                )
                 Text(
                   text = state.statusTextFa,
                   style = MaterialTheme.typography.bodyMedium,

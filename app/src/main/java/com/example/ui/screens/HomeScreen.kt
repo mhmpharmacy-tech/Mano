@@ -58,9 +58,9 @@ import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.Vaccines
-import androidx.compose.material.icons.rounded.ViewInAr
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -119,15 +119,18 @@ import com.example.domain.model.Article
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineSnapshot
 import com.example.ui.util.ManoHaptics
+import com.example.ui.components.DashboardHealthSummaryState
 import com.example.ui.components.GoldenOrbitalGeometry
 import com.example.ui.components.Mano3DIconArtwork
 import com.example.ui.components.ManoBrandCrest
+import com.example.ui.components.ManoDashboardHealthSummaryCard
 import com.example.ui.components.ManoEcosystemPillar
 import com.example.ui.components.ManoIconMedallion
 import com.example.ui.components.ManoKidWordmark
 import com.example.ui.components.OrbitalMenuItem
 import com.example.ui.components.PediatricIconKind
 import com.example.ui.components.TopicAccentRole
+import com.example.ui.components.manoFloatingGlass
 import com.example.ui.components.resolveAccentColor
 import com.example.ui.theme.CalmAquaSurface
 import com.example.ui.theme.CleanWhite
@@ -154,6 +157,7 @@ import com.example.ui.theme.DeepTeal
 import com.example.ui.theme.DeepTealGlass
 import com.example.ui.theme.KidLime
 import com.example.ui.theme.LocalManoDarkTheme
+import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.MetallicSilver
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SeaGreen
@@ -291,15 +295,22 @@ fun HomeScreen(
   hasPlayedHeroIntro: Boolean = false,
   onHeroIntroPlayed: () -> Unit = {},
   onNavigate3DStudio: (String) -> Unit = {},
+  onNavigateFeverCalculator: () -> Unit = {},
   timelineSnapshot: FeverDoseTimelineSnapshot =
     FeverDoseTimelineEngine.buildSnapshot(emptyList(), emptyList(), emptyList(), emptyList()),
   onQuickSaveFever: (tempCelsius: Float, caregiverFa: String) -> Unit = { _, _ -> },
   onOpenFeverTimeline: () -> Unit = {},
   onNavigateNutrition: () -> Unit = {},
   checkedMedSafetyCount: Int = 0,
+  totalMedSafetyCount: Int = 8,
+  isMedSafetyCriticalReady: Boolean = false,
   onOpenMedicationChecklist: () -> Unit = {},
   vaccineBadgeLabelFa: String = "",
+  vaccineAdministeredCount: Int = 0,
+  vaccineTotalCoreCount: Int = 0,
   onNavigateVaccines: () -> Unit = {},
+  milestonesCheckedCount: Int = 0,
+  milestonesTotalCount: Int = 0,
   savedGalacticRingName: String? = null,
   savedGalacticTopicId: String? = null,
   onSaveGalacticSelection: (ringName: String, topicId: String) -> Unit = { _, _ -> },
@@ -398,7 +409,6 @@ fun HomeScreen(
     remember(
       onNavigateVaccines,
       onNavigateNutrition,
-      onNavigate3DStudio,
       onNavigateEcosystemPillar,
       onNavigateDevices,
     ) {
@@ -411,9 +421,6 @@ fun HomeScreen(
         },
         SpecializedQuickLink("home_tool_vaccines", "تقویم واکسن", Icons.Rounded.Vaccines, PediatricIconKind.VACCINE, TopicAccentRole.SAGE, onNavigateVaccines),
         SpecializedQuickLink("home_tool_nutrition", "مشاور تغذیه", Icons.Rounded.Restaurant, PediatricIconKind.SUPPLEMENTS, TopicAccentRole.GOLD, onNavigateNutrition),
-        SpecializedQuickLink("home_tool_3d", "استودیو سه‌بعدی", Icons.Rounded.ViewInAr, PediatricIconKind.FAMILY, TopicAccentRole.SKY) {
-          onNavigate3DStudio("workbench")
-        },
         SpecializedQuickLink("home_tool_devices", "تمرین سرنگ و دماسنج", Icons.Rounded.MedicalServices, PediatricIconKind.REMINDERS, TopicAccentRole.TEAL, onNavigateDevices),
         SpecializedQuickLink("home_tool_pharmacy", "پنل داروخانه", Icons.Rounded.LocalPharmacy, PediatricIconKind.PHARMACY, TopicAccentRole.PLUM) {
           onNavigateEcosystemPillar(ManoEcosystemPillar.MANO_PHARMACY)
@@ -421,6 +428,7 @@ fun HomeScreen(
       )
     }
 
+  val spacing = ManoTheme.spacing
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       state = listState,
@@ -429,7 +437,7 @@ fun HomeScreen(
           .fillMaxSize()
           .widthIn(max = 820.dp)
           .testTag("home_list"),
-      contentPadding = PaddingValues(top = 0.dp, bottom = 14.dp),
+      contentPadding = PaddingValues(top = 0.dp, bottom = spacing.screenBottomClearance),
       verticalArrangement = Arrangement.spacedBy(0.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -453,18 +461,18 @@ fun HomeScreen(
         ) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing.inlineGap),
             modifier =
               Modifier
-                .padding(top = 8.dp, bottom = 2.dp, start = 16.dp, end = 16.dp)
+                .padding(top = spacing.xs, bottom = spacing.xxs, start = spacing.screenHorizontal, end = spacing.screenHorizontal)
                 .testTag("home_brand_crest"),
           ) {
             ManoBrandCrest(size = 42.dp, isDark = isDark)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-              ManoKidWordmark(isDark = isDark, fontSize = 19.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.textPairGap)) {
+              ManoKidWordmark(isDark = isDark, fontSize = 20.sp)
               Text(
                 text = "دستیار هوشمند سلامت کودک و خانواده",
-                style = MaterialTheme.typography.labelMedium.copy(lineHeight = 16.sp),
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
                 color = secondaryInk,
               )
@@ -493,26 +501,89 @@ fun HomeScreen(
         )
       }
 
+      // 2.5 One-Tap 2 AM Pediatric Fever Dose Calculator Entry Card
+      item {
+        FeverDoseQuickEntryCard(
+          isDark = isDark,
+          onClick = onNavigateFeverCalculator,
+        )
+      }
+
+      // 3. Soft Pastel Turquoise Circular Health Summary Status Indicators
+      item {
+        val summaryState =
+          remember(
+            vaccineAdministeredCount,
+            vaccineTotalCoreCount,
+            vaccineBadgeLabelFa,
+            milestonesCheckedCount,
+            milestonesTotalCount,
+            selectedAgeBand,
+            checkedMedSafetyCount,
+            totalMedSafetyCount,
+            isMedSafetyCriticalReady,
+            timelineSnapshot.latestTempCelsius,
+          ) {
+            DashboardHealthSummaryState(
+              vaccineAdministeredCount = vaccineAdministeredCount,
+              vaccineTotalCoreCount = vaccineTotalCoreCount,
+              vaccineCaptionFa = vaccineBadgeLabelFa,
+              milestonesCheckedCount = milestonesCheckedCount,
+              milestonesTotalCount = milestonesTotalCount,
+              ageBandLabelFa = selectedAgeBand?.labelFa ?: "همه رده‌های سنی",
+              medSafetyCheckedCount = checkedMedSafetyCount,
+              medSafetyTotalCount = totalMedSafetyCount,
+              medSafetyAllCriticalReady = isMedSafetyCriticalReady,
+              latestTempCelsius = timelineSnapshot.latestTempCelsius,
+            )
+          }
+        ManoDashboardHealthSummaryCard(
+          state = summaryState,
+          onOpenVaccines = onNavigateVaccines,
+          onOpenGrowth = onNavigateGrowth,
+          onOpenMedicationSafety = onOpenMedicationChecklist,
+          onOpenFeverTimeline = onOpenFeverTimeline,
+        )
+      }
+
       // 3. Compact Supplementary Care Tools neatly below the unified centerpiece
       item {
         Column(
           modifier =
             Modifier
               .fillMaxWidth()
-              .padding(horizontal = 14.dp, vertical = 14.dp)
+              .padding(horizontal = spacing.screenHorizontal, vertical = spacing.sectionGap)
               .testTag("home_specialized_strip"),
-          verticalArrangement = Arrangement.spacedBy(10.dp),
+          verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap),
         ) {
-          Text(
-            text = "ابزارهای تکمیلی مراقبت",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = if (isDark) DarkTextMuted else MaterialTheme.colorScheme.onSurfaceVariant,
-          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+          ) {
+            Box(
+              modifier =
+                Modifier
+                  .width(3.5.dp)
+                  .height(16.dp)
+                  .clip(RoundedCornerShape(50))
+                  .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.78f))
+            )
+            Text(
+              text = "ابزارهای تکمیلی مراقبت",
+              style = ManoTheme.typeScale.sectionHeader,
+              color = if (isDark) DarkTextPrimary else DarkInk,
+            )
+            HorizontalDivider(
+              modifier = Modifier.weight(1f).padding(start = spacing.xs),
+              thickness = 0.75.dp,
+              color = (if (isDark) DarkBorder else HairlineBorder).copy(alpha = 0.70f),
+            )
+          }
           FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
+            verticalArrangement = Arrangement.spacedBy(spacing.chipGap),
           ) {
             specializedQuickLinks.forEach { tool ->
               val accent = tool.accentRole.resolveAccentColor()
@@ -535,9 +606,9 @@ fun HomeScreen(
                 modifier = Modifier.minimumInteractiveComponentSize().testTag(tool.tag),
               ) {
                 Row(
-                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                  modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs),
                   verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(8.dp),
+                  horizontalArrangement = Arrangement.spacedBy(spacing.xs),
                 ) {
                   Box(
                     contentAlignment = Alignment.Center,
@@ -558,7 +629,7 @@ fun HomeScreen(
                   Text(
                     text = tool.labelFa,
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     color = if (isDark) DarkTextPrimary else DarkInk,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -570,13 +641,87 @@ fun HomeScreen(
         }
       }
 
-      item { Spacer(modifier = Modifier.height(6.dp)) }
+      item { Spacer(modifier = Modifier.height(spacing.xs)) }
+    }
+  }
+}
+
+@Composable
+private fun FeverDoseQuickEntryCard(
+  isDark: Boolean,
+  onClick: () -> Unit,
+) {
+  val spacing = ManoTheme.spacing
+  val borderColor =
+    if (isDark) TealGlow.copy(alpha = 0.42f) else SeaGreen.copy(alpha = 0.34f)
+  val cardBg =
+    if (isDark) DarkSurfaceHigh else CalmAquaSurface.copy(alpha = 0.72f)
+  Surface(
+    onClick = onClick,
+    color = cardBg,
+    shape = RoundedCornerShape(22.dp),
+    border = BorderStroke(1.2.dp, borderColor),
+    shadowElevation = 2.dp,
+    modifier =
+      Modifier
+        .fillMaxWidth()
+        .padding(horizontal = spacing.screenHorizontal, vertical = spacing.xs)
+        .minimumInteractiveComponentSize()
+        .testTag("home_fever_dose_quick_card"),
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.cardPadding, vertical = 14.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+          Modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(15.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.24f else 0.14f)),
+      ) {
+        Icon(
+          imageVector = Icons.Rounded.DeviceThermostat,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.size(26.dp),
+        )
+      }
+      Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+      ) {
+        Text(
+          text = "محاسبه سریع دوز تب‌بر کودک",
+          style = ManoTheme.typeScale.cardTitle.copy(fontWeight = FontWeight.ExtraBold),
+          color = if (isDark) DarkTextPrimary else DarkInk,
+        )
+        Text(
+          text = "دوز دقیق با سرنگ، در کمتر از ۱۵ ثانیه",
+          style = ManoTheme.typeScale.cardSubtitle,
+          color = if (isDark) DarkTextMuted else MutedSlate,
+        )
+      }
+      Surface(
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(12.dp),
+      ) {
+        Text(
+          text = "شروع",
+          style = ManoTheme.typeScale.actionLabel.copy(fontWeight = FontWeight.Bold),
+          color = MaterialTheme.colorScheme.onPrimary,
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+        )
+      }
     }
   }
 }
 
 @Composable
 private fun ContinueCareRow(care: PreviousCare, onClick: () -> Unit) {
+  val spacing = ManoTheme.spacing
   val date = remember(care.recordedAtMs) { measurementTimeFa(care.recordedAtMs) }
   val summary = remember(care) {
     when (care) {
@@ -585,18 +730,38 @@ private fun ContinueCareRow(care: PreviousCare, onClick: () -> Unit) {
     }
   }
   Surface(
-    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.48f),
-    shape = RoundedCornerShape(18.dp),
-    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.44f),
+    shape = RoundedCornerShape(20.dp),
+    border = BorderStroke(0.85.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)),
+    modifier =
+      Modifier
+        .fillMaxWidth()
+        .padding(horizontal = spacing.screenHorizontal, vertical = spacing.xs)
+        .manoFloatingGlass(intensity = 0.55f, enableSheen = true),
   ) {
     Column(modifier = Modifier.clickable(role = Role.Button, onClick = onClick)
-      .testTag("home_continue_care").padding(horizontal = 16.dp, vertical = 12.dp),
-      verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      Text("ادامهٔ مراقبت قبلی", style = MaterialTheme.typography.titleMedium)
-      Text(summary, style = MaterialTheme.typography.bodyMedium)
-      Text("زمان ثبت: $date", style = MaterialTheme.typography.bodySmall)
-      Text(if (care is PreviousCare.Temperature) "ثبت دمای جدید" else "دیدن سابقهٔ رشد",
-        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+      .testTag("home_continue_care").padding(horizontal = spacing.cardPadding, vertical = spacing.cardPaddingCompact),
+      verticalArrangement = Arrangement.spacedBy(spacing.textPairGap)) {
+      Text(
+        text = "ادامهٔ مراقبت قبلی",
+        style = ManoTheme.typeScale.cardTitle,
+        color = MaterialTheme.colorScheme.onSurface,
+      )
+      Text(
+        text = summary,
+        style = ManoTheme.typeScale.clinicalBodyCompact.copy(fontWeight = FontWeight.Medium, fontFeatureSettings = "tnum"),
+        color = MaterialTheme.colorScheme.onSurface,
+      )
+      Text(
+        text = "زمان ثبت: $date",
+        style = ManoTheme.typeScale.microCaption,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      Text(
+        text = if (care is PreviousCare.Temperature) "ثبت دمای جدید" else "دیدن سابقهٔ رشد",
+        style = ManoTheme.typeScale.actionLabel,
+        color = MaterialTheme.colorScheme.primary,
+      )
     }
   }
 }
@@ -1206,7 +1371,7 @@ private fun OrbitalCareNode(
 
       Text(
         text = item.titleFa,
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
+        style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         color = if (isDark) DarkTextPrimary else DarkInk,
         textAlign = TextAlign.Center,
@@ -1217,7 +1382,7 @@ private fun OrbitalCareNode(
             .clip(RoundedCornerShape(10.dp))
             .background(labelPillBg)
             .border(0.6.dp, labelPillBorder, RoundedCornerShape(10.dp))
-            .padding(horizontal = 6.dp, vertical = 1.5.dp),
+            .padding(horizontal = 7.dp, vertical = 2.5.dp),
       )
     }
   }
@@ -1231,21 +1396,74 @@ private fun PharmacistConciergeDock(
   onNavigateFollowUp: () -> Unit,
 ) {
   val scheme = MaterialTheme.colorScheme
+  val spacing = ManoTheme.spacing
+  val dockBg = if (isDark) DarkSurface.copy(alpha = 0.92f) else Color(0xFFF2FAF8)
+  val dockBorder =
+    if (isDark) DarkBorder.copy(alpha = 0.90f)
+    else scheme.primary.copy(alpha = 0.16f)
+
   Surface(
-    color = if (isDark) scheme.surfaceVariant else Color(0xFFF0F8F6),
-    shape = RoundedCornerShape(20.dp),
-    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).testTag("home_pharmacist_hero_card"),
+    color = dockBg,
+    shape = RoundedCornerShape(24.dp),
+    border = BorderStroke(0.95.dp, dockBorder),
+    shadowElevation = if (isDark) 2.5.dp else 2.dp,
+    modifier =
+      Modifier
+        .fillMaxWidth()
+        .padding(start = spacing.screenHorizontal, end = spacing.screenHorizontal, top = 0.dp, bottom = spacing.xs)
+        .manoFloatingGlass(intensity = 0.72f, enableSheen = true)
+        .testTag("home_pharmacist_hero_card"),
   ) {
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      Text("داروساز کودک", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-      Text("دربارهٔ مصرف دارو بپرسید یا پاسخ پرسش قبلی را ببینید.",
-        style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
-      androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = onNavigateAskPharmacist, modifier = Modifier.testTag("home_pharmacist_cta")) {
-          Text("پرسش از داروساز")
+    Column(
+      modifier = Modifier.padding(spacing.cardPadding),
+      verticalArrangement = Arrangement.spacedBy(spacing.cardItemGap),
+    ) {
+      Surface(
+        color = scheme.primary.copy(alpha = if (isDark) 0.16f else 0.10f),
+        shape = RoundedCornerShape(50),
+      ) {
+        Text(
+          text = "مشاوره تخصصی و مستند",
+          style = ManoTheme.typeScale.sectionKicker,
+          color = scheme.primary,
+          modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),
+        )
+      }
+      Column(verticalArrangement = Arrangement.spacedBy(spacing.textPairGap)) {
+        Text(
+          text = "داروساز کودک",
+          style = ManoTheme.typeScale.sectionHeader,
+          color = scheme.onSurface,
+        )
+        Text(
+          text = "دربارهٔ مصرف دارو بپرسید یا پاسخ پرسش قبلی را ببینید.",
+          style = ManoTheme.typeScale.clinicalBodyCompact,
+          color = scheme.onSurfaceVariant,
+        )
+      }
+      androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(spacing.chipGap),
+        verticalArrangement = Arrangement.spacedBy(spacing.chipGap),
+      ) {
+        Button(
+          onClick = onNavigateAskPharmacist,
+          shape = RoundedCornerShape(14.dp),
+          modifier = Modifier.minimumInteractiveComponentSize().testTag("home_pharmacist_cta"),
+        ) {
+          Text(
+            text = "پرسش از داروساز",
+            style = ManoTheme.typeScale.actionLabel,
+          )
         }
-        androidx.compose.material3.TextButton(onClick = onNavigateFollowUp, modifier = Modifier.testTag("home_followup_chip")) {
-          Text("پیگیری پاسخ")
+        androidx.compose.material3.TextButton(
+          onClick = onNavigateFollowUp,
+          shape = RoundedCornerShape(14.dp),
+          modifier = Modifier.minimumInteractiveComponentSize().testTag("home_followup_chip"),
+        ) {
+          Text(
+            text = "پیگیری پاسخ",
+            style = ManoTheme.typeScale.actionLabel,
+          )
         }
       }
     }

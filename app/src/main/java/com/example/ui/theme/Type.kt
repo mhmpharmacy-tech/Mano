@@ -1,20 +1,26 @@
 package com.example.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.unit.sp
 import com.example.R
 
+// Canonical Vazirmatn multi-weight family delegated from VazirmatnClinicalStyles.kt
+val VazirmatnFontFamily: FontFamily = VazirmatnClinicalFontFamily
+
+// Retained auxiliary families for backward compatibility where explicitly referenced
 val IbmPlexArabicFamily = FontFamily(
   Font(R.font.ibm_plex_sans_arabic, FontWeight.Normal),
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.Medium),
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.SemiBold),
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.Bold),
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.ExtraBold),
+  Font(R.font.ibm_plex_sans_arabic_medium, FontWeight.Medium),
+  Font(R.font.ibm_plex_sans_arabic_semibold, FontWeight.SemiBold),
+  Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.Bold),
+  Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.ExtraBold),
 )
 
 val DisplayLalezarFamily = FontFamily(
@@ -22,159 +28,91 @@ val DisplayLalezarFamily = FontFamily(
   Font(R.font.lalezar, FontWeight.Bold),
 )
 
-val VazirmatnFontFamily = FontFamily(
-  Font(R.font.vazirmatn, FontWeight.Normal),
-  Font(R.font.vazirmatn, FontWeight.Medium),
-  Font(R.font.vazirmatn, FontWeight.SemiBold),
-  Font(R.font.vazirmatn, FontWeight.Bold),
-  Font(R.font.vazirmatn, FontWeight.ExtraBold),
+/**
+ * Semantic hierarchical Type Scale backed by [VazirmatnClinicalStyles]
+ * (Headings, Body, Captions, Controls, and ClinicalMetrics).
+ */
+@Immutable
+data class ManoTypeScale(
+  val heroDisplay: TextStyle,
+  val screenTitle: TextStyle,
+  val sectionHeader: TextStyle,
+  val cardTitle: TextStyle,
+  val cardSubtitle: TextStyle,
+  val clinicalBody: TextStyle,
+  val clinicalBodyCompact: TextStyle,
+  val clinicalAlertTitle: TextStyle,
+  val clinicalNumericHero: TextStyle,
+  val clinicalNumericMedium: TextStyle,
+  val sectionKicker: TextStyle,
+  val actionLabel: TextStyle,
+  val chipLabel: TextStyle,
+  val microCaption: TextStyle,
+  val latinTechnical: TextStyle,
 )
 
-private val ClinicalLineHeightStyle =
-  LineHeightStyle(
-    alignment = LineHeightStyle.Alignment.Center,
-    trim = LineHeightStyle.Trim.None,
+val DefaultManoTypeScale =
+  ManoTypeScale(
+    heroDisplay = VazirmatnClinicalStyles.Headings.displayPage,
+    screenTitle = VazirmatnClinicalStyles.Headings.h2,
+    sectionHeader = VazirmatnClinicalStyles.Headings.sectionTitle,
+    cardTitle = VazirmatnClinicalStyles.Headings.cardTitle,
+    cardSubtitle = VazirmatnClinicalStyles.Body.supporting,
+    clinicalBody = VazirmatnClinicalStyles.Body.readingPrimary,
+    clinicalBodyCompact = VazirmatnClinicalStyles.Body.readingStandard,
+    clinicalAlertTitle = VazirmatnClinicalStyles.Headings.alertTitle,
+    clinicalNumericHero = VazirmatnClinicalStyles.ClinicalMetrics.dosageHero,
+    clinicalNumericMedium = VazirmatnClinicalStyles.ClinicalMetrics.metricMedium,
+    sectionKicker = VazirmatnClinicalStyles.Captions.overlineKicker,
+    actionLabel = VazirmatnClinicalStyles.Controls.buttonPrimary,
+    chipLabel = VazirmatnClinicalStyles.Controls.chipLabel,
+    microCaption = VazirmatnClinicalStyles.Captions.captionMicro,
+    latinTechnical = VazirmatnClinicalStyles.ClinicalMetrics.latinMonograph,
   )
 
-// International-grade Persian + Latin typography system:
-// - IBM Plex Sans Arabic drives display & section headlines with crisp geometric clarity
-// - Vazirmatn drives clinical reading copy with zero artificial letter-spacing (preserving cursive ligatures)
-//   and generous 1.69x–1.72x line heights for effortless reading in glare or dim night light
+val LocalManoTypeScale = staticCompositionLocalOf { DefaultManoTypeScale }
+
+object ManoTheme {
+  val typeScale: ManoTypeScale
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalManoTypeScale.current
+
+  val spacing: ManoSpacing
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalManoSpacing.current
+}
+
+// Convenient top-level aliases backed by VazirmatnClinicalStyles
+val ManoClinicalNumericLarge: TextStyle = VazirmatnClinicalStyles.ClinicalMetrics.dosageHero
+val ManoClinicalNumericMedium: TextStyle = VazirmatnClinicalStyles.ClinicalMetrics.metricMedium
+val ManoEditorialKicker: TextStyle = VazirmatnClinicalStyles.Captions.overlineKicker
+val ManoLatinTechnicalStyle: TextStyle = VazirmatnClinicalStyles.ClinicalMetrics.latinMonograph
+
+// Material 3 Typography wired directly to VazirmatnClinicalStyles as single source of truth
 val ManoTypography =
   Typography(
-    displayLarge =
-      TextStyle(
-        fontFamily = IbmPlexArabicFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 34.sp,
-        lineHeight = 46.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    displayMedium =
-      TextStyle(
-        fontFamily = IbmPlexArabicFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
-        lineHeight = 42.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    displaySmall =
-      TextStyle(
-        fontFamily = IbmPlexArabicFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
-        lineHeight = 38.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    headlineLarge =
-      TextStyle(
-        fontFamily = IbmPlexArabicFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 35.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    headlineMedium =
-      TextStyle(
-        fontFamily = IbmPlexArabicFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 21.sp,
-        lineHeight = 31.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    headlineSmall =
-      TextStyle(
-        fontFamily = IbmPlexArabicFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 19.5.sp,
-        lineHeight = 29.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    titleLarge =
-      TextStyle(
-        fontFamily = IbmPlexArabicFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 18.5.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    titleMedium =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 16.5.sp,
-        lineHeight = 25.5.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    titleSmall =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 14.5.sp,
-        lineHeight = 22.5.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    bodyLarge =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 27.5.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    bodyMedium =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.5.sp,
-        lineHeight = 25.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    bodySmall =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 13.sp,
-        lineHeight = 22.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    labelLarge =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
-        lineHeight = 21.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    labelMedium =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 12.5.sp,
-        lineHeight = 18.5.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
-    labelSmall =
-      TextStyle(
-        fontFamily = VazirmatnFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 11.5.sp,
-        lineHeight = 16.5.sp,
-        letterSpacing = 0.sp,
-        lineHeightStyle = ClinicalLineHeightStyle,
-      ),
+    // Display & Headline tiers -> Headings
+    displayLarge = VazirmatnClinicalStyles.Headings.displayHero,
+    displayMedium = VazirmatnClinicalStyles.Headings.displayPage,
+    displaySmall = VazirmatnClinicalStyles.Headings.h1,
+    headlineLarge = VazirmatnClinicalStyles.Headings.h2,
+    headlineMedium = VazirmatnClinicalStyles.Headings.h3,
+    headlineSmall = VazirmatnClinicalStyles.Headings.h4,
+
+    // Title tier -> Headings
+    titleLarge = VazirmatnClinicalStyles.Headings.topBarTitle,
+    titleMedium = VazirmatnClinicalStyles.Headings.cardTitle,
+    titleSmall = VazirmatnClinicalStyles.Headings.compactTitle,
+
+    // Body tier -> Body + Primary Caption
+    bodyLarge = VazirmatnClinicalStyles.Body.readingLarge,
+    bodyMedium = VazirmatnClinicalStyles.Body.readingStandard,
+    bodySmall = VazirmatnClinicalStyles.Captions.captionPrimary,
+
+    // Label tier -> Controls + Captions
+    labelLarge = VazirmatnClinicalStyles.Controls.buttonPrimary,
+    labelMedium = VazirmatnClinicalStyles.Captions.captionMedium,
+    labelSmall = VazirmatnClinicalStyles.Captions.navMicro,
   )

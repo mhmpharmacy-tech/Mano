@@ -33,6 +33,12 @@ data class Pediatric3DStudioRoute(
   val prefillScannedDrugFa: String = "",
 )
 
+@Serializable
+data class FeverDoseCalculatorRoute(
+  val prefillFormulationId: String = "",
+  val prefillScannedDrugFa: String = "",
+)
+
 @Serializable data object SyrupScannerRoute
 
 @Serializable data class FaqRoute(val query: String = "")

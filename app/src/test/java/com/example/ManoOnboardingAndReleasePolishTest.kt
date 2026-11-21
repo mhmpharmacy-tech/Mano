@@ -228,9 +228,7 @@ class ManoOnboardingAndReleasePolishTest {
     composeTestRule.onNodeWithTag("test_haptic_btn").performClick()
     assertNotNull(feedbackToast)
 
-    composeTestRule.onNodeWithTag("info_list").performScrollToNode(hasTestTag("info_webgl_tuning_card"))
-    composeTestRule.onNodeWithTag("webgl_quality_balanced").performClick()
-    assertEquals(ManoWebGlQuality.BALANCED, selectedQuality)
+    composeTestRule.onNodeWithTag("info_webgl_tuning_card").assertDoesNotExist()
 
     composeTestRule.onNodeWithTag("info_list").performScrollToNode(hasTestTag("info_release_checklist_card"))
     composeTestRule.onNodeWithTag("info_reopen_onboarding_btn").performClick()

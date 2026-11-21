@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -40,6 +42,7 @@ import com.example.ui.theme.KidLime
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SparkYellow
 import com.example.ui.theme.TealGlow
+import com.example.ui.theme.VazirmatnFontFamily
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -217,12 +220,19 @@ fun ManoKidWordmark(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
+      @Suppress("DEPRECATION")
+      val wordmarkPlatformStyle = PlatformTextStyle(includeFontPadding = false)
       Text(
         text = "MANO",
-        fontSize = fontSize,
-        lineHeight = (fontSize.value + 3f).sp,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 0.6.sp,
+        style =
+          TextStyle(
+            fontFamily = VazirmatnFontFamily,
+            fontSize = fontSize,
+            lineHeight = (fontSize.value + 3f).sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.0.sp,
+            platformStyle = wordmarkPlatformStyle,
+          ),
         color = manoInk,
       )
       Box(contentAlignment = Alignment.TopEnd) {
@@ -236,13 +246,19 @@ fun ManoKidWordmark(
                   listOf(Color(0xFF72E008), KidLime, Color(0xFF47B500))
                 )
               )
-              .padding(horizontal = 7.dp, vertical = 1.5.dp),
+              .padding(horizontal = 7.5.dp, vertical = 2.5.dp),
         ) {
           Text(
             text = "Kid",
-            fontSize = (fontSize.value * 0.88f).sp,
-            lineHeight = (fontSize.value + 1f).sp,
-            fontWeight = FontWeight.ExtraBold,
+            style =
+              TextStyle(
+                fontFamily = VazirmatnFontFamily,
+                fontSize = (fontSize.value * 0.84f).sp,
+                lineHeight = (fontSize.value * 0.96f).sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.35.sp,
+                platformStyle = wordmarkPlatformStyle,
+              ),
             color = PureWhite,
           )
         }

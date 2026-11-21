@@ -898,111 +898,122 @@ const manoFrostedMixMat = createManoFrostedMixMaterial({
 });
 const metalMat = manoFrostedMixMat;
 
-// Calm Seafoam Stage Halo Ring under MANO on the Pearl Plinth
+// Calm Seafoam Stage Halo Ring under floating MANO on the Frosted Plinth
 const manoStageHalo = new THREE.Mesh(
-  new THREE.TorusGeometry(0.68, 0.024, 14, 56),
+  new THREE.TorusGeometry(0.66, 0.020, 14, 56),
   manoAmberAccentMat
 );
 manoStageHalo.rotation.x = Math.PI / 2;
 manoStageHalo.position.y = 0.012;
 manoRoot.add(manoStageHalo);
 
-// Grounded warm ivory feet with dual-tone Energetic Orange + Emerald ankle collars
-[-0.25, 0.25].forEach((x) => {
-  const legColumn = new THREE.Mesh(new THREE.CapsuleGeometry(0.115, 0.18, 12, 18), manoPorcelainMat);
-  legColumn.position.set(x, 0.32, 0.02);
-  legColumn.castShadow = true;
-  manoChar.add(legColumn);
-
-  const foot = new THREE.Mesh(new THREE.SphereGeometry(0.19, 26, 20), manoPorcelainMat);
-  foot.scale.set(1.02, 0.68, 1.34);
-  foot.position.set(x, 0.125, 0.06);
-  foot.castShadow = true;
-  foot.receiveShadow = false;
-  manoChar.add(foot);
-
-  const footSole = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.03, 24), manoGoldMat);
-  footSole.scale.set(1.0, 1.0, 1.25);
-  footSole.position.set(x, 0.02, 0.06);
-  manoChar.add(footSole);
-
-  const ankleEmeraldRing = new THREE.Mesh(new THREE.TorusGeometry(0.138, 0.022, 10, 24), manoScarfMat);
-  ankleEmeraldRing.rotation.x = Math.PI / 2;
-  ankleEmeraldRing.position.set(x, 0.225, 0.04);
-  manoChar.add(ankleEmeraldRing);
-
-  const ankleOrangeRing = new THREE.Mesh(new THREE.TorusGeometry(0.142, 0.020, 10, 24), manoGoldMat);
-  ankleOrangeRing.rotation.x = Math.PI / 2;
-  ankleOrangeRing.position.set(x, 0.255, 0.04);
-  manoChar.add(ankleOrangeRing);
-});
-
-// Warm porcelain torso + Sculpted 3D Orange-Gold "M+" Chest Emblem (MANO V1.0 Signature)
-const torso = new THREE.Mesh(new THREE.SphereGeometry(0.56, 36, 28), manoPorcelainMat);
-torso.scale.set(1.0, 1.08, 0.90);
-torso.position.y = 0.78;
+// Canonical Floating Orbital MANO Kid Torso Pod (smooth tapered ceramic-frosted hover droplet)
+const podProfile = [
+  new THREE.Vector2(0.0, 0.34),
+  new THREE.Vector2(0.11, 0.36),
+  new THREE.Vector2(0.24, 0.44),
+  new THREE.Vector2(0.39, 0.60),
+  new THREE.Vector2(0.50, 0.80),
+  new THREE.Vector2(0.52, 1.00),
+  new THREE.Vector2(0.45, 1.18),
+  new THREE.Vector2(0.32, 1.29),
+  new THREE.Vector2(0.0, 1.32),
+];
+const torso = new THREE.Mesh(new THREE.LatheGeometry(podProfile, 44), manoPorcelainMat);
+torso.scale.set(1.0, 1.0, 0.92);
 torso.castShadow = true;
 torso.receiveShadow = false;
 manoChar.add(torso);
 
-// Warm orange-amber belt/waist accent line for extra visual pop
-const waistTrim = new THREE.Mesh(new THREE.TorusGeometry(0.49, 0.016, 10, 40), manoAmberAccentMat);
-waistTrim.rotation.x = Math.PI / 2;
-waistTrim.scale.set(1.0, 0.89, 1.0);
-waistTrim.position.set(0, 0.52, 0.0);
-manoChar.add(waistTrim);
+// Subtle luminous frosted-turquoise hover propulsion ring at the bottom tip of the floating pod
+const hoverCoreRing = new THREE.Mesh(
+  new THREE.TorusGeometry(0.155, 0.018, 12, 36),
+  manoFaceGlowMat
+);
+hoverCoreRing.rotation.x = Math.PI / 2;
+hoverCoreRing.position.set(0, 0.365, 0);
+manoChar.add(hoverCoreRing);
 
-// Sculpted 3D "M+" Chest Logo Group
+// Signature Tilted Floating Frosted-Turquoise Orbital Ring encircling MANO's torso
+const manoOrbitRingGroup = new THREE.Group();
+manoOrbitRingGroup.position.set(0, 0.82, 0.0);
+manoOrbitRingGroup.rotation.set(Math.PI * 0.43, 0.0, -0.22);
+manoChar.add(manoOrbitRingGroup);
+
+const manoOrbitRing = new THREE.Mesh(
+  new THREE.TorusGeometry(0.76, 0.022, 16, 72),
+  manoFrostedMixMat
+);
+manoOrbitRing.castShadow = false;
+manoOrbitRingGroup.add(manoOrbitRing);
+
+const manoOrbitInnerFilament = new THREE.Mesh(
+  new THREE.TorusGeometry(0.76, 0.008, 10, 64),
+  manoFaceGlowMat
+);
+manoOrbitRingGroup.add(manoOrbitInnerFilament);
+
+const manoOrbitSatellite = new THREE.Mesh(
+  new THREE.SphereGeometry(0.042, 16, 14),
+  manoFaceGlowMat
+);
+manoOrbitSatellite.position.set(0.76, 0, 0);
+manoOrbitRingGroup.add(manoOrbitSatellite);
+
+// Minimalist Clinical Chest Core Emblem ("M+" housed inside a frosted glass core ring)
 const chestLogoGroup = new THREE.Group();
-chestLogoGroup.position.set(0, 0.83, 0.495);
-chestLogoGroup.rotation.x = -0.08;
+chestLogoGroup.position.set(0, 0.88, 0.478);
+chestLogoGroup.rotation.x = -0.06;
 manoChar.add(chestLogoGroup);
 
-// Subtle warm glowing badge plate behind the M+ emblem
-const chestAuraRing = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.014, 12, 36), manoCoreEmblemMat);
-chestAuraRing.position.set(0, 0.0, -0.015);
+const chestBadgePlate = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.195, 0.195, 0.016, 36),
+  manoFrostedMixMat
+);
+chestBadgePlate.rotation.x = Math.PI / 2;
+chestBadgePlate.position.set(0, 0, -0.012);
+chestLogoGroup.add(chestBadgePlate);
+
+const chestAuraRing = new THREE.Mesh(new THREE.TorusGeometry(0.198, 0.015, 12, 36), manoCoreEmblemMat);
+chestAuraRing.position.set(0, 0.0, -0.004);
 chestLogoGroup.add(chestAuraRing);
 
-// Left & Right vertical pillars of "M"
-[-0.105, 0.105].forEach((mx) => {
-  const mPillar = new THREE.Mesh(new THREE.CapsuleGeometry(0.030, 0.15, 10, 16), manoGoldMat);
-  mPillar.position.set(mx, -0.02, 0.01);
+[-0.088, 0.088].forEach((mx) => {
+  const mPillar = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.115, 10, 16), manoGoldMat);
+  mPillar.position.set(mx, -0.015, 0.01);
   mPillar.castShadow = false;
   chestLogoGroup.add(mPillar);
 });
 
-// Left & Right diagonal inner strokes of "M"
 [-1, 1].forEach((dir) => {
-  const mDiag = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.115, 10, 16), manoAmberAccentMat);
-  mDiag.position.set(dir * 0.052, -0.005, 0.016);
+  const mDiag = new THREE.Mesh(new THREE.CapsuleGeometry(0.019, 0.092, 10, 16), manoAmberAccentMat);
+  mDiag.position.set(dir * 0.044, -0.004, 0.014);
   mDiag.rotation.z = dir * 0.56;
   mDiag.castShadow = false;
   chestLogoGroup.add(mDiag);
 });
 
-// Floating Orange-Gold Diamond Droplet above center of "M"
-const mDiamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.052, 0), manoCoreEmblemMat);
-mDiamond.scale.set(0.95, 1.25, 0.55);
-mDiamond.position.set(0, 0.115, 0.02);
+const mDiamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.036, 0), manoCoreEmblemMat);
+mDiamond.scale.set(0.95, 1.22, 0.52);
+mDiamond.position.set(0, 0.096, 0.016);
 chestLogoGroup.add(mDiamond);
 
-// Emerald "+" Cross at top-right of "M"
-const plusVert = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.076, 0.024), manoScarfMat);
-plusVert.position.set(0.165, 0.105, 0.015);
-const plusHoriz = new THREE.Mesh(new THREE.BoxGeometry(0.076, 0.024, 0.024), manoScarfMat);
-plusHoriz.position.set(0.165, 0.105, 0.015);
+const plusVert = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.058, 0.018), manoFaceGlowMat);
+plusVert.position.set(0.132, 0.086, 0.014);
+const plusHoriz = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.018, 0.018), manoFaceGlowMat);
+plusHoriz.position.set(0.132, 0.086, 0.014);
 chestLogoGroup.add(plusVert, plusHoriz);
 
-// Dual-Tone Neck Collar Ring (Thick Vibrant Orange-Gold Upper + Emerald Lower Trim)
-const stethCollar = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.042, 16, 40), manoGoldMat);
+// Sleek Floating Frosted-Turquoise Neck Collar
+const stethCollar = new THREE.Mesh(new THREE.TorusGeometry(0.325, 0.030, 16, 40), manoGoldMat);
 stethCollar.rotation.x = Math.PI * 0.5;
-stethCollar.position.set(0, 1.31, 0.02);
+stethCollar.position.set(0, 1.31, 0.01);
 stethCollar.castShadow = false;
 manoChar.add(stethCollar);
 
-const neckEmeraldCollar = new THREE.Mesh(new THREE.TorusGeometry(0.365, 0.024, 14, 36), manoScarfMat);
+const neckEmeraldCollar = new THREE.Mesh(new THREE.TorusGeometry(0.345, 0.015, 12, 36), manoScarfMat);
 neckEmeraldCollar.rotation.x = Math.PI * 0.5;
-neckEmeraldCollar.position.set(0, 1.265, 0.02);
+neckEmeraldCollar.position.set(0, 1.275, 0.01);
 manoChar.add(neckEmeraldCollar);
 
 // Articulated Head Pivot Group (pivots softly at the neck collar for Soft Eye Tracking)
@@ -1095,96 +1106,65 @@ smileCurve.rotation.z = Math.PI * 1.12;
 smileCurve.position.set(0, smileBaseY, smileBaseZ);
 manoHeadGroup.add(smileCurve);
 
-// Signature MANO V1.0 Single Lush Curved Leaf Sprout + Base Mount attached to Head
-const sproutCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.076, 0.095, 0.062, 24), manoGoldMat);
-sproutCollar.position.set(0, 2.20 - MANO_HEAD_PIVOT_Y, -MANO_HEAD_PIVOT_Z);
-manoHeadGroup.add(sproutCollar);
+// Signature Floating Slim Pediatric Care Halo above MANO's Head (replaces legacy leaf sprout)
+const manoCrownHaloGroup = new THREE.Group();
+const MANO_CROWN_HALO_BASE_Y = 2.29 - MANO_HEAD_PIVOT_Y;
+manoCrownHaloGroup.position.set(0, MANO_CROWN_HALO_BASE_Y, -MANO_HEAD_PIVOT_Z);
+manoCrownHaloGroup.rotation.set(0.14, 0, -0.06);
+manoHeadGroup.add(manoCrownHaloGroup);
 
-const sproutInnerRing = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.016, 10, 24), manoAmberAccentMat);
-sproutInnerRing.rotation.x = Math.PI / 2;
-sproutInnerRing.position.set(0, 2.232 - MANO_HEAD_PIVOT_Y, -MANO_HEAD_PIVOT_Z);
-manoHeadGroup.add(sproutInnerRing);
+const crownHaloOuter = new THREE.Mesh(
+  new THREE.TorusGeometry(0.245, 0.018, 16, 48),
+  manoFrostedMixMat
+);
+crownHaloOuter.rotation.x = Math.PI / 2;
+crownHaloOuter.castShadow = false;
+manoCrownHaloGroup.add(crownHaloOuter);
 
-const sproutStem = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.20, 14), manoSproutMat);
-sproutStem.position.set(0.015, 2.30 - MANO_HEAD_PIVOT_Y, -MANO_HEAD_PIVOT_Z);
-sproutStem.rotation.z = -0.18;
-sproutStem.castShadow = false;
-manoHeadGroup.add(sproutStem);
+const crownHaloGlowRing = new THREE.Mesh(
+  new THREE.TorusGeometry(0.245, 0.007, 10, 44),
+  manoFaceGlowMat
+);
+crownHaloGlowRing.rotation.x = Math.PI / 2;
+manoCrownHaloGroup.add(crownHaloGlowRing);
 
-// Lush main sculpted leaf tilting gracefully to the right (matching MANO V1.0 reference sheet)
-const mainLeaf = new THREE.Mesh(new THREE.SphereGeometry(0.135, 20, 16), manoSproutMat);
-mainLeaf.scale.set(1.48, 0.38, 0.82);
-mainLeaf.position.set(0.135, 2.41 - MANO_HEAD_PIVOT_Y, 0.01 - MANO_HEAD_PIVOT_Z);
-mainLeaf.rotation.z = 0.38;
-mainLeaf.rotation.y = -0.12;
-mainLeaf.castShadow = false;
-manoHeadGroup.add(mainLeaf);
+const crownCareSpark = new THREE.Mesh(
+  new THREE.OctahedronGeometry(0.028, 0),
+  manoFaceGlowMat
+);
+crownCareSpark.position.set(0, 0.012, 0.245);
+manoCrownHaloGroup.add(crownCareSpark);
 
-const leafVein = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.19, 8, 12), manoAmberAccentMat);
-leafVein.position.set(0.125, 2.415 - MANO_HEAD_PIVOT_Y, 0.032 - MANO_HEAD_PIVOT_Z);
-leafVein.rotation.z = -1.18;
-manoHeadGroup.add(leafVein);
+// Minimalist Floating Capsule Hands (clean magnetic mittens matching the Orbital MANO Kid aesthetic)
+function populateFloatingCapsuleHand(armGroup) {
+  const handPod = new THREE.Mesh(new THREE.CapsuleGeometry(0.102, 0.22, 14, 22), manoPorcelainMat);
+  handPod.position.y = -0.14;
+  handPod.castShadow = true;
+  handPod.receiveShadow = false;
+  armGroup.add(handPod);
 
-// Helper to build articulated MANO V1.0 arm with shoulder rings, elbow band, dual wrist cuff, and 3D hand + fingers
-function populateManoArm(armGroup, isRightArm) {
-  const shoulderEmerald = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.022, 12, 24), manoScarfMat);
-  shoulderEmerald.rotation.x = Math.PI / 2;
-  armGroup.add(shoulderEmerald);
+  const handCuff = new THREE.Mesh(new THREE.TorusGeometry(0.104, 0.016, 12, 26), manoFrostedMixMat);
+  handCuff.rotation.x = Math.PI / 2;
+  handCuff.position.y = -0.12;
+  armGroup.add(handCuff);
 
-  const shoulderOrange = new THREE.Mesh(new THREE.SphereGeometry(0.112, 18, 14), manoGoldMat);
-  armGroup.add(shoulderOrange);
-
-  const armMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.106, 0.32, 14, 22), manoPorcelainMat);
-  armMesh.position.y = -0.19;
-  armMesh.castShadow = true;
-  armGroup.add(armMesh);
-
-  const elbowEmeraldRing = new THREE.Mesh(new THREE.TorusGeometry(0.106, 0.018, 10, 24), manoScarfMat);
-  elbowEmeraldRing.rotation.x = Math.PI / 2;
-  elbowEmeraldRing.position.y = -0.17;
-  armGroup.add(elbowEmeraldRing);
-
-  const wristOrangeCuff = new THREE.Mesh(new THREE.TorusGeometry(0.102, 0.022, 12, 24), manoGoldMat);
-  wristOrangeCuff.rotation.x = Math.PI / 2;
-  wristOrangeCuff.position.y = -0.34;
-  armGroup.add(wristOrangeCuff);
-
-  const wristEmeraldCuff = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.015, 10, 24), manoScarfMat);
-  wristEmeraldCuff.rotation.x = Math.PI / 2;
-  wristEmeraldCuff.position.y = -0.368;
-  armGroup.add(wristEmeraldCuff);
-
-  // Rounded 3D Hand Palm + Thumb + 3 Cute Finger Capsules
-  const palm = new THREE.Mesh(new THREE.SphereGeometry(0.096, 18, 14), manoPorcelainMat);
-  palm.scale.set(1.05, 0.92, 0.78);
-  palm.position.y = -0.435;
-  palm.castShadow = false;
-  armGroup.add(palm);
-
-  const thumbDir = isRightArm ? -1 : 1;
-  const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.055, 8, 12), manoPorcelainMat);
-  thumb.position.set(thumbDir * 0.088, -0.425, 0.025);
-  thumb.rotation.z = thumbDir * 0.65;
-  armGroup.add(thumb);
-
-  [-0.045, 0.0, 0.045].forEach((fx) => {
-    const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.065, 8, 12), manoPorcelainMat);
-    finger.position.set(fx, -0.515, 0.01);
-    armGroup.add(finger);
-  });
+  const handTipGlow = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.010, 10, 22), manoFaceGlowMat);
+  handTipGlow.rotation.x = Math.PI / 2;
+  handTipGlow.position.y = -0.24;
+  armGroup.add(handTipGlow);
 }
 
 const leftArmGroup = new THREE.Group();
-leftArmGroup.position.set(-0.57, 0.98, 0.02);
-leftArmGroup.rotation.z = 0.44;
+leftArmGroup.position.set(-0.62, 1.02, 0.04);
+leftArmGroup.rotation.z = 0.34;
 manoChar.add(leftArmGroup);
-populateManoArm(leftArmGroup, false);
+populateFloatingCapsuleHand(leftArmGroup);
 
 const rightArmGroup = new THREE.Group();
-rightArmGroup.position.set(0.57, 1.05, 0.05);
-rightArmGroup.rotation.z = -2.28;
+rightArmGroup.position.set(0.62, 1.12, 0.08);
+rightArmGroup.rotation.z = -2.32;
 manoChar.add(rightArmGroup);
-populateManoArm(rightArmGroup, true);
+populateFloatingCapsuleHand(rightArmGroup);
 
 tagInteractive(manoChar, 'mano');
 
@@ -1277,24 +1257,22 @@ squadConfigs.forEach((cfg, idx) => {
     stGroup.add(miniEye);
   });
 
-  // Role-distinct head topper emblem in brushed gold / glow
+  // Unified Floating Orbital Mini-MANO Halo Topper (consistent MANO Kid Brand DNA across squad)
+  const miniHalo = new THREE.Mesh(new THREE.TorusGeometry(0.084, 0.013, 10, 24), rimMat);
+  miniHalo.rotation.x = Math.PI / 2;
+  miniHalo.position.y = 0.635;
+  stGroup.add(miniHalo);
+
   if (cfg.kind === 'drug') {
-    const plusV = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.085, 0.026), manoGoldMat);
-    plusV.position.y = 0.64;
-    const plusH = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.026, 0.026), manoGoldMat);
-    plusH.position.y = 0.64;
+    const plusV = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.068, 0.020), manoGoldMat);
+    plusV.position.y = 0.655;
+    const plusH = new THREE.Mesh(new THREE.BoxGeometry(0.068, 0.020, 0.020), manoGoldMat);
+    plusH.position.y = 0.655;
     stGroup.add(plusV, plusH);
-  } else if (cfg.kind === 'growth' || cfg.kind === 'nutrition') {
-    const miniLeaf = new THREE.Mesh(new THREE.SphereGeometry(0.048, 14, 10), suitMat);
-    miniLeaf.scale.set(1.3, 0.42, 0.72);
-    miniLeaf.position.set(0.03, 0.63, 0);
-    miniLeaf.rotation.z = 0.4;
-    stGroup.add(miniLeaf);
   } else {
-    const miniHalo = new THREE.Mesh(new THREE.TorusGeometry(0.078, 0.014, 10, 22), manoGoldMat);
-    miniHalo.rotation.x = Math.PI / 2;
-    miniHalo.position.y = 0.63;
-    stGroup.add(miniHalo);
+    const miniSpark = new THREE.Mesh(new THREE.OctahedronGeometry(0.020, 0), manoFaceGlowMat);
+    miniSpark.position.set(0, 0.642, 0.084);
+    stGroup.add(miniSpark);
   }
 
   stGroup.userData.suitMat = suitMat;
@@ -2509,15 +2487,27 @@ function animate(nowMs) {
     feverRing.scale.setScalar(1.0);
   }
 
-  // 3D MANO gentle breath, bounce, Soft Eye Tracking (head + eyes + blink) & orbiting PBR squad
+  // 3D MANO gentle weightless levitation, orbital ring, crown halo, Soft Eye Tracking & orbiting squad
   if (activeScene === 'mano') {
     manoBounce = Math.max(0, manoBounce - dt * 2.2);
-    const hop = Math.sin(manoBounce * Math.PI) * 0.26;
-    manoChar.position.y = hop;
-    const breath = 1.0 + Math.sin(t * 2.4) * 0.016;
+    const hop = Math.sin(manoBounce * Math.PI) * 0.24;
+    const hoverFloat = Math.sin(t * 2.0) * 0.055;
+    manoChar.position.y = hoverFloat + hop;
+    const breath = 1.0 + Math.sin(t * 2.4) * 0.014;
     manoChar.scale.set(breath, 2.0 - breath, breath);
-    rightArmGroup.rotation.z = -2.28 + Math.sin(t * 4.2) * 0.20;
-    leftArmGroup.rotation.z = 0.48 + Math.sin(t * 2.4) * 0.04;
+    rightArmGroup.rotation.z = -2.32 + Math.sin(t * 4.0) * 0.18;
+    rightArmGroup.position.y = 1.12 + Math.sin(t * 2.4 + 0.6) * 0.022;
+    leftArmGroup.rotation.z = 0.34 + Math.sin(t * 2.2) * 0.05;
+    leftArmGroup.position.y = 1.02 + Math.sin(t * 2.4) * 0.018;
+
+    // Signature frosted-turquoise torso orbital ring & satellite pearl
+    manoOrbitRingGroup.rotation.z = -0.22 + Math.sin(t * 0.9) * 0.06;
+    manoOrbitRingGroup.rotation.y = t * 0.55;
+    hoverCoreRing.scale.setScalar(1.0 + Math.sin(t * 3.2) * 0.06);
+
+    // Floating slim pediatric care halo gently hovers above MANO's head
+    manoCrownHaloGroup.position.y = MANO_CROWN_HALO_BASE_Y + Math.sin(t * 2.5 + 0.8) * 0.018;
+    manoCrownHaloGroup.rotation.y = t * 0.42;
 
     // Soft Eye Tracking: blend user touch/pointer gaze, phone tilt gaze, and calm idle presence
     const eyeCfg = MANO_RENDER_TUNING.eyeTracking;
