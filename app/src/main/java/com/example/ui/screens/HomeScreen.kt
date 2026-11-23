@@ -338,6 +338,7 @@ fun HomeScreen(
       onCheckSymptoms = { onNavigateSymptoms("fever") },
       onAskPharmacist = onNavigateAskPharmacist,
       onMedicines = onNavigateMedicines,
+      onSyrupScanner = onNavigateSyrupScanner,
       onVaccines = onNavigateVaccines,
       onGrowth = onNavigateGrowth,
       onNutrition = onNavigateNutrition,
