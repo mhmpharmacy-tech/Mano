@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoGraph
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.ChildCare
 import androidx.compose.material.icons.rounded.DeviceThermostat
