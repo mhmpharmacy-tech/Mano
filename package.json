@@ -1,0 +1,14 @@
+{
+  "name": "mano-kid-care-home-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MANO Kid premium RTL Care Home for Google AI Studio Build",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "build": "node scripts/build-web.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check src/app.js && node --check server.mjs && npm test"
+  }
+}
