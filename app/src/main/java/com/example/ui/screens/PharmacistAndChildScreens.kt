@@ -88,6 +88,7 @@ import com.example.domain.util.AssetLinksVerifier
 import com.example.domain.util.ManoDomainLinks
 import com.example.domain.util.PersianNormalizer
 import com.example.domain.util.VaccinationScheduleEngine
+import com.example.ui.components.ManoCarePageIntro
 import com.example.ui.components.AlertSeverity
 import com.example.ui.components.ConsentBox
 import com.example.ui.components.LtrText
@@ -555,6 +556,15 @@ fun AskPharmacistScreen(
       verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
       item {
+        ManoCarePageIntro(
+          titleFa = "پرسش دارویی و داروساز",
+          descriptionFa = "ثبت پرسش غیرفوری؛ پاسخ انسانی فقط پس از بررسی داروساز.",
+          icon = Icons.Rounded.VerifiedUser,
+          accent = androidx.compose.ui.graphics.Color(0xFF105B48),
+          modifier = Modifier.testTag("care_pharmacist_intro"),
+        )
+      }
+      item {
         SectionCard(modifier = Modifier.testTag("mano_connect_header_card")) {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ManoPoseAvatar(pose = MascotPose.LISTEN, size = 60.dp)
@@ -756,6 +766,16 @@ fun MyChildScreen(
       contentPadding = ManoTheme.spacing.screenContentPadding,
       verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
+      item {
+        ManoCarePageIntro(
+          titleFa = "پرونده کودک",
+          descriptionFa = "اطلاعات خصوصی، سوابق و وضعیت همگام‌سازی؛ بدون تصویر اجباری کودک.",
+          icon = Icons.Rounded.VerifiedUser,
+          accent = androidx.compose.ui.graphics.Color(0xFF2F83B9),
+          modifier = Modifier.testTag("care_child_record_intro"),
+          withMascot = false,
+        )
+      }
       item {
         SectionCard {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
