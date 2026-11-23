@@ -103,70 +103,16 @@ class ExampleRobolectricTest {
 
   @Test
   @Config(sdk = [36], qualifiers = "w411dp-h915dp-xxhdpi")
-  fun homeScreen_displaysOrbitalMenuWithoutOverlapAndPharmacistHeroBelow() {
-    composeTestRule.waitForIdle()
-    composeTestRule.mainClock.advanceTimeBy(600L)
+  fun homeScreen_careHomeShowsBrandedActionsAndNoSyntheticCareData() {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_brand_crest").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("orbital_menu_stage").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("mano_mascot_touch").assertIsDisplayed().performClick()
-    composeTestRule.onNodeWithText("دستیار هوشمند سلامت کودک و خانواده").assertIsDisplayed()
-
-    val stageBounds = composeTestRule.onNodeWithTag("orbital_menu_stage").fetchSemanticsNode().boundsInRoot
-    val mascotBounds = composeTestRule.onNodeWithTag("mano_mascot_touch").fetchSemanticsNode().boundsInRoot
-    val orbitalTags =
-      listOf(
-        "home_menu_fever",
-        "home_menu_medicines",
-        "home_menu_scanner",
-        "home_menu_growth",
-        "home_menu_skin",
-        "home_menu_qa",
-      )
-    val nodeBounds =
-      orbitalTags.associateWith { tag ->
-        composeTestRule.onNodeWithTag(tag).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-      }
-
-    // Every orbital node must sit strictly inside stage bounds and never overlap central MANO
-    nodeBounds.forEach { (tag, bounds) ->
-      org.junit.Assert.assertTrue("$tag clipped left of stage", bounds.left >= stageBounds.left - 1f)
-      org.junit.Assert.assertTrue("$tag clipped right of stage", bounds.right <= stageBounds.right + 1f)
-      org.junit.Assert.assertTrue("$tag clipped top of stage", bounds.top >= stageBounds.top - 1f)
-      org.junit.Assert.assertTrue("$tag clipped bottom of stage", bounds.bottom <= stageBounds.bottom + 1f)
-      org.junit.Assert.assertFalse(
-        "$tag overlapped central MANO mascot ($bounds vs $mascotBounds)",
-        bounds.overlaps(mascotBounds),
-      )
-    }
-
-    // No pair of orbital nodes may overlap each other
-    for (i in orbitalTags.indices) {
-      for (j in i + 1 until orbitalTags.size) {
-        val tagA = orbitalTags[i]
-        val tagB = orbitalTags[j]
-        org.junit.Assert.assertFalse(
-          "Orbital nodes $tagA and $tagB overlapped",
-          nodeBounds.getValue(tagA).overlaps(nodeBounds.getValue(tagB)),
-        )
-      }
-    }
-
-    // Verify circular hexagonal symmetry around MANO
-    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_fever").bottom <= mascotBounds.top)
-    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_growth").top >= mascotBounds.bottom)
-    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_medicines").left >= mascotBounds.right)
-    org.junit.Assert.assertTrue(nodeBounds.getValue("home_menu_qa").right <= mascotBounds.left)
-
-    // Verify zero separation gap between MANO orbital stage and Pharmacist card directly beneath it
-    val pharmacistBounds =
-      composeTestRule.onNodeWithTag("home_pharmacist_hero_card").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-    org.junit.Assert.assertTrue(
-      "Expected pharmacist card docked flush beneath orbital stage with zero gap, got gap=${pharmacistBounds.top - stageBounds.bottom}",
-      pharmacistBounds.top - stageBounds.bottom <= 2f,
-    )
-    composeTestRule.onNodeWithTag("home_pharmacist_cta").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("care_child_profile").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_menu_fever").assertIsDisplayed()
+    composeTestRule.onNodeWithTag("home_ask_pharmacist").assertIsDisplayed()
+    composeTestRule.onNodeWithText("من مانو هستم").assertExists()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("care_today_card"))
+    composeTestRule.onNodeWithTag("care_today_card").assertIsDisplayed()
   }
 
   @Test
@@ -174,8 +120,8 @@ class ExampleRobolectricTest {
     composeTestRule.waitForIdle()
 
     // 1. Navigate via competitive-advantage Pharmacist Hero CTA -> AskPharmacistRoute, then return via bottom nav Home
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_pharmacist_cta"))
-    composeTestRule.onNodeWithTag("home_pharmacist_cta").performClick()
+    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_ask_pharmacist"))
+    composeTestRule.onNodeWithTag("home_ask_pharmacist").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_hero_card").assertDoesNotExist()
     composeTestRule.onNodeWithTag("nav_home").performClick()
@@ -391,24 +337,17 @@ class ExampleRobolectricTest {
 
   @Test
   @Config(sdk = [36], qualifiers = "w411dp-h915dp-xxhdpi")
-  fun homeScreen_specializedStripOpens3DStudioAndReturnsHomeViaBottomNav() {
+  fun homeScreen_careHomeKeepsDoseCalculatorReachableWithoutFakeDose() {
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_specialized_strip"))
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_safety"))
-    composeTestRule.onNodeWithTag("home_tool_safety").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_comparison"))
-    composeTestRule.onNodeWithTag("home_tool_comparison").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_tool_pharmacy"))
-    composeTestRule.onNodeWithTag("home_tool_pharmacy").assertIsDisplayed()
-    composeTestRule.onNodeWithTag("home_tool_3d").assertDoesNotExist()
-
+    composeTestRule.onNodeWithTag("home_specialized_strip").assertIsDisplayed()
     composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_fever_dose_quick_card"))
     composeTestRule.onNodeWithTag("home_fever_dose_quick_card").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("fever_dose_calculator_screen").assertIsDisplayed()
-
     composeTestRule.onNodeWithTag("nav_home").performClick()
     composeTestRule.waitForIdle()
     composeTestRule.onNodeWithTag("home_hero_card").assertIsDisplayed()
+
   }
 }
