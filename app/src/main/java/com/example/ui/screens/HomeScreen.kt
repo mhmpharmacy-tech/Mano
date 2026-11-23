@@ -330,7 +330,6 @@ fun HomeScreen(
   if (useCareHomeDesign) {
     ManoCareHomeScreen(
       childProfile = childProfile,
-      ageBandLabelFa = selectedAgeBand?.labelFa,
       vaccineBadgeLabelFa = vaccineBadgeLabelFa,
       previousCare = previousCare,
       onContinueCare = onContinueCare,
