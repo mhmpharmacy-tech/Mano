@@ -1,0 +1,73 @@
+name: MANO Kid AI Studio Care Home web
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "server.mjs"
+      - "src/**"
+      - "tests/web.test.mjs"
+      - "tests/browser.mjs"
+      - "scripts/build-web.mjs"
+      - ".github/workflows/manokid-aistudio-web.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "server.mjs"
+      - "src/**"
+      - "tests/web.test.mjs"
+      - "tests/browser.mjs"
+      - "scripts/build-web.mjs"
+      - ".github/workflows/manokid-aistudio-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-and-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - name: Upload static preview for internal review
+        uses: actions/upload-artifact@v4
+        with:
+          name: mano-kid-aistudio-static-preview
+          path: dist/
+          retention-days: 7
+
+  chromium-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: static-and-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - name: Install pinned Playwright for browser-only QA
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - run: node tests/browser.mjs
+      - name: Upload mobile browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mano-kid-aistudio-mobile-screenshots
+          path: web-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
