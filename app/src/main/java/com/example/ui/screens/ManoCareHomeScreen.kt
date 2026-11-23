@@ -48,6 +48,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.PreviousCare
@@ -297,7 +298,7 @@ fun ManoCareHomeScreen(
           horizontalArrangement = Arrangement.Center,
           verticalAlignment = Alignment.CenterVertically,
         ) {
-          ManoKidWordmark(isDark = isDark, fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp))
+          ManoKidWordmark(isDark = isDark, fontSize = 22.sp)
         }
         Text(
           "دستیار سلامت کودک و خانواده",
