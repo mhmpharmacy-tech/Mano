@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoGraph
+import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.ChildCare
 import androidx.compose.material.icons.rounded.DeviceThermostat
@@ -268,6 +270,7 @@ fun ManoCareHomeScreen(
   onCheckSymptoms: () -> Unit,
   onAskPharmacist: () -> Unit,
   onMedicines: () -> Unit,
+  onSyrupScanner: () -> Unit,
   onVaccines: () -> Unit,
   onGrowth: () -> Unit,
   onNutrition: () -> Unit,
@@ -463,17 +466,17 @@ fun ManoCareHomeScreen(
             onClick = onVaccines,
           )
           CareCompactTool(
-            text = "بانک دارویی",
-            icon = Icons.Rounded.Medication,
+            text = "اسکنر شربت",
+            icon = Icons.Rounded.QrCodeScanner,
             accent = CareCoral,
             tint = Color(0xFFFBEFEA),
-            tag = "care_quick_drugs",
+            tag = "home_menu_scanner",
             modifier = Modifier.weight(1f),
-            onClick = onMedicines,
+            onClick = onSyrupScanner,
           )
           CareCompactTool(
             text = "محاسبه دوز",
-            icon = Icons.Rounded.LocalPharmacy,
+            icon = Icons.Rounded.Calculate,
             accent = CareGold,
             tint = Color(0xFFF7F1E6),
             tag = "home_fever_dose_quick_card",
