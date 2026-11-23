@@ -423,7 +423,7 @@ fun ManoCareHomeScreen(
                 title = "ادامه مراقبت ثبت‌شده",
                 detail = "به آخرین مراقبت مستند بازگردید.",
                 onClick = { onContinueCare(previousCare) },
-                testTag = "home_followup_chip",
+                testTag = "home_continue_care",
               )
             }
             if (onOpenCareCards != null) {
@@ -471,6 +471,15 @@ fun ManoCareHomeScreen(
             tag = "care_quick_drugs",
             modifier = Modifier.weight(1f),
             onClick = onMedicines,
+          )
+          CareCompactTool(
+            text = "محاسبه دوز",
+            icon = Icons.Rounded.LocalPharmacy,
+            accent = CareGold,
+            tint = Color(0xFFF7F1E6),
+            tag = "home_fever_dose_quick_card",
+            modifier = Modifier.weight(1f),
+            onClick = onFeverCalculator,
           )
         }
       }
