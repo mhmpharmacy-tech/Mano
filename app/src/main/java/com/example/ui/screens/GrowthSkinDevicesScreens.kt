@@ -416,6 +416,8 @@ fun DevicesScreen(
   childBirthDateEpochMs: Long? = null,
   onNavigate3DStudio: () -> Unit = {},
   onOpen3DWithDose: (Float) -> Unit = {},
+  onNavigateAskPharmacist: (String) -> Unit = {},
+  onNavigateSupplementsHygiene: () -> Unit = {},
 ) {
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
@@ -435,7 +437,7 @@ fun DevicesScreen(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
               Text("وسایل مراقبت از کودک و ابزارهای آموزشی", style = MaterialTheme.typography.headlineSmall)
               Text(
-                text = "سرنگ مدرج تعاملی (سن و وزن) و مقیاس دماسنج دیجیتال، به همراه راهنمای ایمن نبولایزر، اسپیسر و دستگاه بخور.",
+                text = "راهنمای وسایل مراقبتی و انتخاب محصولات بهداشت کودک؛ برای مصرف دارو و تعیین دوز با داروساز مشورت کنید.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
@@ -445,15 +447,10 @@ fun DevicesScreen(
       }
 
       item {
-        InteractiveOralSyringeLabCard(
-          childProfile = childProfile,
-          childBirthDateEpochMs = childBirthDateEpochMs,
-          onOpen3DWithDose = onOpen3DWithDose,
+        com.example.ui.components.SupplementsHygieneRecommendedCard(
+          onAskPharmacist = onNavigateAskPharmacist,
+          onOpenAllGuides = onNavigateSupplementsHygiene,
         )
-      }
-
-      item {
-        InteractiveThermometerLabCard()
       }
 
       items(guides, key = { it.id }) { guide ->
