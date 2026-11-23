@@ -10,7 +10,7 @@ on:
       - "src/**"
       - "tests/web.test.mjs"
       - "tests/browser.mjs"
-      - "scripts/build-web.mjs"
+      - "web-tools/build-web.mjs"
       - ".github/workflows/manokid-aistudio-web.yml"
   pull_request:
     paths:
@@ -21,7 +21,7 @@ on:
       - "src/**"
       - "tests/web.test.mjs"
       - "tests/browser.mjs"
-      - "scripts/build-web.mjs"
+      - "web-tools/build-web.mjs"
       - ".github/workflows/manokid-aistudio-web.yml"
   workflow_dispatch:
 
