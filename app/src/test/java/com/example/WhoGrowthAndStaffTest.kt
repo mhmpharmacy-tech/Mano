@@ -6,6 +6,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -269,6 +271,7 @@ class WhoGrowthAndStaffTest {
     // Switch to Pharmacist Staff Tab
     composeTestRule.onNodeWithTag("ask_mode_staff").performClick()
     composeTestRule.waitForIdle()
+    composeTestRule.onNodeWithTag("ask_pharmacist_list").performScrollToNode(hasTestTag("pharmacist_staff_panel"))
     composeTestRule.onNodeWithTag("pharmacist_staff_panel").assertIsDisplayed()
 
     // PENDING case card shows accept button
