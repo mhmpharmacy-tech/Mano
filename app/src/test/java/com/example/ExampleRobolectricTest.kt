@@ -56,12 +56,14 @@ class ExampleRobolectricTest {
     try {
       runBlocking { prefs.addGrowthMeasurement(null, GrowthMeasurement(now - 120_000L, 12.5, null)) }
       awaitTag("home_continue_care")
+      composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_continue_care"))
       composeTestRule.onNodeWithTag("home_continue_care").assertIsDisplayed().performClick()
       awaitTag("growth_history_row")
       composeTestRule.onNodeWithTag("growth_history_row").assertIsDisplayed()
       runBlocking { prefs.addLocalFeverLog(TimelineTempPoint("recent", 37.2f, now, "", "", "", "", false)) }
       composeTestRule.onNodeWithTag("nav_home").performClick()
       awaitTag("home_continue_care")
+      composeTestRule.onNodeWithTag("home_list").performScrollToNode(hasTestTag("home_continue_care"))
       composeTestRule.onNodeWithTag("home_continue_care").assertIsDisplayed().performClick()
       awaitTag("timeline_temp_input")
       composeTestRule.onNodeWithTag("timeline_temp_input").assertIsDisplayed()
