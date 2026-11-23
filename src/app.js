@@ -6,7 +6,7 @@
 (function () {
   "use strict";
   var routes = ["home","profile","symptoms","pharmacist","care","growth","vaccines","medicines","treatment","supplements","alerts","search","tools","addDrug"];
-  var state = { route:"home", profile:null, measurements:[], vaccines:[], treatment:[], question:"", symptom:null, lastMessage:"" };
+  var state = { route:"home", profile:null, measurements:[], vaccines:[], treatment:[], question:"", symptom:null, symptomInput:{topic:"",age:"",temp:"",danger:[]}, lastMessage:"" };
   var shell = document.querySelector(".shell");
   var home = document.querySelector(".main");
   var nav = document.querySelector(".bottom");
@@ -182,7 +182,20 @@
   function render() {
     var key=state.route;
     home.hidden=key!=="home"; host.hidden=key==="home";
-    if(key==="home")syncHome();else{host.innerHTML=headerHint()+renderScreen(key);if(key==="search")wireSearch();}
+    if(key==="home")syncHome();else{
+      host.innerHTML=headerHint()+renderScreen(key);
+      if(key==="search")wireSearch();
+      if(key==="symptoms"){
+        var f=host.querySelector("#symptom-form");
+        var keep=state.symptomInput;
+        if(f&&keep){
+          f.elements.namedItem("topic").value=keep.topic||"";
+          f.elements.namedItem("age").value=keep.age!==""?keep.age:(state.profile?String(state.profile.months):"");
+          f.elements.namedItem("temp").value=keep.temp||"";
+          Array.prototype.forEach.call(f.querySelectorAll('input[name="danger"]'),function(x){x.checked=keep.danger.includes(x.value);});
+        }
+      }
+    }
     updateBottom(key);
     window.scrollTo({top:0,behavior:"instant"});
     document.title="MANO Kid — "+(key==="home"?"خانه":key);
@@ -191,6 +204,7 @@
     return routes.indexOf(k)>-1?k:"home";
   }
   function go(route) {
+    shell.querySelectorAll(".status-toast").forEach(function(t){t.remove();});
     state.route=sanitizeRoute(route);
     var hash=state.route==="home"?"":("#"+state.route);
     if(window.location.hash!==hash)window.location.hash=hash;
@@ -218,7 +232,7 @@
     if(route){event.preventDefault();go(route.getAttribute("data-route"));return;}
     var action=event.target.closest("[data-action]");
     if(action&&action.getAttribute("data-action")==="clear-session") {
-      state.profile=null;state.treatment=[];state.vaccines=[];state.measurements=[];state.question="";state.symptom=null;
+      state.profile=null;state.treatment=[];state.vaccines=[];state.measurements=[];state.question="";state.symptom=null;state.symptomInput={topic:"",age:"",temp:"",danger:[]};
       showMessage("داده‌های موقت پاک شدند");render();
     }
   });
@@ -235,7 +249,7 @@
       var dangers=data.getAll("danger"), reasons=[];
       if(dangers.length)reasons.push("علائم خطر انتخاب‌شده");
       if(age<3&&temp!==null&&temp>=38)reasons.push("تب ۳۸ درجه یا بالاتر در شیرخوار زیر ۳ ماه");
-      state.symptom={urgent:reasons.length>0,reasons:reasons};render();return;
+      state.symptomInput={topic:value(f,"topic"),age:String(age),temp:tempS,danger:dangers.slice()};state.symptom={urgent:reasons.length>0,reasons:reasons};render();return;
     }
     if(f.id==="question-form"){state.question=value(f,"question");showMessage("پیش‌نویس فقط در این نشست حفظ شد");render();return;}
     if(f.id==="growth-form"){
