@@ -432,7 +432,7 @@ fun MedicationChecklistActionsCard(
       ) {
         Icon(Icons.Rounded.Vaccines, contentDescription = null, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text("آزمایشگاه سرنگ", maxLines = 1)
+        Text("مکمل و بهداشت", maxLines = 1)
       }
       OutlinedButton(
         onClick = onOpenOverlapChecker,

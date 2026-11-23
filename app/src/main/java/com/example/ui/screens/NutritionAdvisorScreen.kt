@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -80,7 +82,10 @@ import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.FeverDoseTimelineSnapshot
 import com.example.domain.util.NutritionPromptBuilder
 import com.example.ui.components.AlertSeverity
+import com.example.ui.components.FlowchartStepSpec
 import com.example.ui.components.ManoBannerFrame
+import com.example.ui.components.ManoCompactScreenHeader
+import com.example.ui.components.ManoFlowchartStepperBar
 import com.example.ui.components.ManoIconMedallion
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PediatricIconKind
@@ -290,109 +295,57 @@ fun NutritionAdvisorScreen(
     )
   }
 
+  val mangoAccent = manoSemanticAccent(MangoCare, DarkGold)
+  val nutritionFlowSteps =
+    remember {
+      listOf(
+        FlowchartStepSpec("child", "۱. سن و رشد", Icons.Rounded.MonitorWeight),
+        FlowchartStepSpec("appetite", "۲. اشتها", Icons.Rounded.Restaurant),
+        FlowchartStepSpec("plan", "۳. برنامه", Icons.Rounded.AutoAwesome),
+      )
+    }
+  val activeStepIdx = if (nutritionUiState is NutritionUiState.Ready) 2 else 0
+
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("nutrition_advisor_list"),
-      contentPadding = ManoTheme.spacing.screenContentPadding,
-      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
+      contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      // Hero Header Card
       item {
-        SectionCard {
-          ManoBannerFrame(
-            resId = R.drawable.img_nutrition_banner,
-            contentDescription = "پیشنهاد غذای سالم و مقوی کودک با همراهی مانو",
-            aspectRatio = 16f / 9f,
-          )
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-          ) {
-            ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 60.dp)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text(
-                text = "پیشنهاد غذای سالم و مقوی کودک",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-              )
-              Text(
-                text = "با کمک دستیار هوشمند و بر اساس سن در پروفایل، وزن، قد، حساسیت‌ها و نقاط عطف رشد، پیشنهادهای عملی و ایمن دریافت کنید.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-          }
-        }
-      }
-
-      // Context & Growth Inputs Card
-      item {
-        SectionCard(modifier = Modifier.testTag("nutrition_context_card")) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            Text(
-              text =
-                if (childProfile != null) {
-                  "همگام با پروفایل: ${childProfile.aliasFa}"
-                } else {
-                  "اطلاعات سن و رشد کودک"
-                },
-              style = MaterialTheme.typography.titleMedium,
-              color = MaterialTheme.colorScheme.primary,
-            )
+        ManoCompactScreenHeader(
+          titleFa = "مشاور تغذیه کودک",
+          subtitleFa = if (childProfile != null) "همگام با ${childProfile.aliasFa} • ${checkedMilestones.size} مهارت" else "برنامه غذایی سالم متناسب با سن و رشد",
+          icon = Icons.Rounded.Restaurant,
+          accentColor = mangoAccent,
+          trailingAction = {
             TextButton(
               onClick = onOpenMyChildProfile,
               modifier = Modifier.minimumInteractiveComponentSize().testTag("nutrition_open_profile_btn"),
             ) {
               Icon(Icons.Rounded.PersonOutline, contentDescription = null, modifier = Modifier.size(16.dp))
-              Spacer(Modifier.width(4.dp))
-              Text(if (childProfile != null) "ویرایش پروفایل" else "تکمیل پروفایل")
+              Spacer(Modifier.width(3.dp))
+              Text("پروفایل", style = MaterialTheme.typography.labelSmall)
             }
-          }
+          },
+        )
+      }
 
-          val successAccent = manoSemanticAccent(SuccessEmerald, DarkSage)
-          val mangoAccent = manoSemanticAccent(MangoCare, DarkGold)
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-          ) {
-            Surface(
-              color = manoTintedSurface(SuccessSurface, DarkSage, lightAlpha = 0.7f, darkAlpha = 0.16f),
-              shape = RoundedCornerShape(10.dp),
-            ) {
-              Text(
-                text = "${checkedMilestones.size} نقطه عطف رشد تیک‌خورده",
-                style = MaterialTheme.typography.labelMedium,
-                color = successAccent,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-              )
-            }
-            if ((timelineSnapshot.latestTempCelsius ?: 0f) >= 38.0f) {
-              Surface(
-                color = manoTintedSurface(GoldSurface, DarkGold, lightAlpha = 1f, darkAlpha = 0.18f),
-                shape = RoundedCornerShape(10.dp),
-              ) {
-                Text(
-                  text = "تب اخیر ثبت شده (${FeverDoseTimelineEngine.formatTempC(timelineSnapshot.latestTempCelsius ?: 38.0f)})",
-                  style = MaterialTheme.typography.labelMedium,
-                  color = mangoAccent,
-                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                )
-              }
-            }
-          }
+      item {
+        ManoFlowchartStepperBar(
+          steps = nutritionFlowSteps,
+          activeIndex = activeStepIdx,
+          accentColor = mangoAccent,
+        )
+      }
 
-          Text("رده سنی کودک:", style = MaterialTheme.typography.labelLarge)
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-          ) {
-            AgeBand.entries.forEach { band ->
+      // Compact Context & Growth Inputs Card
+      item {
+        SectionCard(modifier = Modifier.testTag("nutrition_context_card")) {
+          LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(AgeBand.entries) { band ->
               SymptomChip(
-                label = "${band.labelFa} (${band.rangeFa})",
+                label = band.labelFa,
                 selected = ageBand == band,
                 onClick = { ageBand = band },
                 modifier = Modifier.testTag("nutrition_age_${band.id}"),
@@ -400,51 +353,41 @@ fun NutritionAdvisorScreen(
             }
           }
 
-          OutlinedTextField(
-            value = ageDetailFa,
-            onValueChange = { ageDetailFa = it },
-            label = { Text("سن دقیق کودک (مثلاً ۸ ماهه یا ۲ سال و ۴ ماه)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag("nutrition_age_detail_input"),
-          )
-
           Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth(),
           ) {
             OutlinedTextField(
+              value = ageDetailFa,
+              onValueChange = { ageDetailFa = it },
+              label = { Text("سن دقیق") },
+              singleLine = true,
+              shape = RoundedCornerShape(14.dp),
+              modifier = Modifier.weight(1.1f).testTag("nutrition_age_detail_input"),
+            )
+            OutlinedTextField(
               value = weightKgText,
               onValueChange = { weightKgText = it },
-              label = { Text("وزن (kg)") },
+              label = { Text("وزن kg") },
               keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
               singleLine = true,
-              modifier = Modifier.weight(1f).testTag("nutrition_weight_input"),
+              shape = RoundedCornerShape(14.dp),
+              modifier = Modifier.weight(0.75f).testTag("nutrition_weight_input"),
             )
             OutlinedTextField(
               value = heightCmText,
               onValueChange = { heightCmText = it },
-              label = { Text("قد (cm) اختیاری") },
+              label = { Text("قد cm") },
               keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
               singleLine = true,
-              modifier = Modifier.weight(1f).testTag("nutrition_height_input"),
+              shape = RoundedCornerShape(14.dp),
+              modifier = Modifier.weight(0.75f).testTag("nutrition_height_input"),
             )
           }
 
-          OutlinedTextField(
-            value = allergiesFa,
-            onValueChange = { allergiesFa = it },
-            label = { Text("حساسیت‌های غذایی شناخته‌شده (مثلاً تخم‌مرغ، لبنیات، گندم)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag("nutrition_allergies_input"),
-          )
-
-          Text("وضعیت اشتها و گوارش فعلی:", style = MaterialTheme.typography.labelLarge)
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-          ) {
-            val chipContainer = manoCardSurface()
-            NutritionAppetiteStatus.entries.forEach { st ->
+          val chipContainer = manoCardSurface()
+          LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(NutritionAppetiteStatus.entries) { st ->
               FilterChip(
                 selected = appetiteStatus == st,
                 onClick = { appetiteStatus = st },
@@ -455,28 +398,40 @@ fun NutritionAdvisorScreen(
             }
           }
 
-          OutlinedTextField(
-            value = availableIngredientsFa,
-            onValueChange = { availableIngredientsFa = it },
-            label = { Text("مواد اولیه در دسترس یا علاقه کودک (اختیاری)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag("nutrition_ingredients_input"),
-          )
+          Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+          ) {
+            OutlinedTextField(
+              value = allergiesFa,
+              onValueChange = { allergiesFa = it },
+              label = { Text("حساسیت غذایی") },
+              singleLine = true,
+              shape = RoundedCornerShape(14.dp),
+              modifier = Modifier.weight(1f).testTag("nutrition_allergies_input"),
+            )
+            OutlinedTextField(
+              value = availableIngredientsFa,
+              onValueChange = { availableIngredientsFa = it },
+              label = { Text("مواد در دسترس") },
+              singleLine = true,
+              shape = RoundedCornerShape(14.dp),
+              modifier = Modifier.weight(1f).testTag("nutrition_ingredients_input"),
+            )
+          }
 
           if (isUnderSixMonths) {
             SeverityAlert(
               severity = AlertSeverity.CAUTION,
-              title = "توصیه ایمنی برای نوزاد زیر ۶ ماه",
-              body =
-                "بر پایه راهنمای WHO/AAP، نوزاد زیر ۶ ماه فقط باید با شیر مادر یا شیرخشک استاندارد تغذیه شود و غذای کمکی، آب ساده یا عسل نباید داده شود. دستیار هوشمند راهنمای عملی شیردهی و آمادگی تغذیه را ارائه می‌دهد.",
+              title = "ایمنی نوزاد زیر ۶ ماه",
+              body = "فقط شیر مادر یا شیرخشک استاندارد؛ غذای کمکی، آب ساده و عسل ممنوع است.",
               modifier = Modifier.testTag("nutrition_under6m_safety_banner"),
             )
           } else if (isUnderTwelveMonths) {
             SeverityAlert(
               severity = AlertSeverity.INFO,
-              title = "یادآوری ایمنی زیر ۱ سال",
-              body =
-                "عسل تا پایان ۱۲ ماهگی ممنوع است؛ غذاها باید بدون نمک و شکر افزوده و با بافت نرم برای پیشگیری از خفگی آماده شوند.",
+              title = "ایمنی زیر ۱ سال",
+              body = "عسل تا ۱۲ ماهگی ممنوع است؛ غذا بدون نمک/شکر و با بافت نرم باشد.",
               modifier = Modifier.testTag("nutrition_under12m_safety_banner"),
             )
           }
@@ -488,7 +443,7 @@ fun NutritionAdvisorScreen(
           ) {
             Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("دریافت پیشنهاد غذای سالم و مقوی (هوشمند)")
+            Text("دریافت برنامه غذای سالم کودک")
           }
         }
       }

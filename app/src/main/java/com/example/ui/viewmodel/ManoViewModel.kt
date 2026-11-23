@@ -25,10 +25,13 @@ import com.example.domain.model.MedicationMonograph
 import com.example.domain.model.MedicationSafetyCategory
 import com.example.domain.model.MilestoneItem
 import com.example.domain.model.NutritionPlanResult
+import com.example.domain.model.PediatricTreatmentPlan
 import com.example.domain.model.SavedSyrupScan
 import com.example.domain.model.SourceReference
 import com.example.domain.model.SymptomFlow
 import com.example.domain.model.TopicCategory
+import com.example.domain.model.TreatmentMedicationItem
+import com.example.domain.model.TreatmentPlanFormatter
 import com.example.domain.model.TriageEvaluationResult
 import com.example.domain.model.VaccineRecord
 import com.example.domain.model.VaccineReminderSettings
@@ -46,6 +49,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -154,15 +158,24 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
   val webGlQuality: StateFlow<ManoWebGlQuality> =
     prefs.webGlQuality.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ManoWebGlQuality.AUTO)
 
+  val treatmentPlan: StateFlow<PediatricTreatmentPlan> =
+    prefs.treatmentPlan
+      .map { TreatmentPlanFormatter.normalizeForToday(it) }
+      .stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        TreatmentPlanFormatter.normalizeForToday(PediatricTreatmentPlan()),
+      )
+
   private val _uiState = MutableStateFlow(ManoUiState())
   val uiState: StateFlow<ManoUiState> = _uiState.asStateFlow()
 
-  // Static catalog accessors
-  val allArticles: List<Article> = repository.articles
-  val allSymptomFlows: List<SymptomFlow> = repository.symptomFlows
-  val allMedications: List<MedicationMonograph> = repository.medications
-  val allDeviceGuides: List<DeviceGuide> = repository.deviceGuides
-  val allSources: List<SourceReference> = repository.sources
+  // Static catalog accessors (delegated to lazy repository lists for instant cold start)
+  val allArticles: List<Article> get() = repository.articles
+  val allSymptomFlows: List<SymptomFlow> get() = repository.symptomFlows
+  val allMedications: List<MedicationMonograph> get() = repository.medications
+  val allDeviceGuides: List<DeviceGuide> get() = repository.deviceGuides
+  val allSources: List<SourceReference> get() = repository.sources
 
   fun articleBySlug(slug: String): Article? = repository.articleBySlug(slug)
 
@@ -1006,6 +1019,97 @@ class ManoViewModel(application: Application) : AndroidViewModel(application) {
     viewModelScope.launch {
       prefs.setWebGlQuality(quality)
       showToast("کیفیت موتور سه‌بعدی WebGL روی «${quality.labelFa}» تنظیم شد.")
+    }
+  }
+
+  fun toggleTreatmentDoseSlot(medicationId: String, slotIndex: Int) {
+    viewModelScope.launch {
+      val today = TreatmentPlanFormatter.currentDayKey()
+      val current = TreatmentPlanFormatter.normalizeForToday(treatmentPlan.value, today)
+      var toggledOn = false
+      val updatedMeds =
+        current.medications.map { med ->
+          if (med.id != medicationId) {
+            med
+          } else {
+            val nextSlots = med.completedSlotTimesFa.toMutableMap()
+            if (nextSlots.containsKey(slotIndex)) {
+              nextSlots.remove(slotIndex)
+              toggledOn = false
+            } else {
+              nextSlots[slotIndex] = TreatmentPlanFormatter.currentTimeFa()
+              toggledOn = true
+            }
+            med.copy(completedSlotTimesFa = nextSlots)
+          }
+        }
+      prefs.saveTreatmentPlan(current.copy(lastCheckoffDayKey = today, medications = updatedMeds))
+      val slotFa = TreatmentPlanFormatter.toPersianDigits(slotIndex.toString())
+      showToast(if (toggledOn) "نوبت $slotFa امروز ثبت شد." else "تیک نوبت $slotFa برداشته شد.")
+    }
+  }
+
+  fun upsertTreatmentMedication(item: TreatmentMedicationItem) {
+    viewModelScope.launch {
+      val today = TreatmentPlanFormatter.currentDayKey()
+      val current = TreatmentPlanFormatter.normalizeForToday(treatmentPlan.value, today)
+      val exists = current.medications.any { it.id == item.id }
+      val updatedMeds =
+        if (exists) {
+          current.medications.map { if (it.id == item.id) item else it }
+        } else {
+          current.medications + item
+        }
+      prefs.saveTreatmentPlan(current.copy(lastCheckoffDayKey = today, medications = updatedMeds))
+      showToast(if (exists) "تغییرات دارو در برنامه درمانی ذخیره شد." else "داروی جدید به برنامه درمانی اضافه شد.")
+    }
+  }
+
+  fun deleteTreatmentMedication(medicationId: String) {
+    viewModelScope.launch {
+      val today = TreatmentPlanFormatter.currentDayKey()
+      val current = TreatmentPlanFormatter.normalizeForToday(treatmentPlan.value, today)
+      val updatedMeds = current.medications.filterNot { it.id == medicationId }
+      prefs.saveTreatmentPlan(current.copy(lastCheckoffDayKey = today, medications = updatedMeds))
+      showToast("قلم دارویی از برنامه درمانی حذف شد.")
+    }
+  }
+
+  fun updateTreatmentPlanHeader(
+    pharmacyNameFa: String,
+    pharmacistBadgeFa: String,
+    prescriptionDateFa: String,
+    storageInstructionFa: String,
+  ) {
+    viewModelScope.launch {
+      val current = TreatmentPlanFormatter.normalizeForToday(treatmentPlan.value)
+      prefs.saveTreatmentPlan(
+        current.copy(
+          pharmacyNameFa = pharmacyNameFa.trim().ifBlank { current.pharmacyNameFa },
+          pharmacistBadgeFa = pharmacistBadgeFa.trim().ifBlank { current.pharmacistBadgeFa },
+          prescriptionDateFa = prescriptionDateFa.trim().ifBlank { current.prescriptionDateFa },
+          storageInstructionFa = storageInstructionFa.trim().ifBlank { current.storageInstructionFa },
+        )
+      )
+      showToast("اطلاعات نسخه و داروخانه به‌روزرسانی شد.")
+    }
+  }
+
+  fun setTreatmentSmartRemindersEnabled(enabled: Boolean) {
+    viewModelScope.launch {
+      val current = TreatmentPlanFormatter.normalizeForToday(treatmentPlan.value)
+      prefs.saveTreatmentPlan(current.copy(smartRemindersEnabled = enabled))
+      showToast(
+        if (enabled) "یادآور هوشمند برای همه داروهای این نسخه فعال شد."
+        else "یادآور هوشمند داروهای این نسخه غیرفعال شد."
+      )
+    }
+  }
+
+  fun resetTreatmentPlanToDefault() {
+    viewModelScope.launch {
+      prefs.saveTreatmentPlan(TreatmentPlanFormatter.normalizeForToday(PediatricTreatmentPlan()))
+      showToast("نسخه نمونه استاندارد داروسازی بازیابی شد.")
     }
   }
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.ManoThemeMode
 import com.example.domain.util.ManoDomainLinks
+import com.example.notifications.TreatmentPlanNotificationHelper
 import com.example.notifications.VaccineNotificationHelper
 import com.example.ui.ManoApp
 import com.example.ui.auth.configureAppCheck
@@ -23,23 +24,34 @@ import com.example.ui.theme.ManoKidsTheme
 import com.example.ui.viewmodel.ManoViewModel
 import com.example.widget.FeverTimelineWidgetStore
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 class MainActivity : ComponentActivity() {
   private val manoViewModel: ManoViewModel by viewModels()
   private var openTimelineState by mutableStateOf(false)
   private var openVaccinesState by mutableStateOf(false)
+  private var openTreatmentPlanState by mutableStateOf(false)
   private var pendingDeepLinkUriState by mutableStateOf<String?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    configureAppCheck(this, intent)
-    openTimelineState = intent?.getBooleanExtra(FeverTimelineWidgetStore.EXTRA_OPEN_TIMELINE, false) == true
-    openVaccinesState = intent?.getBooleanExtra(VaccineNotificationHelper.EXTRA_OPEN_VACCINES, false) == true
-    pendingDeepLinkUriState = extractDeepLinkUri(intent)
+    val launchIntent = intent
+    openTimelineState = launchIntent?.getBooleanExtra(FeverTimelineWidgetStore.EXTRA_OPEN_TIMELINE, false) == true
+    openVaccinesState = launchIntent?.getBooleanExtra(VaccineNotificationHelper.EXTRA_OPEN_VACCINES, false) == true
+    openTreatmentPlanState = launchIntent?.getBooleanExtra(TreatmentPlanNotificationHelper.EXTRA_OPEN_TREATMENT_PLAN, false) == true
+    pendingDeepLinkUriState = extractDeepLinkUri(launchIntent)
     enableEdgeToEdge(
       statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
       navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
     )
     setContent {
+      LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+          runCatching { configureAppCheck(applicationContext, launchIntent) }
+        }
+      }
+
       val themeMode by manoViewModel.themeMode.collectAsStateWithLifecycle()
       val systemDark = isSystemInDarkTheme()
       val isDarkTheme =
@@ -67,6 +79,8 @@ class MainActivity : ComponentActivity() {
           onConsumedTimelineLaunch = { openTimelineState = false },
           openVaccinesOnLaunch = openVaccinesState,
           onConsumedVaccinesLaunch = { openVaccinesState = false },
+          openTreatmentPlanOnLaunch = openTreatmentPlanState,
+          onConsumedTreatmentPlanLaunch = { openTreatmentPlanState = false },
           pendingDeepLinkUri = pendingDeepLinkUriState,
           onConsumedDeepLinkUri = { pendingDeepLinkUriState = null },
         )
@@ -82,6 +96,9 @@ class MainActivity : ComponentActivity() {
     }
     if (intent.getBooleanExtra(VaccineNotificationHelper.EXTRA_OPEN_VACCINES, false)) {
       openVaccinesState = true
+    }
+    if (intent.getBooleanExtra(TreatmentPlanNotificationHelper.EXTRA_OPEN_TREATMENT_PLAN, false)) {
+      openTreatmentPlanState = true
     }
     extractDeepLinkUri(intent)?.let { uri ->
       pendingDeepLinkUriState = uri

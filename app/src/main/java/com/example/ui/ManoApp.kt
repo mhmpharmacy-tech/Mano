@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -39,7 +40,10 @@ import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LocalPharmacy
 import androidx.compose.material.icons.outlined.MedicalServices
+import androidx.compose.material.icons.outlined.Spa
+import androidx.compose.material.icons.automirrored.rounded.Assignment
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.ChildCare
@@ -141,6 +145,7 @@ import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.ConsultationCategory
 import com.example.domain.model.MascotPose
 import com.example.domain.model.TopicCategory
+import com.example.domain.model.TreatmentPlanFormatter
 import com.example.domain.model.VaccineRecord
 import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.HighFeverClinicalAlert
@@ -148,6 +153,8 @@ import com.example.domain.util.ManoDeepLinkParser
 import com.example.domain.util.PersianNormalizer
 import com.example.domain.util.VaccinationScheduleEngine
 import com.example.notifications.HighFeverNotificationHelper
+import com.example.notifications.TreatmentPlanNotificationHelper
+import com.example.notifications.TreatmentPlanReminderScheduler
 import com.example.notifications.VaccineNotificationHelper
 import com.example.notifications.VaccineReminderScheduler
 import com.example.ui.auth.attemptAutoSignIn
@@ -195,10 +202,12 @@ import com.example.ui.navigation.MyChildRoute
 import com.example.ui.navigation.NutritionRoute
 import com.example.ui.navigation.Pediatric3DStudioRoute
 import com.example.ui.navigation.SkinRoute
+import com.example.ui.navigation.SupplementsHygieneRoute
 import com.example.ui.navigation.SymptomsRoute
 import com.example.ui.navigation.SyrupScannerRoute
 import com.example.ui.navigation.TopicDetailRoute
 import com.example.ui.navigation.TopicsRoute
+import com.example.ui.navigation.TreatmentPlanRoute
 import com.example.ui.navigation.VaccinesRoute
 import com.example.ui.screens.AskPharmacistScreen
 import com.example.ui.screens.DevicesScreen
@@ -207,16 +216,16 @@ import com.example.ui.screens.FeverDoseCalculatorScreen
 import com.example.ui.screens.GrowthScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InfoScreen
-import com.example.ui.screens.MedicineDetailScreen
-import com.example.ui.screens.MedicinesScreen
 import com.example.ui.screens.MyChildScreen
 import com.example.ui.screens.NutritionAdvisorScreen
 import com.example.ui.screens.Pediatric3DStudioScreen
 import com.example.ui.screens.SkinScreen
+import com.example.ui.screens.SupplementsHygieneScreen
 import com.example.ui.screens.SymptomNavigatorScreen
 import com.example.ui.screens.SyrupScannerScreen
 import com.example.ui.screens.TopicDetailScreen
 import com.example.ui.screens.TopicsScreen
+import com.example.ui.screens.TreatmentPlanScreen
 import com.example.ui.screens.VaccinesScreen
 import com.example.ui.viewmodel.CloudDataState
 import com.example.ui.viewmodel.ManoCloudSyncViewModel
@@ -228,12 +237,16 @@ import com.example.ui.viewmodel.ManoVisitDraftViewModel
 import com.example.widget.FeverTimelineWidgetStore
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private data class NavTab(
   val label: String,
@@ -250,6 +263,7 @@ private data class DrawerNavItem(
   val route: Any,
   val accentRole: TopicAccentRole,
   val iconKind: PediatricIconKind? = null,
+  val testTag: String? = null,
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -260,20 +274,26 @@ fun ManoApp(
   onConsumedTimelineLaunch: () -> Unit = {},
   openVaccinesOnLaunch: Boolean = false,
   onConsumedVaccinesLaunch: () -> Unit = {},
+  openTreatmentPlanOnLaunch: Boolean = false,
+  onConsumedTreatmentPlanLaunch: () -> Unit = {},
   pendingDeepLinkUri: String? = null,
   onConsumedDeepLinkUri: () -> Unit = {},
   forceShowOnboarding: Boolean = false,
 ) {
   val context = LocalContext.current
-  val auth =
-    remember(context) {
-      runCatching {
-        if (FirebaseApp.getApps(context).isEmpty()) {
-          FirebaseApp.initializeApp(context)
-        }
-        Firebase.auth
-      }.getOrNull()
-    }
+  var auth by remember(context) { mutableStateOf<FirebaseAuth?>(null) }
+  LaunchedEffect(context) {
+    val resolvedAuth =
+      withContext(Dispatchers.IO) {
+        runCatching {
+          if (FirebaseApp.getApps(context).isEmpty()) {
+            FirebaseApp.initializeApp(context)
+          }
+          Firebase.auth
+        }.getOrNull()
+      }
+    auth = resolvedAuth
+  }
   val currentUser: FirebaseUser? by
     (auth?.authStateFlow() ?: remember { flowOf<FirebaseUser?>(null) })
       .collectAsStateWithLifecycle(initialValue = auth?.currentUser)
@@ -297,19 +317,9 @@ fun ManoApp(
   val notifiedVaccineReminderKeys by viewModel.notifiedVaccineReminderKeys.collectAsStateWithLifecycle()
   val savedGalacticSelection by viewModel.savedGalacticSelection.collectAsStateWithLifecycle()
   val localSyrupScans by viewModel.savedSyrupScans.collectAsStateWithLifecycle()
-  val onboardingCompleted by viewModel.onboardingCompleted.collectAsStateWithLifecycle()
   val hapticIntensity by viewModel.hapticIntensity.collectAsStateWithLifecycle()
   val webGlQuality by viewModel.webGlQuality.collectAsStateWithLifecycle()
-  val visitDraftVm: ManoVisitDraftViewModel = viewModel()
-  val visitDraftUiState by visitDraftVm.uiState.collectAsStateWithLifecycle()
-  val visitDraftPdfState by visitDraftVm.pdfState.collectAsStateWithLifecycle()
-  val nutritionVm: ManoNutritionViewModel = viewModel()
-  val nutritionUiState by nutritionVm.uiState.collectAsStateWithLifecycle()
-  val syrupScannerVm: ManoSyrupScannerViewModel = viewModel()
-  val syrupScannerUiState by syrupScannerVm.uiState.collectAsStateWithLifecycle()
-  val safetyTriageAiVm: ManoSafetyTriageAiViewModel = viewModel()
-  val safetyChecklistUiState by safetyTriageAiVm.checklistState.collectAsStateWithLifecycle()
-  val documentedQaUiState by safetyTriageAiVm.qaState.collectAsStateWithLifecycle()
+  val treatmentPlan by viewModel.treatmentPlan.collectAsStateWithLifecycle()
 
   val snackbarHostState = remember { SnackbarHostState() }
   val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -317,36 +327,20 @@ fun ManoApp(
   var showGlobalSearchSheet by remember { mutableStateOf(false) }
   var showVisitDraftSheet by remember { mutableStateOf(false) }
   var manualOnboardingOpen by remember { mutableStateOf(forceShowOnboarding) }
-  var dismissedAutoOnboarding by remember { mutableStateOf(false) }
-  val isRobolectricRuntime = remember { Build.FINGERPRINT.equals("robolectric", ignoreCase = true) }
-
-  LaunchedEffect(auth) {
-    if (auth == null) return@LaunchedEffect
-    val credentialManager = CredentialManager.create(context)
-    attemptAutoSignIn(
-      context = context,
-      credentialManager = credentialManager,
-      onAuthSuccess = {},
-      onUnauthenticated = {},
-      scope = scope,
-    )
-  }
+  var localEraseEpoch by remember { mutableIntStateOf(0) }
+  val caregiverSessionKey = "${currentUser?.uid ?: "guest"}_$localEraseEpoch"
 
   // Discard ephemeral clinical drafts when the caregiver/account changes. Persistent
   // offline records remain on this device until the caregiver explicitly erases them.
-  // Cloud ViewModels below are separately keyed by UID.
+  // Cloud and feature ViewModels below are separately keyed by caregiverSessionKey / UID.
   var observedCaregiverUid by remember { mutableStateOf(currentUser?.uid) }
   LaunchedEffect(currentUser?.uid) {
     val newUid = currentUser?.uid
     if (observedCaregiverUid != newUid) {
-      visitDraftVm.resetToIdle()
-      nutritionVm.resetToIdle()
-      syrupScannerVm.reset()
-      safetyTriageAiVm.resetChecklist()
-      safetyTriageAiVm.resetDocumentedQa()
       viewModel.clearTransientHealthSession()
       showVisitDraftSheet = false
-      if (!ManoSensitiveCacheCleaner.clear(context)) {
+      val cleaned = withContext(Dispatchers.IO) { runCatching { ManoSensitiveCacheCleaner.clear(context) }.getOrDefault(true) }
+      if (!cleaned) {
         viewModel.showToast("فایل‌های موقت حساب قبلی کامل پاک نشدند؛ برای حذف کامل، حافظه برنامه را از تنظیمات دستگاه پاک کنید.")
       }
     }
@@ -354,12 +348,13 @@ fun ManoApp(
   }
 
   // Strictly auth-gated Cloud Sync ViewModel: only instantiated and observed while currentUser != null
+  val activeAuth = auth
+  val activeUid = currentUser?.uid
   val cloudVm: ManoCloudSyncViewModel? =
-    if (auth != null && currentUser?.uid != null) {
-      val uid = currentUser!!.uid
-      key(uid) {
+    if (activeAuth != null && activeUid != null) {
+      key(activeUid) {
         viewModel(
-          key = uid,
+          key = activeUid,
           factory =
             viewModelFactory {
               initializer {
@@ -369,8 +364,8 @@ fun ManoApp(
                 val functionsGateway =
                   runCatching { FirebaseFunctionsConsultationGateway(FirebaseFunctions.getInstance("us-central1")) }.getOrNull()
                 ManoCloudSyncViewModel(
-                  repository = ManoCloudRepository(db, auth, functionsGateway),
-                  currentUserId = uid,
+                  repository = ManoCloudRepository(db, activeAuth, functionsGateway),
+                  currentUserId = activeUid,
                   prefs = ManoPreferencesRepository(app.applicationContext),
                 )
               }
@@ -566,8 +561,8 @@ fun ManoApp(
 
   LaunchedEffect(openTimelineOnLaunch) {
     if (openTimelineOnLaunch) {
-      openMedicinesTimelineTab = true
-      navController.navigate(MedicinesRoute) { launchSingleTop = true }
+      viewModel.startSymptomFlow("fever")
+      navController.navigate(SymptomsRoute("fever")) { launchSingleTop = true }
       onConsumedTimelineLaunch()
     }
   }
@@ -576,6 +571,13 @@ fun ManoApp(
     if (openVaccinesOnLaunch) {
       navController.navigate(VaccinesRoute) { launchSingleTop = true }
       onConsumedVaccinesLaunch()
+    }
+  }
+
+  LaunchedEffect(openTreatmentPlanOnLaunch) {
+    if (openTreatmentPlanOnLaunch) {
+      navController.navigate(TreatmentPlanRoute) { launchSingleTop = true }
+      onConsumedTreatmentPlanLaunch()
     }
   }
 
@@ -588,7 +590,10 @@ fun ManoApp(
   }
 
   LaunchedEffect(timelineSnapshot) {
-    FeverTimelineWidgetStore.saveAndUpdateWidgets(context, timelineSnapshot)
+    delay(600L)
+    withContext(Dispatchers.IO) {
+      runCatching { FeverTimelineWidgetStore.saveAndUpdateWidgets(context, timelineSnapshot) }
+    }
   }
 
   var activeHighFeverDialog by remember { mutableStateOf<HighFeverClinicalAlert?>(null) }
@@ -626,14 +631,46 @@ fun ManoApp(
       }
     }
 
+  val treatmentReminderPermissionLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+      hasNotificationPermission = granted
+      viewModel.setTreatmentSmartRemindersEnabled(true)
+      if (granted) {
+        runCatching {
+          TreatmentPlanNotificationHelper.postReminderNotification(
+            context = context,
+            plan = treatmentPlan.copy(smartRemindersEnabled = true),
+            childDisplayFa = TreatmentPlanFormatter.resolveChildDisplaySummary(treatmentPlan, effectiveChildProfile),
+            isActivationPreview = true,
+          )
+        }
+      } else {
+        viewModel.showToast("یادآور برنامه درمانی ذخیره شد؛ برای نمایش اعلان روی نوار بالا، مجوز اعلان سیستم را فعال کنید.")
+      }
+    }
+
+  LaunchedEffect(treatmentPlan.smartRemindersEnabled, treatmentPlan.medications) {
+    delay(700L)
+    withContext(Dispatchers.IO) {
+      runCatching {
+        TreatmentPlanReminderScheduler.syncReminders(context, treatmentPlan)
+      }
+    }
+  }
+
   LaunchedEffect(vaccineSummary, vaccineReminderSettings, notifiedVaccineReminderKeys, hasNotificationPermission) {
-    VaccineReminderScheduler.syncSchedule(
-      context = context,
-      summary = vaccineSummary,
-      settings = vaccineReminderSettings,
-      alreadyNotifiedKeys = notifiedVaccineReminderKeys,
-      hasNotificationPermission = hasNotificationPermission,
-    )
+    delay(800L)
+    withContext(Dispatchers.IO) {
+      runCatching {
+        VaccineReminderScheduler.syncSchedule(
+          context = context,
+          summary = vaccineSummary,
+          settings = vaccineReminderSettings,
+          alreadyNotifiedKeys = notifiedVaccineReminderKeys,
+          hasNotificationPermission = hasNotificationPermission,
+        )
+      }
+    }
     if (hasNotificationPermission) {
       val pendingVaccines =
         VaccinationScheduleEngine.findUnnotifiedReminders(
@@ -643,11 +680,13 @@ fun ManoApp(
         )
       if (pendingVaccines.isNotEmpty()) {
         val posted =
-          VaccineNotificationHelper.postVaccineReminderNotification(
-            context = context,
-            dueItems = pendingVaccines,
-            childAliasFa = effectiveChildProfile?.aliasFa,
-          )
+          runCatching {
+            VaccineNotificationHelper.postVaccineReminderNotification(
+              context = context,
+              dueItems = pendingVaccines,
+              childAliasFa = effectiveChildProfile?.aliasFa,
+            )
+          }.getOrDefault(false)
         if (posted) {
           val keys = pendingVaccines.mapNotNull { VaccinationScheduleEngine.reminderKeyFor(it) }.toSet()
           viewModel.markVaccineReminderKeysNotified(keys)
@@ -713,9 +752,9 @@ fun ManoApp(
       listOf(
         NavTab("خانه", Icons.Rounded.Home, Icons.Outlined.Home, HomeRoute, "nav_home", TopicAccentRole.TEAL),
         NavTab("علائم", Icons.Rounded.HealthAndSafety, Icons.Outlined.HealthAndSafety, SymptomsRoute(), "nav_symptoms", TopicAccentRole.CORAL),
-        NavTab("داروها", Icons.Rounded.MedicalServices, Icons.Outlined.MedicalServices, MedicinesRoute, "nav_medicines", TopicAccentRole.TEAL),
+        NavTab("مکمل و بهداشت", Icons.Rounded.Spa, Icons.Outlined.Spa, SupplementsHygieneRoute, "nav_supplements_hygiene", TopicAccentRole.SAGE),
+        NavTab("داروساز", Icons.Rounded.LocalPharmacy, Icons.Outlined.LocalPharmacy, AskPharmacistRoute(), "nav_pharmacist", TopicAccentRole.TEAL),
         NavTab("رشد", Icons.Rounded.ChildCare, Icons.Outlined.ChildCare, GrowthRoute, "nav_growth", TopicAccentRole.SKY),
-        NavTab("پرسش‌ها", Icons.AutoMirrored.Rounded.Help, Icons.AutoMirrored.Outlined.HelpOutline, FaqRoute(), "nav_faq", TopicAccentRole.PLUM),
       )
     }
 
@@ -735,9 +774,8 @@ fun ManoApp(
     }
     val poppedWithinTab =
       when {
-        route is MedicinesRoute &&
-          (currentDest?.hasRoute<MedicineDetailRoute>() == true || currentDest?.hasRoute<SyrupScannerRoute>() == true) ->
-          navController.popBackStack<MedicinesRoute>(inclusive = false)
+        route is SupplementsHygieneRoute && currentDest?.hasRoute<SkinRoute>() == true ->
+          navController.popBackStack<SupplementsHygieneRoute>(inclusive = false)
         route is GrowthRoute &&
           (currentDest?.hasRoute<NutritionRoute>() == true || currentDest?.hasRoute<VaccinesRoute>() == true) ->
           navController.popBackStack<GrowthRoute>(inclusive = false)
@@ -781,17 +819,16 @@ fun ManoApp(
 
           val drawerLinks =
             listOf(
-              DrawerNavItem("محاسبه سریع دوز تب‌بر کودک", Icons.Rounded.DeviceThermostat, FeverDoseCalculatorRoute(), TopicAccentRole.CORAL, PediatricIconKind.FEVER),
+              DrawerNavItem("برنامه درمانی کودک (نسخه)", Icons.AutoMirrored.Rounded.Assignment, TreatmentPlanRoute, TopicAccentRole.GOLD, PediatricIconKind.PHARMACY, testTag = "drawer_treatment_plan_item"),
+              DrawerNavItem("مکمل‌ها و بهداشت کودک", Icons.Rounded.Spa, SupplementsHygieneRoute, TopicAccentRole.TEAL, PediatricIconKind.SUPPLEMENTS),
+              DrawerNavItem("سوال از داروساز (مشاوره دارویی)", Icons.Rounded.LocalPharmacy, AskPharmacistRoute(), TopicAccentRole.SAGE, PediatricIconKind.PHARMACY),
               DrawerNavItem("موضوعات سلامت", Icons.Rounded.HealthAndSafety, TopicsRoute(), TopicAccentRole.CORAL, PediatricIconKind.URGENT),
-              DrawerNavItem("داروهای کودک", Icons.Rounded.MedicalServices, MedicinesRoute, TopicAccentRole.TEAL, PediatricIconKind.MEDICINE),
-              DrawerNavItem("اسکنر برچسب شربت و قطره", Icons.Rounded.QrCodeScanner, SyrupScannerRoute, TopicAccentRole.MANGO, PediatricIconKind.SCANNER),
               DrawerNavItem("پوست و پوشک", Icons.Rounded.Spa, SkinRoute, TopicAccentRole.SAGE, PediatricIconKind.DIAPER),
               DrawerNavItem("وسایل مراقبتی (نبولایزر/بخور)", Icons.Rounded.MedicalServices, DevicesRoute, TopicAccentRole.SKY, PediatricIconKind.DEVICE),
               DrawerNavItem("رشد و تکامل", Icons.Rounded.ChildCare, GrowthRoute, TopicAccentRole.SKY, PediatricIconKind.GROWTH),
               DrawerNavItem("برنامه واکسیناسیون و یادآور", Icons.Rounded.Vaccines, VaccinesRoute, TopicAccentRole.SAGE, PediatricIconKind.VACCINE),
               DrawerNavItem("غذای سالم و مقوی کودک", Icons.Rounded.Restaurant, NutritionRoute, TopicAccentRole.MANGO, PediatricIconKind.SUPPLEMENTS),
               DrawerNavItem("پرسش‌های پرتکرار (FAQ)", Icons.AutoMirrored.Rounded.Help, FaqRoute(), TopicAccentRole.PLUM, PediatricIconKind.FAQ),
-              DrawerNavItem("ارتباط با داروساز", Icons.Rounded.LocalPharmacy, AskPharmacistRoute(), TopicAccentRole.SAGE, PediatricIconKind.PHARMACY),
               DrawerNavItem("فرزند من", Icons.Rounded.PersonOutline, MyChildRoute, TopicAccentRole.MANGO, PediatricIconKind.FAMILY),
               DrawerNavItem("منابع علمی و حریم خصوصی", Icons.Rounded.HealthAndSafety, InfoRoute("sources"), TopicAccentRole.GOLD, PediatricIconKind.SAFETY_SHIELD),
               DrawerNavItem("اتصال دامنه (manokid.ir)", Icons.Rounded.Language, InfoRoute("domain"), TopicAccentRole.SKY, PediatricIconKind.FOLLOW_UP),
@@ -801,10 +838,9 @@ fun ManoApp(
           drawerLinks.forEach { item ->
             val isItemSelected =
               when (item.route) {
-                is FeverDoseCalculatorRoute -> currentDest?.hasRoute<FeverDoseCalculatorRoute>() == true
+                is TreatmentPlanRoute -> currentDest?.hasRoute<TreatmentPlanRoute>() == true
+                is SupplementsHygieneRoute -> currentDest?.hasRoute<SupplementsHygieneRoute>() == true
                 is TopicsRoute -> currentDest?.hasRoute<TopicsRoute>() == true
-                is MedicinesRoute -> currentDest?.hasRoute<MedicinesRoute>() == true
-                is SyrupScannerRoute -> currentDest?.hasRoute<SyrupScannerRoute>() == true
                 is SkinRoute -> currentDest?.hasRoute<SkinRoute>() == true
                 is DevicesRoute -> currentDest?.hasRoute<DevicesRoute>() == true
                 is GrowthRoute -> currentDest?.hasRoute<GrowthRoute>() == true
@@ -839,6 +875,7 @@ fun ManoApp(
                 scope.launch { drawerState.close() }
                 navController.navigate(item.route) { launchSingleTop = true }
               },
+              modifier = item.testTag?.let { Modifier.testTag(it) } ?: Modifier,
             )
           }
 
@@ -1103,15 +1140,14 @@ fun ManoApp(
                   when (tab.route) {
                     is HomeRoute -> currentDest?.hasRoute<HomeRoute>() == true
                     is SymptomsRoute -> currentDest?.hasRoute<SymptomsRoute>() == true
-                    is MedicinesRoute ->
-                      currentDest?.hasRoute<MedicinesRoute>() == true ||
-                        currentDest?.hasRoute<MedicineDetailRoute>() == true ||
-                        currentDest?.hasRoute<SyrupScannerRoute>() == true
+                    is SupplementsHygieneRoute ->
+                      currentDest?.hasRoute<SupplementsHygieneRoute>() == true ||
+                        currentDest?.hasRoute<SkinRoute>() == true
+                    is AskPharmacistRoute -> currentDest?.hasRoute<AskPharmacistRoute>() == true
                     is GrowthRoute ->
                       currentDest?.hasRoute<GrowthRoute>() == true ||
                         currentDest?.hasRoute<NutritionRoute>() == true ||
                         currentDest?.hasRoute<VaccinesRoute>() == true
-                    is FaqRoute -> currentDest?.hasRoute<FaqRoute>() == true
                     else -> false
                   }
                 },
@@ -1131,15 +1167,14 @@ fun ManoApp(
                     when (tab.route) {
                       is HomeRoute -> currentDest?.hasRoute<HomeRoute>() == true
                       is SymptomsRoute -> currentDest?.hasRoute<SymptomsRoute>() == true
-                      is MedicinesRoute ->
-                        currentDest?.hasRoute<MedicinesRoute>() == true ||
-                          currentDest?.hasRoute<MedicineDetailRoute>() == true ||
-                          currentDest?.hasRoute<SyrupScannerRoute>() == true
+                      is SupplementsHygieneRoute ->
+                        currentDest?.hasRoute<SupplementsHygieneRoute>() == true ||
+                          currentDest?.hasRoute<SkinRoute>() == true
+                      is AskPharmacistRoute -> currentDest?.hasRoute<AskPharmacistRoute>() == true
                       is GrowthRoute ->
                         currentDest?.hasRoute<GrowthRoute>() == true ||
                           currentDest?.hasRoute<NutritionRoute>() == true ||
                           currentDest?.hasRoute<VaccinesRoute>() == true
-                      is FaqRoute -> currentDest?.hasRoute<FaqRoute>() == true
                       else -> false
                     }
                   val railAccent = tab.accentRole.resolveAccentColor()
@@ -1194,9 +1229,8 @@ fun ManoApp(
                   previousCare = previousCare,
                   onContinueCare = { care ->
                     if (care is PreviousCare.Temperature) {
-                      openMedicinesTimelineTab = true
-                      navController.navigate(MedicinesRoute)
-                      navController.currentBackStackEntry?.savedStateHandle?.set("open_temperature_entry", true)
+                      viewModel.startSymptomFlow("fever")
+                      navController.navigate(SymptomsRoute("fever"))
                     } else {
                       navController.navigate(GrowthRoute)
                       navController.currentBackStackEntry?.savedStateHandle?.set("open_growth_history", true)
@@ -1217,18 +1251,19 @@ fun ManoApp(
                     navController.navigate(TopicsRoute(catId, q))
                   },
                   onNavigateTopicDetail = { slug -> navController.navigate(TopicDetailRoute(slug)) },
-                  onNavigateMedicines = { navController.navigate(MedicinesRoute) },
+                  onNavigateMedicines = { navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true } },
                   onNavigateGrowth = { navController.navigate(GrowthRoute) },
                   onNavigateSkin = { navController.navigate(SkinRoute) },
                   onNavigateDevices = { navController.navigate(DevicesRoute) },
-                  onNavigateAskPharmacist = { navController.navigate(AskPharmacistRoute()) },
+                  onNavigateAskPharmacist = { navController.navigate(AskPharmacistRoute()) { launchSingleTop = true } },
+                  onNavigateSupplementsHygiene = { navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true } },
                   onNavigateMyChild = { navController.navigate(MyChildRoute) },
                   onNavigateInfo = { section -> navController.navigate(InfoRoute(section)) },
                   onOpenGlobalSearch = { showGlobalSearchSheet = true },
                   hasPlayedHeroIntro = uiState.hasPlayedHeroIntro,
                   onHeroIntroPlayed = viewModel::markHeroIntroPlayed,
-                  onNavigateFeverCalculator = { navController.navigate(FeverDoseCalculatorRoute()) { launchSingleTop = true } },
-                  onNavigate3DStudio = { navController.navigate(FeverDoseCalculatorRoute()) { launchSingleTop = true } },
+                  onNavigateFeverCalculator = { navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true } },
+                  onNavigate3DStudio = { navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true } },
                   timelineSnapshot = timelineSnapshot,
                   onQuickSaveFever = { tempC, caregiver ->
                     val timeNow = FeverDoseTimelineEngine.formatHourMinute(System.currentTimeMillis())
@@ -1240,8 +1275,8 @@ fun ManoApp(
                     }
                   },
                   onOpenFeverTimeline = {
-                    openMedicinesTimelineTab = true
-                    navController.navigate(MedicinesRoute) { launchSingleTop = true }
+                    viewModel.startSymptomFlow("fever")
+                    navController.navigate(SymptomsRoute("fever")) { launchSingleTop = true }
                   },
                   onNavigateNutrition = { navController.navigate(NutritionRoute) { launchSingleTop = true } },
                   checkedMedSafetyCount = checkedMedSafetyIds.size,
@@ -1251,8 +1286,7 @@ fun ManoApp(
                       com.example.domain.model.MedicationSafetyChecklistCatalog.evaluateProgress(checkedMedSafetyIds).isAllCriticalReady
                     },
                   onOpenMedicationChecklist = {
-                    openMedicinesChecklistTab = true
-                    navController.navigate(MedicinesRoute) { launchSingleTop = true }
+                    navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true }
                   },
                   vaccineBadgeLabelFa =
                     vaccineSummary.nextUpcoming?.let { next ->
@@ -1273,7 +1307,7 @@ fun ManoApp(
                   savedGalacticRingName = savedGalacticSelection?.ringName,
                   savedGalacticTopicId = savedGalacticSelection?.topicId,
                   onSaveGalacticSelection = viewModel::saveGalacticOrbitSelection,
-                  onNavigateSyrupScanner = { navController.navigate(SyrupScannerRoute) { launchSingleTop = true } },
+                  onNavigateSyrupScanner = { navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true } },
                   savedSyrupScansCount = effectiveSyrupScans.size,
                   onNavigateEcosystemPillar = { pillar ->
                     when (pillar) {
@@ -1281,12 +1315,10 @@ fun ManoApp(
                         navController.navigate(FaqRoute()) { launchSingleTop = true }
                       }
                       com.example.ui.components.ManoEcosystemPillar.MANO_SAFETY -> {
-                        requestedMedicinesTabKey = "overlap"
-                        navController.navigate(MedicinesRoute) { launchSingleTop = true }
+                        navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true }
                       }
                       com.example.ui.components.ManoEcosystemPillar.PRODUCT_COMPARISON -> {
-                        requestedMedicinesTabKey = "comparison"
-                        navController.navigate(MedicinesRoute) { launchSingleTop = true }
+                        navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true }
                       }
                       com.example.ui.components.ManoEcosystemPillar.MANO_CONNECT -> {
                         navController.navigate(AskPharmacistRoute(initialMode = "parent")) { launchSingleTop = true }
@@ -1301,6 +1333,8 @@ fun ManoApp(
                   },
                   scrollToTopTrigger = homeScrollToTopTrigger,
                   hapticIntensity = hapticIntensity,
+                  onNavigateTreatmentPlan = { navController.navigate(TreatmentPlanRoute) { launchSingleTop = true } },
+                  treatmentPlanMedCount = treatmentPlan.medications.size,
                 )
               }
 
@@ -1325,7 +1359,7 @@ fun ManoApp(
                   onOpenArticle = { slug -> navController.navigate(TopicDetailRoute(slug)) },
                   onNavigateSkin = { navController.navigate(SkinRoute) },
                   onNavigateDevices = { navController.navigate(DevicesRoute) },
-                  onNavigate3DStudio = { navController.navigate(Pediatric3DStudioRoute()) },
+                  onNavigate3DStudio = { navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true } },
                   onShowFeedback = viewModel::showToast,
                 )
               }
@@ -1353,7 +1387,7 @@ fun ManoApp(
                         viewModel.setFaqSearchQuery(q)
                         navController.navigate(FaqRoute(q))
                       }
-                      key == "medicines" -> navController.navigate(MedicinesRoute)
+                      key == "medicines" -> navController.navigate(AskPharmacistRoute("otc"))
                       key == "skin" -> navController.navigate(SkinRoute)
                       key == "growth" -> navController.navigate(GrowthRoute)
                       else -> navController.navigate(SymptomsRoute())
@@ -1371,6 +1405,8 @@ fun ManoApp(
                     viewModel.selectWizardSymptom(args.symptomId)
                   }
                 }
+                val safetyTriageAiVm: ManoSafetyTriageAiViewModel = viewModel(key = "safety_$caregiverSessionKey")
+                val safetyChecklistUiState by safetyTriageAiVm.checklistState.collectAsStateWithLifecycle()
                 SymptomNavigatorScreen(
                   wizard = uiState.symptomWizard,
                   flows = viewModel.allSymptomFlows,
@@ -1405,84 +1441,34 @@ fun ManoApp(
                 )
               }
 
-              composable<MedicinesRoute> { entry ->
-                MedicinesScreen(
-                  openTemperatureEntry = entry.savedStateHandle.get<Boolean>("open_temperature_entry") == true,
-                  query = uiState.medicineSearchQuery,
-                  medications = viewModel.filteredMedications(),
-                  allMedicationsCatalog = viewModel.allMedications,
-                  onQueryChange = viewModel::setMedicineSearchQuery,
-                  onOpenMedication = { slug -> navController.navigate(MedicineDetailRoute(slug)) },
-                  onNavigateDevices = { navController.navigate(DevicesRoute) },
-                  onNavigateAskPharmacist = { navController.navigate(AskPharmacistRoute("otc")) },
-                  selectedCategory = uiState.medicineCategory,
-                  onCategorySelect = viewModel::setMedicineCategory,
-                  childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
-                  currentUser = currentUser,
-                  doseLogsState = cloudDoseLogsState,
-                  timelineSnapshot = timelineSnapshot,
-                  onAddDoseLog = { slug, nameFa, formFa, volumeMl, timeLabel, noteFa, onDone ->
-                    val activeCloudVm = cloudVm
-                    if (currentUser != null && activeCloudVm != null) {
-                      activeCloudVm.addDoseLog(slug, nameFa, formFa, volumeMl, timeLabel, noteFa, onDone)
-                    } else {
-                      viewModel.addLocalDoseLog(slug, nameFa, formFa, volumeMl, timeLabel, noteFa)
-                      onDone()
-                    }
+              composable<SupplementsHygieneRoute> {
+                SupplementsHygieneScreen(
+                  onNavigateAskPharmacist = { categoryId ->
+                    navController.navigate(AskPharmacistRoute(categoryId = categoryId)) { launchSingleTop = true }
                   },
-                  onDeleteDoseLog = { logId, isCloud ->
-                    if (isCloud) cloudVm?.deleteDoseLog(logId) else viewModel.deleteLocalDoseLog(logId)
-                  },
-                  onAddFeverLog = { tempCelsius, siteFa, timeLabelFa, caregiverFa, noteFa, onDone ->
-                    val activeCloudVm = cloudVm
-                    if (currentUser != null && activeCloudVm != null) {
-                      activeCloudVm.addFeverLog(tempCelsius.toDouble(), siteFa, timeLabelFa, caregiverFa, noteFa, onDone)
-                    } else {
-                      viewModel.addLocalFeverLog(tempCelsius, siteFa, timeLabelFa, caregiverFa, noteFa)
-                      onDone()
-                    }
-                  },
-                  onDeleteFeverLog = { logId, isCloud ->
-                    if (isCloud) cloudVm?.deleteFeverLog(logId) else viewModel.deleteLocalFeverLog(logId)
-                  },
-                  onOpen3DWithDose = { recommendedMl ->
-                    val hasFever = (timelineSnapshot.latestTempCelsius ?: 0f) >= 38.0f
-                    navController.navigate(
-                      Pediatric3DStudioRoute(
-                        initialScene = "workbench",
-                        prefillMl = recommendedMl,
-                        prefillFever = hasFever,
-                      )
-                    )
-                  },
-                  onOpenUrgentDoctorGuide = { navController.navigate(TopicDetailRoute("when-to-see-doctor")) },
-                  selectedSymptomFlow = activeSymptomFlow,
-                  savedVisitDraftsCount = effectiveSavedVisitDrafts.size,
-                  onOpenVisitDraftStudio = { showVisitDraftSheet = true },
-                  startOnTimeline = openMedicinesTimelineTab,
-                  onTimelineStartConsumed = { openMedicinesTimelineTab = false },
-                  checkedMedSafetyIds = checkedMedSafetyIds,
-                  onToggleMedSafetyCheck = viewModel::toggleMedSafetyCheckItem,
-                  onResetMedSafetyChecklist = viewModel::resetMedSafetyChecklist,
-                  startOnChecklist = openMedicinesChecklistTab,
-                  onChecklistStartConsumed = { openMedicinesChecklistTab = false },
-                  requestedSubTabKey = requestedMedicinesTabKey,
-                  onSubTabKeyConsumed = { requestedMedicinesTabKey = null },
-                  onCloudAuthSuccess = { viewModel.showToast("اتصال به حساب گوگل انجام شد.") },
-                  onCloudAuthError = { msg -> viewModel.showToast(msg) },
-                  onSignedOut = { viewModel.showToast("از حساب گوگل خارج شدید.") },
+                  onNavigateSkinCare = { navController.navigate(SkinRoute) { launchSingleTop = true } },
+                  onNavigateNutrition = { navController.navigate(NutritionRoute) { launchSingleTop = true } },
                 )
               }
 
+              composable<MedicinesRoute> { entry ->
+                LaunchedEffect(entry) {
+                  viewModel.showToast("پرسش‌های دارویی مستقیماً از طریق داروساز کودک پاسخ داده می‌شود.")
+                  navController.navigate(AskPharmacistRoute("otc")) {
+                    popUpTo(entry.destination.id) { inclusive = true }
+                    launchSingleTop = true
+                  }
+                }
+              }
+
               composable<MedicineDetailRoute> { entry ->
-                val args = entry.toRoute<MedicineDetailRoute>()
-                MedicineDetailScreen(
-                  medication = viewModel.medicationBySlug(args.slug),
-                  onBack = { navController.popBackStack() },
-                  onNavigateAskPharmacist = { navController.navigate(AskPharmacistRoute("otc")) },
-                  onShowFeedback = viewModel::showToast,
-                )
+                LaunchedEffect(entry) {
+                  viewModel.showToast("پرسش‌های دارویی مستقیماً از طریق داروساز کودک پاسخ داده می‌شود.")
+                  navController.navigate(AskPharmacistRoute("otc")) {
+                    popUpTo(entry.destination.id) { inclusive = true }
+                    launchSingleTop = true
+                  }
+                }
               }
 
               composable<GrowthRoute> { entry ->
@@ -1500,7 +1486,7 @@ fun ManoApp(
                     onSelectAgeBand = viewModel::selectAgeBand,
                     onToggleMilestone = viewModel::toggleMilestoneChecked,
                     onOpenGrowthArticle = { navController.navigate(TopicDetailRoute("growth-and-development")) },
-                    onOpen3DWeighingGuide = { navController.navigate(Pediatric3DStudioRoute("weighing")) },
+                    onOpen3DWeighingGuide = { navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true } },
                     childProfile = effectiveChildProfile,
                     savedHeightCm = effectiveChildHeightCm,
                     savedNutritionPlansCount = savedNutritionPlans.size,
@@ -1562,6 +1548,8 @@ fun ManoApp(
               }
 
               composable<NutritionRoute> {
+                val nutritionVm: ManoNutritionViewModel = viewModel(key = "nutrition_$caregiverSessionKey")
+                val nutritionUiState by nutritionVm.uiState.collectAsStateWithLifecycle()
                 NutritionAdvisorScreen(
                   nutritionUiState = nutritionUiState,
                   savedPlans = savedNutritionPlans,
@@ -1595,7 +1583,7 @@ fun ManoApp(
                     }
                   },
                   onOpenMyChildProfile = { navController.navigate(MyChildRoute) { launchSingleTop = true } },
-                  onOpen3DWeighingGuide = { navController.navigate(Pediatric3DStudioRoute("weighing")) { launchSingleTop = true } },
+                  onOpen3DWeighingGuide = { navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true } },
                   onFeedback = viewModel::showToast,
                 )
               }
@@ -1617,16 +1605,11 @@ fun ManoApp(
                   onNavigateSymptoms = { navController.navigate(SymptomsRoute()) },
                   childProfile = effectiveChildProfile,
                   childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
-                  onNavigate3DStudio = { navController.navigate(Pediatric3DStudioRoute("workbench")) },
-                  onOpen3DWithDose = { recommendedMl ->
-                    val hasFever = (timelineSnapshot.latestTempCelsius ?: 0f) >= 38.0f
-                    navController.navigate(
-                      Pediatric3DStudioRoute(
-                        initialScene = "workbench",
-                        prefillMl = recommendedMl,
-                        prefillFever = hasFever,
-                      )
-                    )
+                  onNavigateAskPharmacist = { categoryId ->
+                    navController.navigate(AskPharmacistRoute(categoryId = categoryId)) { launchSingleTop = true }
+                  },
+                  onNavigateSupplementsHygiene = {
+                    navController.navigate(SupplementsHygieneRoute) { launchSingleTop = true }
                   },
                 )
               }
@@ -1661,23 +1644,17 @@ fun ManoApp(
               }
 
               composable<Pediatric3DStudioRoute> { entry ->
-                val args = entry.toRoute<Pediatric3DStudioRoute>()
-                Pediatric3DStudioScreen(
-                  initialScene = args.initialScene,
-                  prefillMl = args.prefillMl,
-                  prefillFever = args.prefillFever,
-                  prefillFormulationId = args.prefillFormulationId,
-                  prefillScannedDrugFa = args.prefillScannedDrugFa,
-                  childProfile = effectiveChildProfile,
-                  childBirthDateEpochMs = resolvedChildBirthDateEpochMs,
-                  latestTempCelsius = timelineSnapshot.latestTempCelsius,
-                  hapticIntensity = hapticIntensity,
-                  webGlQuality = webGlQuality,
-                  onBack = { navController.popBackStack() },
-                )
+                LaunchedEffect(entry) {
+                  navController.navigate(SupplementsHygieneRoute) {
+                    popUpTo(entry.destination.id) { inclusive = true }
+                    launchSingleTop = true
+                  }
+                }
               }
 
               composable<SyrupScannerRoute> {
+                val syrupScannerVm: ManoSyrupScannerViewModel = viewModel(key = "scanner_$caregiverSessionKey")
+                val syrupScannerUiState by syrupScannerVm.uiState.collectAsStateWithLifecycle()
                 SyrupScannerScreen(
                   scannerUiState = syrupScannerUiState,
                   savedScans = effectiveSyrupScans,
@@ -1733,8 +1710,7 @@ fun ManoApp(
                   onResetScanner = syrupScannerVm::reset,
                   onOpenMyChildProfile = { navController.navigate(MyChildRoute) { launchSingleTop = true } },
                   onOpenMedicinesSyringe = {
-                    requestedMedicinesTabKey = "syringe"
-                    navController.navigate(MedicinesRoute) { launchSingleTop = true }
+                    navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true }
                   },
                   onOpenAskPharmacist = { navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true } },
                   onFeedback = viewModel::showToast,
@@ -1743,6 +1719,8 @@ fun ManoApp(
 
               composable<FaqRoute> { entry ->
                 val args = entry.toRoute<FaqRoute>()
+                val safetyTriageAiVm: ManoSafetyTriageAiViewModel = viewModel(key = "safety_$caregiverSessionKey")
+                val documentedQaUiState by safetyTriageAiVm.qaState.collectAsStateWithLifecycle()
                 LaunchedEffect(args.query) {
                   if (args.query.isNotBlank()) viewModel.setFaqSearchQuery(args.query)
                 }
@@ -1918,11 +1896,7 @@ fun ManoApp(
                     viewModel.exportChildProfileSummary(effectiveChildProfile)
                   },
                   onEraseLocalData = {
-                    visitDraftVm.resetToIdle()
-                    nutritionVm.resetToIdle()
-                    syrupScannerVm.reset()
-                    safetyTriageAiVm.resetChecklist()
-                    safetyTriageAiVm.resetDocumentedQa()
+                    localEraseEpoch++
                     showVisitDraftSheet = false
                     viewModel.eraseLocalChildHealthData()
                   },
@@ -1940,9 +1914,60 @@ fun ManoApp(
                   onSignedOut = { viewModel.showToast("از حساب گوگل خارج شدید.") },
                   onOpenNutritionAdvisor = { navController.navigate(NutritionRoute) { launchSingleTop = true } },
                   onOpenVaccinesSchedule = { navController.navigate(VaccinesRoute) { launchSingleTop = true } },
+                  onOpenTreatmentPlan = { navController.navigate(TreatmentPlanRoute) { launchSingleTop = true } },
+                  treatmentPlanMedCount = treatmentPlan.medications.size,
                   pendingCloudSync = pendingProfileSync,
                   isSyncingOfflineQueue = isSyncingOfflineQueue,
                   onRetryCloudSync = { cloudVm?.syncPendingOfflineQueue(silent = false) },
+                )
+              }
+
+              composable<TreatmentPlanRoute> {
+                TreatmentPlanScreen(
+                  plan = treatmentPlan,
+                  childProfile = effectiveChildProfile,
+                  onToggleDoseSlot = viewModel::toggleTreatmentDoseSlot,
+                  onSaveMedication = viewModel::upsertTreatmentMedication,
+                  onDeleteMedication = viewModel::deleteTreatmentMedication,
+                  onUpdateHeader = viewModel::updateTreatmentPlanHeader,
+                  onResetDefault = viewModel::resetTreatmentPlanToDefault,
+                  onToggleSmartReminders = { enable ->
+                    if (!enable) {
+                      viewModel.setTreatmentSmartRemindersEnabled(false)
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+                      treatmentReminderPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                      viewModel.setTreatmentSmartRemindersEnabled(true)
+                      if (hasNotificationPermission) {
+                        runCatching {
+                          TreatmentPlanNotificationHelper.postReminderNotification(
+                            context = context,
+                            plan = treatmentPlan.copy(smartRemindersEnabled = true),
+                            childDisplayFa = TreatmentPlanFormatter.resolveChildDisplaySummary(treatmentPlan, effectiveChildProfile),
+                            isActivationPreview = true,
+                          )
+                        }
+                      }
+                    }
+                  },
+                  onShareForCaregiver = {
+                    val shareText = TreatmentPlanFormatter.buildCaregiverShareText(treatmentPlan, effectiveChildProfile)
+                    val sendIntent =
+                      Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, "برنامه درمانی کودک — مانو کید")
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                      }
+                    val chooser = Intent.createChooser(sendIntent, "ارسال برنامه درمانی برای والد یا مراقب")
+                    runCatching {
+                      context.startActivity(chooser)
+                    }.onFailure {
+                      viewModel.showToast("برنامه‌ای برای اشتراک‌گذاری متن روی این دستگاه یافت نشد.")
+                    }
+                  },
+                  onAskPharmacist = {
+                    navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true }
+                  },
                 )
               }
 
@@ -1965,17 +1990,15 @@ fun ManoApp(
         }
       }
 
-      val shouldShowFirstRunOnboarding =
-        manualOnboardingOpen ||
-          (!isRobolectricRuntime && !dismissedAutoOnboarding && onboardingCompleted == false && effectiveChildProfile == null)
-      if (shouldShowFirstRunOnboarding) {
+      // Launch onboarding only on explicit user request (drawer/settings) or test override,
+      // keeping cold-start frame 1 directly on the compact HomeScreen without blocking Dialogs.
+      if (manualOnboardingOpen) {
         ManoOnboardingOverlay(
           existingProfile = effectiveChildProfile,
           existingBirthDateEpochMs = resolvedChildBirthDateEpochMs,
           existingHeightCm = effectiveChildHeightCm,
           onComplete = { alias, birthMs, band, weightKg, heightCm ->
             manualOnboardingOpen = false
-            dismissedAutoOnboarding = true
             viewModel.completeOnboarding(
               aliasFa = alias,
               birthDateEpochMs = birthMs,
@@ -1991,7 +2014,6 @@ fun ManoApp(
           },
           onSkip = {
             manualOnboardingOpen = false
-            dismissedAutoOnboarding = true
             viewModel.skipOnboarding()
           },
         )
@@ -2014,6 +2036,9 @@ fun ManoApp(
       }
 
       if (showVisitDraftSheet) {
+        val visitDraftVm: ManoVisitDraftViewModel = viewModel(key = "visit_$caregiverSessionKey")
+        val visitDraftUiState by visitDraftVm.uiState.collectAsStateWithLifecycle()
+        val visitDraftPdfState by visitDraftVm.pdfState.collectAsStateWithLifecycle()
         VisitDraftModalBottomSheet(
           onDismiss = { showVisitDraftSheet = false },
           draftUiState = visitDraftUiState,
@@ -2136,9 +2161,9 @@ fun ManoApp(
       }
 
       if (showGlobalSearchSheet) {
-        val (matchedArticles, matchedFaqs, matchedMeds) = viewModel.globalSearchResults(selectedAgeBand)
+        val (matchedArticles, matchedFaqs, _) = viewModel.globalSearchResults(selectedAgeBand)
         val searchSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val quickQueries = remember { listOf("تب کودک", "استامینوفن", "سرفه", "واکسن", "پوشک") }
+        val quickQueries = remember { listOf("تب کودک", "قطره آهن", "ویتامین D", "واکسن", "پوشک") }
         val resultItemColors = ListItemDefaults.colors(containerColor = Color.Transparent)
         val resultBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
         ModalBottomSheet(
@@ -2172,7 +2197,7 @@ fun ManoApp(
             OutlinedTextField(
               value = uiState.globalSearchQuery,
               onValueChange = viewModel::setGlobalSearchQuery,
-              label = { Text("جست‌وجو: تب نوزاد، شیرخشک، استامینوفن، سرفه، یبوست...") },
+              label = { Text("جست‌وجو: تب نوزاد، ویتامین D، قطره آهن، بهداشت پوشک، سرفه...") },
               leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
               trailingIcon = {
                 if (uiState.globalSearchQuery.isNotEmpty()) {
@@ -2216,10 +2241,10 @@ fun ManoApp(
                   )
                 }
               }
-            } else if (matchedArticles.isEmpty() && matchedFaqs.isEmpty() && matchedMeds.isEmpty()) {
+            } else if (matchedArticles.isEmpty() && matchedFaqs.isEmpty()) {
               EmptyState(
                 title = "نتیجه‌ای یافت نشد",
-                subtitle = "عبارت کوتاه‌تری بنویسید یا وارد فهرست پرسش‌های پرتکرار شوید.",
+                subtitle = "عبارت کوتاه‌تری بنویسید یا مستقیماً از داروساز کودک بپرسید.",
                 pose = MascotPose.WAIT,
               )
             } else {
@@ -2272,30 +2297,31 @@ fun ManoApp(
                   }
                 }
               }
-              if (matchedMeds.isNotEmpty()) {
-                Text("داروهای کودک", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                matchedMeds.forEach { med ->
-                  Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                    border = resultBorder,
-                    modifier =
-                      Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable {
-                          showGlobalSearchSheet = false
-                          navController.navigate(MedicineDetailRoute(med.slug))
-                        },
-                  ) {
-                    ListItem(
-                      colors = resultItemColors,
-                      headlineContent = { Text(med.nameFa, fontWeight = FontWeight.SemiBold) },
-                      supportingContent = { Text(med.genericNameEn) },
-                    )
+            }
+
+            // Direct shortcuts to Supplements & Hygiene and Ask Pharmacist from global search
+            Surface(
+              shape = RoundedCornerShape(14.dp),
+              color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+              border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+              modifier =
+                Modifier
+                  .fillMaxWidth()
+                  .clip(RoundedCornerShape(14.dp))
+                  .clickable {
+                    showGlobalSearchSheet = false
+                    navController.navigate(AskPharmacistRoute("otc")) { launchSingleTop = true }
                   }
-                }
-              }
+                  .testTag("global_search_ask_pharmacist_cta"),
+            ) {
+              ListItem(
+                colors = resultItemColors,
+                leadingContent = {
+                  Icon(Icons.Rounded.LocalPharmacy, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                },
+                headlineContent = { Text("پرسش دارویی دارید؟ مستقیم از داروساز بپرسید", fontWeight = FontWeight.Bold) },
+                supportingContent = { Text("مشاوره تخصصی دارو، مکمل و محصولات بهداشتی کودک") },
+              )
             }
             Spacer(Modifier.height(24.dp))
           }

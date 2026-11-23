@@ -46,6 +46,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -69,6 +70,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.domain.model.ChildProfileDemo
@@ -83,9 +85,11 @@ import com.example.domain.util.ManoDomainLinks
 import com.example.domain.util.VaccinationScheduleCatalog
 import com.example.domain.util.VaccinationScheduleEngine
 import com.example.ui.components.AlertSeverity
+import com.example.ui.components.FlowchartDownConnector
 import com.example.ui.components.LtrText
 import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoCircularProgressSize
+import com.example.ui.components.ManoCompactScreenHeader
 import com.example.ui.components.ManoHealthProgressRing
 import com.example.ui.components.ManoHealthRingTone
 import com.example.ui.components.ManoIconMedallion
@@ -158,217 +162,148 @@ fun VaccinesScreen(
   Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
       modifier = Modifier.fillMaxSize().widthIn(max = 840.dp).imePadding().testTag("vaccines_list"),
-      contentPadding = ManoTheme.spacing.screenContentPadding,
-      verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
+      contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      // HERO & PROGRESS OVERVIEW CARD
+      // COMPACT HERO & PROGRESS OVERVIEW
       item {
-        SectionCard(modifier = Modifier.testTag("vaccine_overview_card")) {
-          ManoBannerFrame(
-            resId = R.drawable.img_vaccines_banner,
-            contentDescription = "تصویر برنامه واکسیناسیون و مراقبت پیشگیرانه مانو کید",
-            aspectRatio = 16f / 9f,
-          )
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-          ) {
-            ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 60.dp)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text(
-                text = stringResource(R.string.vaccines_screen_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-              )
-              Text(
-                text = stringResource(R.string.vaccines_screen_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-            ManoIconMedallion(
-              icon = Icons.Rounded.Vaccines,
-              accentColor = sageAccent,
-              iconKind = PediatricIconKind.DEVICE,
-              containerSize = 46.dp,
-            )
-          }
-
-          Spacer(Modifier.height(4.dp))
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(ManoTheme.spacing.inlineGap),
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            ManoHealthProgressRing(
-              progress = progressRatio,
-              size = ManoCircularProgressSize.LARGE,
-              tone = if (progressRatio >= 1f) ManoHealthRingTone.EMERALD else ManoHealthRingTone.TURQUOISE,
-              subLabel = "تکمیل",
-              contentDescriptionFa =
-                "پیشرفت واکسن‌های اصلی: ${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())} از ${VaccinationScheduleEngine.toPersianDigits(summary.totalCoreCount.toString())} نوبت",
-              modifier = Modifier.testTag("vaccine_progress_ring"),
-            )
-            Column(
-              modifier = Modifier.weight(1f),
-              verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.textPairGap),
+        val context = LocalContext.current
+        val vaccinesUrl = ManoDomainLinks.vaccinesUrl()
+        Surface(
+          color = if (isDark) MaterialTheme.colorScheme.surface else PureWhite,
+          shape = RoundedCornerShape(18.dp),
+          border = BorderStroke(1.dp, sageAccent.copy(alpha = 0.25f)),
+          modifier = Modifier.fillMaxWidth().testTag("vaccine_overview_card"),
+        ) {
+          Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(10.dp),
+              verticalAlignment = Alignment.CenterVertically,
             ) {
-              Text(
-                text =
+              ManoHealthProgressRing(
+                progress = progressRatio,
+                size = ManoCircularProgressSize.SMALL,
+                tone = if (progressRatio >= 1f) ManoHealthRingTone.EMERALD else ManoHealthRingTone.TURQUOISE,
+                subLabel = "تکمیل",
+                contentDescriptionFa =
                   "پیشرفت واکسن‌های اصلی: ${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())} از ${VaccinationScheduleEngine.toPersianDigits(summary.totalCoreCount.toString())} نوبت",
-                style = ManoTheme.typeScale.actionLabel,
-                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag("vaccine_progress_ring"),
               )
-              if (isCloudSignedIn) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                  Icon(Icons.Rounded.CloudDone, contentDescription = null, modifier = Modifier.size(15.dp), tint = sageAccent)
-                  Text("همگام ابری فعال", style = ManoTheme.typeScale.chipLabel, color = sageAccent)
-                }
-              } else {
+              Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                  text = "وضعیت نوبت‌های اصلی ایمن‌سازی کودک",
-                  style = ManoTheme.typeScale.cardSubtitle,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  text = stringResource(R.string.vaccines_screen_title),
+                  style = MaterialTheme.typography.titleMedium,
+                  fontWeight = FontWeight.ExtraBold,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                  text =
+                    "${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())} از ${VaccinationScheduleEngine.toPersianDigits(summary.totalCoreCount.toString())} نوبت اصلی" +
+                      if (isCloudSignedIn) " • همگام ابری" else "",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.primary,
                 )
               }
-            }
-          }
-
-          FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-          ) {
-            VaccineStatPill(
-              label = "تزریق‌شده: ${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())}",
-              accent = sageAccent,
-            )
-            VaccineStatPill(
-              label = "نزدیک موعد: ${VaccinationScheduleEngine.toPersianDigits(summary.dueSoonCount.toString())}",
-              accent = mangoAccent,
-            )
-            VaccineStatPill(
-              label = "نیازمند پیگیری: ${VaccinationScheduleEngine.toPersianDigits(summary.overdueCount.toString())}",
-              accent = if (summary.overdueCount > 0) dangerAccent else skyAccent,
-            )
-          }
-
-          summary.nextUpcoming?.let { next ->
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            Surface(
-              color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 0.55f, darkAlpha = 0.16f),
-              shape = RoundedCornerShape(12.dp),
-              modifier = Modifier.fillMaxWidth().testTag("vaccine_next_upcoming_banner"),
-            ) {
-              Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+              IconButton(
+                onClick = {
+                  val shareBody = ManoDomainLinks.buildVaccinesShareText(summary, childProfile?.aliasFa)
+                  ManoLinkShareHelper.shareTextWithLink(context, "برنامه واکسیناسیون مانو کید", shareBody)
+                    .onFailure {
+                      ManoLinkShareHelper.copyToClipboard(context, "لینک برنامه واکسن", vaccinesUrl)
+                      onFeedback("لینک برنامه واکسیناسیون کپی شد.")
+                    }
+                },
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("vaccine_share_btn"),
               ) {
-                Icon(Icons.Rounded.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                  Text(
-                    text = "نوبت پیش‌رو: ${next.definition.titleFa}",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                  )
+                Icon(Icons.Rounded.Share, contentDescription = "اشتراک‌گذاری برنامه واکسن", modifier = Modifier.size(20.dp))
+              }
+              IconButton(
+                onClick = {
+                  ManoLinkShareHelper.copyToClipboard(context, "لینک برنامه واکسن", vaccinesUrl)
+                  onFeedback("لینک manokid.ir/vaccines کپی شد.")
+                },
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("vaccine_copy_link_btn"),
+              ) {
+                Icon(Icons.Rounded.ContentCopy, contentDescription = "کپی لینک واکسیناسیون", modifier = Modifier.size(20.dp))
+              }
+            }
+
+            Row(
+              modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+              horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+              VaccineStatPill(
+                label = "تزریق‌شده: ${VaccinationScheduleEngine.toPersianDigits(summary.administeredCoreCount.toString())}",
+                accent = sageAccent,
+              )
+              VaccineStatPill(
+                label = "نزدیک موعد: ${VaccinationScheduleEngine.toPersianDigits(summary.dueSoonCount.toString())}",
+                accent = mangoAccent,
+              )
+              VaccineStatPill(
+                label = "پیگیری: ${VaccinationScheduleEngine.toPersianDigits(summary.overdueCount.toString())}",
+                accent = if (summary.overdueCount > 0) dangerAccent else skyAccent,
+              )
+            }
+
+            summary.nextUpcoming?.let { next ->
+              Surface(
+                color = manoTintedSurface(AquaSurface, DarkSky, lightAlpha = 0.55f, darkAlpha = 0.16f),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth().testTag("vaccine_next_upcoming_banner"),
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                  Icon(Icons.Rounded.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                   val dateText =
                     next.effectiveDueDateEpochMs?.let { VaccinationScheduleEngine.formatPersianDate(it) }
-                      ?: "در انتظار ثبت تاریخ تولد"
+                      ?: "در انتظار تاریخ تولد"
                   Text(
-                    text = "تاریخ موعد: $dateText • ${VaccinationScheduleEngine.formatRelativeDueLabelFa(next)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "نوبت پیش‌رو: ${next.definition.milestoneLabelFa} • $dateText",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                   )
                 }
               }
-            }
-          }
-
-          val context = LocalContext.current
-          val vaccinesUrl = ManoDomainLinks.vaccinesUrl()
-          Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth(),
-          ) {
-            OutlinedButton(
-              onClick = {
-                val shareBody = ManoDomainLinks.buildVaccinesShareText(summary, childProfile?.aliasFa)
-                ManoLinkShareHelper.shareTextWithLink(context, "برنامه واکسیناسیون مانو کید", shareBody)
-                  .onFailure {
-                    ManoLinkShareHelper.copyToClipboard(context, "لینک برنامه واکسن", vaccinesUrl)
-                    onFeedback("لینک برنامه واکسیناسیون کپی شد.")
-                  }
-              },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("vaccine_share_btn"),
-            ) {
-              Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-              Spacer(Modifier.width(6.dp))
-              Text("اشتراک‌گذاری برنامه واکسن")
-            }
-            OutlinedButton(
-              onClick = {
-                ManoLinkShareHelper.copyToClipboard(context, "لینک برنامه واکسن", vaccinesUrl)
-                onFeedback("لینک manokid.ir/vaccines کپی شد.")
-              },
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("vaccine_copy_link_btn"),
-            ) {
-              Icon(Icons.Rounded.ContentCopy, contentDescription = "کپی لینک واکسیناسیون", modifier = Modifier.size(18.dp))
-              Spacer(Modifier.width(4.dp))
-              Text("کپی لینک")
             }
           }
         }
       }
 
-      // CHILD BIRTH DATE REGISTRATION CARD
+      // COMPACT BIRTH DATE STRIP
       item {
         SectionCard(modifier = Modifier.testTag("vaccine_birth_date_card")) {
-          Text(
-            text = "۱. ثبت تاریخ تولد کودک برای محاسبه خودکار موعدها",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-          )
-          Text(
-            text =
-              if (childProfile?.aliasFa?.isNotBlank() == true) {
-                "تاریخ تولد «${childProfile.aliasFa}» را به شمسی (مثلاً ۱۴۰۴/۰۵/۱۲) یا میلادی (2025/08/03) وارد کنید یا از تقویم انتخاب نمایید:"
-              } else {
-                "تاریخ تولد را به شمسی (مثلاً ۱۴۰۴/۰۵/۱۲) یا میلادی (2025/08/03) وارد کنید یا از تقویم انتخاب نمایید:"
-              },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-
-          OutlinedTextField(
-            value = birthDateInput,
-            onValueChange = {
-              birthDateInput = it
-              birthDateErrorFa = null
-            },
-            label = { Text("تاریخ تولد (شمسی YYYY/MM/DD یا میلادی)") },
-            placeholder = { Text("۱۴۰۴/۰۵/۱۲") },
-            singleLine = true,
-            isError = birthDateErrorFa != null,
-            supportingText =
-              birthDateErrorFa?.let { err ->
-                { Text(err, color = MaterialTheme.colorScheme.error) }
-              },
-            leadingIcon = { Icon(Icons.Rounded.CalendarMonth, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth().testTag("vaccine_birthdate_input"),
-          )
-
           Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
           ) {
+            OutlinedTextField(
+              value = birthDateInput,
+              onValueChange = {
+                birthDateInput = it
+                birthDateErrorFa = null
+              },
+              label = { Text("۱. تاریخ تولد (۱۴۰۴/۰۵/۱۲)") },
+              singleLine = true,
+              isError = birthDateErrorFa != null,
+              leadingIcon = { Icon(Icons.Rounded.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp)) },
+              shape = RoundedCornerShape(14.dp),
+              modifier = Modifier.weight(1f).testTag("vaccine_birthdate_input"),
+            )
             Button(
               onClick = {
                 val parsed = VaccinationScheduleEngine.parseFlexibleDateToEpochMs(birthDateInput)
                 if (parsed == null) {
-                  val msg = "فرمت تاریخ معتبر نیست؛ نمونه شمسی: ۱۴۰۴/۰۵/۱۲ یا میلادی: 2025/08/03"
+                  val msg = "فرمت تاریخ معتبر نیست؛ نمونه شمسی: ۱۴۰۴/۰۵/۱۲"
                   birthDateErrorFa = msg
                   onFeedback(msg)
                 } else {
@@ -376,20 +311,21 @@ fun VaccinesScreen(
                   onSaveBirthDate(parsed)
                 }
               },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("vaccine_save_birthdate_btn"),
+              contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("vaccine_save_birthdate_btn"),
             ) {
-              Text("ثبت و محاسبه برنامه")
+              Text("ثبت")
             }
-            OutlinedButton(
+            IconButton(
               onClick = { showBirthDatePicker = true },
-              modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("vaccine_pick_birthdate_btn"),
+              modifier = Modifier.minimumInteractiveComponentSize().testTag("vaccine_pick_birthdate_btn"),
             ) {
-              Icon(Icons.Rounded.EditCalendar, contentDescription = null, modifier = Modifier.size(18.dp))
-              Spacer(Modifier.width(6.dp))
-              Text("انتخاب از تقویم")
+              Icon(Icons.Rounded.EditCalendar, contentDescription = "انتخاب از تقویم")
             }
           }
-
+          if (birthDateErrorFa != null) {
+            Text(birthDateErrorFa.orEmpty(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+          }
           if (birthDateEpochMs != null) {
             Row(
               modifier = Modifier.fillMaxWidth(),
@@ -397,9 +333,8 @@ fun VaccinesScreen(
               verticalAlignment = Alignment.CenterVertically,
             ) {
               Text(
-                text =
-                  "ثبت‌شده: ${VaccinationScheduleEngine.formatPersianDate(birthDateEpochMs)} (${VaccinationScheduleEngine.formatGregorianDateAscii(birthDateEpochMs)})",
-                style = MaterialTheme.typography.labelMedium,
+                text = "ثبت‌شده: ${VaccinationScheduleEngine.formatPersianDate(birthDateEpochMs)}",
+                style = MaterialTheme.typography.labelSmall,
                 color = sageAccent,
               )
               TextButton(
@@ -416,7 +351,7 @@ fun VaccinesScreen(
         }
       }
 
-      // PRE-DUE REMINDER NOTIFICATION SETTINGS CARD
+      // COMPACT REMINDER STRIP
       item {
         SectionCard(modifier = Modifier.testTag("vaccine_reminder_card")) {
           Row(
@@ -426,27 +361,25 @@ fun VaccinesScreen(
           ) {
             Row(
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(10.dp),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
               modifier = Modifier.weight(1f),
             ) {
               Icon(
                 imageVector = if (reminderSettings.enabled) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff,
                 contentDescription = null,
                 tint = if (reminderSettings.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
               )
-              Column {
-                Text("۲. یادآور اعلان پیش از موعد واکسن", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(
-                  text =
-                    if (reminderSettings.enabled) {
-                      "ارسال اعلان یادآوری ${VaccinationScheduleEngine.toPersianDigits(reminderSettings.leadDaysBefore.toString())} روز پیش از موعد"
-                    } else {
-                      "اعلان خودکار پیش از موعد غیرفعال است"
-                    },
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-              }
+              Text(
+                text =
+                  if (reminderSettings.enabled) {
+                    "۲. یادآور ${VaccinationScheduleEngine.toPersianDigits(reminderSettings.leadDaysBefore.toString())} روز قبل"
+                  } else {
+                    "۲. یادآور پیش از موعد خاموش"
+                  },
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+              )
             }
             Switch(
               checked = reminderSettings.enabled,
@@ -458,67 +391,53 @@ fun VaccinesScreen(
           }
 
           if (reminderSettings.enabled) {
-            Text("زمان ارسال یادآور پیش از تاریخ موعد:", style = MaterialTheme.typography.labelLarge)
-            FlowRow(
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-              verticalArrangement = Arrangement.spacedBy(8.dp),
+            Row(
+              modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+              horizontalArrangement = Arrangement.spacedBy(6.dp),
+              verticalAlignment = Alignment.CenterVertically,
             ) {
               VaccinationScheduleEngine.LEAD_DAY_OPTIONS.forEach { days ->
                 val selected = reminderSettings.leadDaysBefore == days
                 FilterChip(
                   selected = selected,
                   onClick = { onUpdateReminderSettings(true, days) },
-                  label = {
-                    Text("${VaccinationScheduleEngine.toPersianDigits(days.toString())} روز قبل")
-                  },
+                  label = { Text("${VaccinationScheduleEngine.toPersianDigits(days.toString())} روز") },
                   modifier = Modifier.minimumInteractiveComponentSize().testTag("vaccine_lead_days_$days"),
                 )
+              }
+              FilledTonalButton(
+                onClick = {
+                  if (!hasNotificationPermission) onRequestNotificationPermission() else onSendPreviewReminder()
+                },
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                modifier = Modifier.minimumInteractiveComponentSize().testTag("vaccine_test_reminder_btn"),
+              ) {
+                Text("تست اعلان", style = MaterialTheme.typography.labelSmall)
               }
             }
 
             if (!hasNotificationPermission) {
               SeverityAlert(
                 severity = AlertSeverity.CAUTION,
-                title = "نیاز به مجوز نمایش اعلان در سیستم",
-                body = "برای دریافت یادآورهای پیش از موعد واکسیناسیون در نوار اعلان گوشی، مجوز اعلان را فعال کنید.",
-                actionLabel = "فعال‌سازی مجوز اعلان",
+                title = "نیاز به مجوز نمایش اعلان",
+                body = "برای دریافت یادآورهای واکسیناسیون، مجوز اعلان را فعال کنید.",
+                actionLabel = "فعال‌سازی",
                 onAction = onRequestNotificationPermission,
                 modifier = Modifier.testTag("vaccine_permission_banner"),
               )
-            }
-
-            FilledTonalButton(
-              onClick = {
-                if (!hasNotificationPermission) {
-                  onRequestNotificationPermission()
-                } else {
-                  onSendPreviewReminder()
-                }
-              },
-              modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("vaccine_test_reminder_btn"),
-            ) {
-              Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
-              Spacer(Modifier.width(8.dp))
-              Text("ارسال اعلان نمونه / بررسی یادآور فوری")
             }
           }
         }
       }
 
-      // SCIENTIFIC DISCLAIMER
+      // FILTER CHIPS + FLOWCHART CONNECTOR
       item {
-        SeverityAlert(
-          severity = AlertSeverity.INFO,
-          title = "انطباق با کارت واکسن مرکز بهداشت",
-          body = VaccinationScheduleCatalog.SCIENTIFIC_REFERENCE_NOTE_FA,
-        )
+        FlowchartDownConnector(labelFa = "فلوچارت نوبت‌های واکسیناسیون (لمس هر نوبت برای ثبت)")
       }
-
-      // FILTER CHIPS
       item {
         Row(
           modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
           VaccineFilter.entries.forEach { filter ->
             FilterChip(
@@ -531,7 +450,7 @@ fun VaccinesScreen(
         }
       }
 
-      // VACCINE SCHEDULE CARDS
+      // 2-COLUMN COMPACT VACCINE FLOWCHART BOARD
       if (filteredItems.isEmpty()) {
         item {
           SectionCard {
@@ -543,27 +462,39 @@ fun VaccinesScreen(
           }
         }
       } else {
-        items(filteredItems, key = { it.definition.id }) { item ->
-          VaccineItemCard(
-            item = item,
-            isDark = isDark,
-            onOpenEdit = { editingItem = item },
-            onQuickMarkAdministeredToday = {
-              val todayMs = VaccinationScheduleEngine.startOfDayEpochMs(System.currentTimeMillis())
-              val updated =
-                (item.record ?: VaccineRecord(id = item.definition.id, vaccineId = item.definition.id)).copy(
-                  customDueDateEpochMs = item.record?.customDueDateEpochMs ?: item.effectiveDueDateEpochMs,
-                  administeredDateEpochMs = todayMs,
-                  isDeferred = false,
-                  updatedAtMs = System.currentTimeMillis(),
+        items(filteredItems.chunked(2), key = { row -> row.joinToString("_") { it.definition.id } }) { pair ->
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            pair.forEach { item ->
+              Box(modifier = Modifier.weight(1f)) {
+                VaccineItemCard(
+                  item = item,
+                  isDark = isDark,
+                  onOpenEdit = { editingItem = item },
+                  onQuickMarkAdministeredToday = {
+                    val todayMs = VaccinationScheduleEngine.startOfDayEpochMs(System.currentTimeMillis())
+                    val updated =
+                      (item.record ?: VaccineRecord(id = item.definition.id, vaccineId = item.definition.id)).copy(
+                        customDueDateEpochMs = item.record?.customDueDateEpochMs ?: item.effectiveDueDateEpochMs,
+                        administeredDateEpochMs = todayMs,
+                        isDeferred = false,
+                        updatedAtMs = System.currentTimeMillis(),
+                      )
+                    onSaveVaccineRecord(updated)
+                  },
                 )
-              onSaveVaccineRecord(updated)
-            },
-          )
+              }
+            }
+            if (pair.size == 1) {
+              Spacer(modifier = Modifier.weight(1f))
+            }
+          }
         }
       }
 
-      item { Spacer(Modifier.height(16.dp)) }
+      item { Spacer(Modifier.height(8.dp)) }
     }
   }
 
@@ -656,121 +587,92 @@ private fun VaccineItemCard(
     }
   val cardColor = if (isDark) MaterialTheme.colorScheme.surface else PureWhite
   val borderColor = manoBorderColor()
+  val dueLabel =
+    item.effectiveDueDateEpochMs?.let { VaccinationScheduleEngine.formatPersianDate(it) }
+      ?: "ثبت‌نشده"
 
   Surface(
+    onClick = onOpenEdit,
     color = cardColor,
-    shape = RoundedCornerShape(18.dp),
+    shape = RoundedCornerShape(16.dp),
     border = BorderStroke(1.2.dp, if (item.status == VaccineStatus.DUE_SOON || item.status == VaccineStatus.OVERDUE) statusAccent.copy(alpha = 0.65f) else borderColor),
     modifier = Modifier.fillMaxWidth().testTag("vaccine_card_${item.definition.id}"),
   ) {
     Column(
-      modifier = Modifier.padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier.padding(10.dp),
+      verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        VaccineStatPill(label = item.definition.milestoneLabelFa, accent = MaterialTheme.colorScheme.primary)
-        VaccineStatPill(label = item.status.labelFa, accent = statusAccent)
-      }
-
-      Text(
-        text = item.definition.titleFa,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-      )
-
-      Text(
-        text = item.definition.vaccinesIncludedFa,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-
-      Surface(
-        color = statusAccent.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          val dueLabel =
-            item.effectiveDueDateEpochMs?.let { VaccinationScheduleEngine.formatPersianDate(it) }
-              ?: "ثبت‌نشده"
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-          ) {
-            Icon(
-              imageVector =
-                when (item.status) {
-                  VaccineStatus.ADMINISTERED -> Icons.Rounded.CheckCircle
-                  VaccineStatus.OVERDUE -> Icons.Rounded.WarningAmber
-                  else -> Icons.Rounded.CalendarMonth
-                },
-              contentDescription = null,
-              modifier = Modifier.size(16.dp),
-              tint = statusAccent,
-            )
-            Text(
-              text =
-                "موعد مقرر: $dueLabel (${item.dueDateSourceFa})",
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onSurface,
-            )
-          }
-
+        Icon(
+          imageVector =
+            when (item.status) {
+              VaccineStatus.ADMINISTERED -> Icons.Rounded.CheckCircle
+              VaccineStatus.OVERDUE -> Icons.Rounded.WarningAmber
+              else -> Icons.Rounded.Vaccines
+            },
+          contentDescription = null,
+          tint = statusAccent,
+          modifier = Modifier.size(18.dp),
+        )
+        Surface(
+          color = statusAccent.copy(alpha = 0.13f),
+          shape = RoundedCornerShape(8.dp),
+        ) {
           Text(
-            text = VaccinationScheduleEngine.formatRelativeDueLabelFa(item),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
+            text = item.status.labelFa,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
             color = statusAccent,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
           )
-
-          if (item.record?.facilityOrLotFa?.isNotBlank() == true) {
-            Text(
-              text = "مرکز / شماره سری: ${item.record.facilityOrLotFa}",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-          if (item.record?.noteFa?.isNotBlank() == true) {
-            Text(
-              text = "یادداشت والد: ${item.record.noteFa}",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
         }
       }
 
       Text(
-        text = "توصیه مراقبتی: ${item.definition.careNotesFa}",
-        style = MaterialTheme.typography.bodySmall,
+        text = item.definition.milestoneLabelFa,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.ExtraBold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      Text(
+        text = item.definition.vaccinesIncludedFa,
+        style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+      Text(
+        text = dueLabel,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = statusAccent,
+        maxLines = 1,
       )
 
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
       ) {
         OutlinedButton(
           onClick = onOpenEdit,
+          contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
           modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("vaccine_edit_btn_${item.definition.id}"),
         ) {
-          Icon(Icons.Rounded.EditCalendar, contentDescription = null, modifier = Modifier.size(18.dp))
-          Spacer(Modifier.width(6.dp))
-          Text("ثبت / ویرایش تاریخ")
+          Text("ثبت", style = MaterialTheme.typography.labelSmall, maxLines = 1)
         }
-
         if (item.status != VaccineStatus.ADMINISTERED) {
           Button(
             onClick = onQuickMarkAdministeredToday,
+            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
             modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("vaccine_quick_mark_${item.definition.id}"),
           ) {
-            Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("تزریق شد (امروز)")
+            Text("شد", style = MaterialTheme.typography.labelSmall, maxLines = 1)
           }
         }
       }

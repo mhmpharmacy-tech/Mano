@@ -56,3 +56,8 @@ data class AskPharmacistRoute(
 @Serializable data class InfoRoute(val initialSection: String = "about")
 
 @Serializable data object CareCardsRoute
+
+@Serializable data object SupplementsHygieneRoute
+
+@Serializable data object TreatmentPlanRoute
+

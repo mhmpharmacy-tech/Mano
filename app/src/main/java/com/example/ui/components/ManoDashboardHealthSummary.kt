@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChildCare
-import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.rounded.Vaccines
 import androidx.compose.material3.Icon
@@ -317,24 +317,14 @@ fun ManoDashboardHealthSummaryCard(
         )
 
         DashboardHealthRingTile(
-          labelFa = "ایمنی دارو",
-          captionFa =
-            if (state.medSafetyAllCriticalReady) {
-              "گام‌های حیاتی آماده"
-            } else {
-              "${toPersianDigits(state.medSafetyCheckedCount)} از ${toPersianDigits(state.medSafetyTotalCount)} گام"
-            },
-          progress = state.medSafetyProgress,
-          valueText = "${toPersianDigits(state.medSafetyCheckedCount)}/${toPersianDigits(state.medSafetyTotalCount)}",
-          subLabel = if (state.medSafetyAllCriticalReady) "آماده" else "ایمنی",
-          icon = Icons.Rounded.Shield,
+          labelFa = "مکمل و بهداشت",
+          captionFa = "مراقبت و مکمل کودک",
+          progress = 1f,
+          valueText = "۱۰",
+          subLabel = "راهنما",
+          icon = Icons.Rounded.Spa,
           tileBackground = safetyTileBg,
-          tone =
-            if (state.medSafetyAllCriticalReady) {
-              ManoHealthRingTone.EMERALD
-            } else {
-              ManoHealthRingTone.PASTEL_TURQUOISE
-            },
+          tone = ManoHealthRingTone.PASTEL_TURQUOISE,
           testTag = "dashboard_health_ring_safety",
           onClick = onOpenMedicationSafety,
           modifier = Modifier.weight(1f),

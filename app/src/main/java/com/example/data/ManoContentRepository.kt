@@ -15,14 +15,14 @@ import com.example.domain.util.PersianNormalizer
 
 class ManoContentRepository {
 
-  val articles: List<Article> = ManoArticlesSeed.starterArticles.map(ManoTextbookEvidence::reviseArticle)
-  val faqs: List<FaqItem> = ManoFaqSeed.faqs + ManoTextbookEvidence.faqs
-  val symptomFlows: List<SymptomFlow> = ManoSourcesAndClinicalSeed.symptomFlows.map(ManoTextbookEvidence::reviseFlow)
-  val medications: List<MedicationMonograph> = ManoSourcesAndClinicalSeed.medicationMonographs
-  val milestones: List<MilestoneItem> = ManoSourcesAndClinicalSeed.milestones
-  val deviceGuides: List<DeviceGuide> = ManoSourcesAndClinicalSeed.deviceGuides
-  val sources: List<SourceReference> = ManoSourcesAndClinicalSeed.allSources + ManoTextbookEvidence.allSources
-  val demoPharmacistCases: List<PharmacistCaseDemo> = ManoSourcesAndClinicalSeed.demoPharmacistCases
+  val articles: List<Article> by lazy { ManoArticlesSeed.starterArticles.map(ManoTextbookEvidence::reviseArticle) }
+  val faqs: List<FaqItem> by lazy { ManoFaqSeed.faqs + ManoTextbookEvidence.faqs }
+  val symptomFlows: List<SymptomFlow> by lazy { ManoSourcesAndClinicalSeed.symptomFlows.map(ManoTextbookEvidence::reviseFlow) }
+  val medications: List<MedicationMonograph> by lazy { ManoSourcesAndClinicalSeed.medicationMonographs }
+  val milestones: List<MilestoneItem> by lazy { ManoSourcesAndClinicalSeed.milestones }
+  val deviceGuides: List<DeviceGuide> by lazy { ManoSourcesAndClinicalSeed.deviceGuides }
+  val sources: List<SourceReference> by lazy { ManoSourcesAndClinicalSeed.allSources + ManoTextbookEvidence.allSources }
+  val demoPharmacistCases: List<PharmacistCaseDemo> by lazy { ManoSourcesAndClinicalSeed.demoPharmacistCases }
 
   fun articleBySlug(slug: String): Article? = articles.firstOrNull { it.slug == slug }
 

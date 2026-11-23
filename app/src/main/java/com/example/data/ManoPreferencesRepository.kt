@@ -16,6 +16,7 @@ import com.example.domain.model.ConsultationRequestDemo
 import com.example.domain.model.GrowthMeasurement
 import com.example.domain.model.DoctorVisitDraft
 import com.example.domain.model.NutritionPlanResult
+import com.example.domain.model.PediatricTreatmentPlan
 import com.example.domain.model.SavedSyrupScan
 import com.example.domain.model.VaccineRecord
 import com.example.domain.model.VaccineReminderSettings
@@ -111,6 +112,7 @@ class ManoPreferencesRepository(private val context: Context) {
     val ONBOARDING_COMPLETED = booleanPreferencesKey("mano_onboarding_completed")
     val HAPTIC_INTENSITY = stringPreferencesKey("mano_haptic_intensity")
     val WEBGL_QUALITY = stringPreferencesKey("mano_webgl_quality")
+    val TREATMENT_PLAN_JSON = stringPreferencesKey("mano_pediatric_treatment_plan_json")
   }
 
   val bookmarkedSlugs: Flow<Set<String>> =
@@ -796,6 +798,29 @@ class ManoPreferencesRepository(private val context: Context) {
   suspend fun setHapticIntensity(intensity: ManoHapticIntensity) {
     context.manoDataStore.edit { prefs ->
       prefs[Keys.HAPTIC_INTENSITY] = intensity.id
+    }
+  }
+
+  val treatmentPlan: Flow<PediatricTreatmentPlan> =
+    context.manoDataStore.data.map { prefs ->
+      val raw = prefs[Keys.TREATMENT_PLAN_JSON].orEmpty()
+      if (raw.isBlank()) {
+        PediatricTreatmentPlan()
+      } else {
+        runCatching { json.decodeFromString<PediatricTreatmentPlan>(raw) }
+          .getOrDefault(PediatricTreatmentPlan())
+      }
+    }
+
+  suspend fun saveTreatmentPlan(plan: PediatricTreatmentPlan) {
+    context.manoDataStore.edit { prefs ->
+      prefs[Keys.TREATMENT_PLAN_JSON] = json.encodeToString(plan)
+    }
+  }
+
+  suspend fun clearTreatmentPlan() {
+    context.manoDataStore.edit { prefs ->
+      prefs.remove(Keys.TREATMENT_PLAN_JSON)
     }
   }
 

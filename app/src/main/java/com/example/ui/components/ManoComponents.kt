@@ -220,23 +220,40 @@ fun ManoAtmosphericBackdrop(
           val midSkyAccentHalo =
             if (isDark) TealGlow.copy(alpha = 0.08f) else SoftSkyHalo.copy(alpha = 0.34f)
 
+          val w = size.width.coerceAtLeast(1f)
+          val h = size.height.coerceAtLeast(1f)
+          val topSkyCenter = Offset(w * 0.52f, h * 0.03f)
+          val topSkyRadius = (w * 0.92f).coerceAtLeast(1f)
+          val topSkyBrush =
+            Brush.radialGradient(
+              colors = listOf(topSkyHalo, Color.Transparent),
+              center = topSkyCenter,
+              radius = topSkyRadius,
+            )
+
+          val topMintCenter = Offset(w * 0.14f, h * 0.10f)
+          val topMintRadius = (w * 0.65f).coerceAtLeast(1f)
+          val topMintBrush =
+            Brush.radialGradient(
+              colors = listOf(topMintHalo, Color.Transparent),
+              center = topMintCenter,
+              radius = topMintRadius,
+            )
+
+          val midSkyCenter = Offset(w * 0.88f, h * 0.34f)
+          val midSkyRadius = (w * 0.60f).coerceAtLeast(1f)
+          val midSkyBrush =
+            Brush.radialGradient(
+              colors = listOf(midSkyAccentHalo, Color.Transparent),
+              center = midSkyCenter,
+              radius = midSkyRadius,
+            )
+
           onDrawBehind {
             drawRect(color = baseColor)
-            drawCircle(
-              brush = Brush.radialGradient(listOf(topSkyHalo, Color.Transparent)),
-              center = Offset(size.width * 0.52f, size.height * 0.03f),
-              radius = size.width * 0.92f,
-            )
-            drawCircle(
-              brush = Brush.radialGradient(listOf(topMintHalo, Color.Transparent)),
-              center = Offset(size.width * 0.14f, size.height * 0.10f),
-              radius = size.width * 0.65f,
-            )
-            drawCircle(
-              brush = Brush.radialGradient(listOf(midSkyAccentHalo, Color.Transparent)),
-              center = Offset(size.width * 0.88f, size.height * 0.34f),
-              radius = size.width * 0.60f,
-            )
+            drawCircle(brush = topSkyBrush, center = topSkyCenter, radius = topSkyRadius)
+            drawCircle(brush = topMintBrush, center = topMintCenter, radius = topMintRadius)
+            drawCircle(brush = midSkyBrush, center = midSkyCenter, radius = midSkyRadius)
           }
         },
     content = content,

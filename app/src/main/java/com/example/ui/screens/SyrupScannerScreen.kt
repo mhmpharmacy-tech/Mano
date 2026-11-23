@@ -837,12 +837,12 @@ fun SyrupScannerScreen(
                   Text("ذخیره در لیست")
                 }
                 OutlinedButton(
-                  onClick = onOpenMedicinesSyringe,
+                  onClick = onOpenAskPharmacist,
                   modifier = Modifier.weight(1f).minimumInteractiveComponentSize().testTag("scanner_open_medicines_btn"),
                 ) {
-                  Icon(Icons.Rounded.MedicalServices, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Icon(Icons.Rounded.LocalPharmacy, contentDescription = null, modifier = Modifier.size(16.dp))
                   Spacer(Modifier.width(4.dp))
-                  Text("آزمایشگاه سرنگ")
+                  Text("سوال از داروساز")
                 }
               }
             }

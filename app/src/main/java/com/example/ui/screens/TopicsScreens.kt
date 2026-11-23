@@ -65,14 +65,21 @@ import com.example.ui.components.ArticleCard
 import com.example.ui.components.ClinicalBulletList
 import com.example.ui.components.ClinicalNote
 import com.example.ui.components.EmptyState
+import com.example.ui.components.FlowchartDownConnector
 import com.example.ui.components.LtrText
 import com.example.ui.components.ManoBannerFrame
+import com.example.ui.components.ManoCompactScreenHeader
+import com.example.ui.components.ManoFlowchartIconTile
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SeverityAlert
 import com.example.ui.components.SourceBadge
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.ManoTheme
 import com.example.ui.theme.DarkGold
+import com.example.ui.theme.DarkSage
+import com.example.ui.theme.DarkSky
+import com.example.ui.theme.SageCare
+import com.example.ui.theme.SkyCare
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoCardSurface
 import com.example.ui.theme.manoSemanticAccent
@@ -134,125 +141,142 @@ fun TopicsScreen(
     }
 
     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+      val primaryAccent = MaterialTheme.colorScheme.primary
+      val sageAccent = manoSemanticAccent(SageCare, DarkSage)
+      val skyAccent = manoSemanticAccent(SkyCare, DarkSky)
+      val goldAccent = manoSemanticAccent(AccentGold, DarkGold)
+
       LazyColumn(
         modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
-        contentPadding = ManoTheme.spacing.screenContentPadding,
-        verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
         item {
-          SectionCard {
-            ManoBannerFrame(
-              resId = R.drawable.img_topics_library_banner,
-              contentDescription = "کتابخانه سلامت کودک مانو کید",
-              aspectRatio = 16f / 9f,
+          ManoCompactScreenHeader(
+            titleFa = "موضوعات سلامت کودک",
+            subtitleFa = "راهنماهای علمی • لمس هر آیکون برای مطالعه",
+            icon = Icons.AutoMirrored.Rounded.MenuBook,
+            accentColor = primaryAccent,
+          )
+        }
+
+        item {
+          OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text("جست‌وجو (تب، یبوست، شیرخشک...)") },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+            trailingIcon = {
+              if (query.isNotEmpty()) {
+                IconButton(
+                  onClick = { onQueryChange("") },
+                  modifier = Modifier.minimumInteractiveComponentSize(),
+                ) {
+                  Icon(Icons.Rounded.Close, contentDescription = "پاک کردن جست‌وجو")
+                }
+              }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().testTag("topics_search_input"),
+          )
+        }
+
+        if (PersianNormalizer.isHighRiskQuery(query)) {
+          item {
+            SeverityAlert(
+              severity = AlertSeverity.DANGER,
+              title = "یادآوری ایمنی علائم پرخطر",
+              body = "در تب نوزاد زیر ۳ ماه (≥۳۸ درجه)، تنگی نفس یا بی‌حالی بلافاصله با ۱۱۵ تماس بگیرید.",
+              showCautionMascot = true,
             )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-              com.example.ui.components.ManoPoseAvatar(pose = MascotPose.EXPLAIN, size = 62.dp)
-              Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("موضوعات سلامت و راهنماهای جامع", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                  text = "مقالات آموزشی پایه با ذکر رده سنی، علائم هشدار و منابع معتبر علمی (بازبینی و تایید علمی داروساز).",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+          }
+        }
+
+        item {
+          LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            item {
+              FilterChip(
+                selected = selectedCategory == null,
+                onClick = { onCategorySelect(null) },
+                label = { Text("همه") },
+                modifier = Modifier.minimumInteractiveComponentSize(),
+              )
+            }
+            items(TopicCategory.entries) { cat ->
+              FilterChip(
+                selected = selectedCategory == cat,
+                onClick = { onCategorySelect(cat) },
+                label = { Text(cat.labelFa) },
+                modifier = Modifier.minimumInteractiveComponentSize(),
+              )
+            }
+          }
+        }
+
+        item {
+          AgeSelectorRow(selectedAgeBand = selectedAgeBand, onSelect = onAgeSelect)
+        }
+
+        item {
+          FlowchartDownConnector(labelFa = "موضوعات (${articles.size}) • لمس برای باز کردن راهنما")
+        }
+
+        if (articles.isEmpty()) {
+          item {
+            EmptyState(
+              title = "مقاله‌ای با این فیلتر پیدا نشد",
+              subtitle = "فیلتر سن یا عبارت جست‌وجو را پاک کنید.",
+              pose = MascotPose.WAIT,
+              actionLabel = "پاک کردن فیلترها",
+              onAction = {
+                onQueryChange("")
+                onCategorySelect(null)
+                onAgeSelect(null)
+              },
+            )
+          }
+        } else {
+          items(articles.chunked(2), key = { row -> row.joinToString("_") { it.slug } }) { pair ->
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              pair.forEachIndexed { idx, article ->
+                val accent =
+                  when ((article.category.ordinal + idx) % 4) {
+                    0 -> primaryAccent
+                    1 -> sageAccent
+                    2 -> skyAccent
+                    else -> goldAccent
+                  }
+                ManoFlowchartIconTile(
+                  titleFa = article.titleFa,
+                  subtitleFa = article.category.labelFa,
+                  badgeFa = if (article.slug in bookmarkedSlugs) "نشان‌شده" else (article.ageBands.firstOrNull()?.labelFa ?: "مطالعه"),
+                  icon = if (article.slug in bookmarkedSlugs) Icons.Rounded.Bookmark else Icons.AutoMirrored.Rounded.MenuBook,
+                  accentColor = accent,
+                  onClick = { onOpenArticle(article.slug) },
+                  modifier = Modifier.weight(1f).testTag("article_card_${article.slug}"),
                 )
               }
-            }
-          }
-        }
-
-      item {
-        OutlinedTextField(
-          value = query,
-          onValueChange = onQueryChange,
-          label = { Text("جست‌وجو در موضوعات (مثلاً تب، یبوست، شیرخشک)") },
-          leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-          trailingIcon = {
-            if (query.isNotEmpty()) {
-              IconButton(
-                onClick = { onQueryChange("") },
-                modifier = Modifier.minimumInteractiveComponentSize(),
-              ) {
-                Icon(Icons.Rounded.Close, contentDescription = "پاک کردن جست‌وجو")
+              if (pair.size == 1) {
+                Spacer(modifier = Modifier.weight(1f))
               }
             }
-          },
-          singleLine = true,
-          shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-          modifier = Modifier.fillMaxWidth().testTag("topics_search_input"),
-        )
-      }
+          }
+        }
 
-      if (PersianNormalizer.isHighRiskQuery(query)) {
         item {
-          SeverityAlert(
-            severity = AlertSeverity.DANGER,
-            title = "یادآوری ایمنی در جست‌وجوی علائم پرخطر",
-            body = "اگر کودک زیر ۳ ماه تب ۳۸ درجه یا بیشتر دارد، یا تنفس سخت و بی‌حالی مشاهده می‌کنید، بلافاصله به اورژانس ۱۱۵ یا پزشک مراجعه نمایید.",
-            showCautionMascot = true,
-          )
-        }
-      }
-
-      item {
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          item {
-            FilterChip(
-              selected = selectedCategory == null,
-              onClick = { onCategorySelect(null) },
-              label = { Text("همه دسته‌ها") },
-              modifier = Modifier.minimumInteractiveComponentSize(),
-            )
-          }
-          items(TopicCategory.entries) { cat ->
-            FilterChip(
-              selected = selectedCategory == cat,
-              onClick = { onCategorySelect(cat) },
-              label = { Text(cat.labelFa) },
-              modifier = Modifier.minimumInteractiveComponentSize(),
-            )
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onNavigateSkin, modifier = Modifier.weight(1f).minimumInteractiveComponentSize()) {
+              Text("پوست و پوشک")
+            }
+            OutlinedButton(onClick = onNavigateDevices, modifier = Modifier.weight(1f).minimumInteractiveComponentSize()) {
+              Text("وسایل مراقبتی")
+            }
           }
         }
-      }
-
-      item {
-        AgeSelectorRow(selectedAgeBand = selectedAgeBand, onSelect = onAgeSelect)
-      }
-
-      item {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-          OutlinedButton(onClick = onNavigateSkin, modifier = Modifier.weight(1f).minimumInteractiveComponentSize()) {
-            Text("پوست و پوشک")
-          }
-          OutlinedButton(onClick = onNavigateDevices, modifier = Modifier.weight(1f).minimumInteractiveComponentSize()) {
-            Text("وسایل مراقبتی")
-          }
-        }
-      }
-
-      if (articles.isEmpty()) {
-        item {
-          EmptyState(
-            title = "مقاله‌ای با این فیلتر پیدا نشد",
-            subtitle = "می‌توانید فیلتر سن یا عبارت جست‌وجو را پاک کنید تا همه راهنماها نمایش داده شوند.",
-            pose = MascotPose.WAIT,
-            actionLabel = "پاک کردن فیلترها",
-            onAction = {
-              onQueryChange("")
-              onCategorySelect(null)
-              onAgeSelect(null)
-            },
-          )
-        }
-      } else {
-        items(articles, key = { it.slug }) { article ->
-          ArticleCard(
-            article = article,
-            isBookmarked = article.slug in bookmarkedSlugs,
-            onToggleBookmark = { onToggleBookmark(article.slug) },
-            onOpen = { onOpenArticle(article.slug) },
-          )
-        }
-      }
       }
     }
   }

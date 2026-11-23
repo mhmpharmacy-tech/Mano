@@ -316,6 +316,8 @@ fun ManoAlgorithmicNavIcon(
     when (tabTag) {
       "nav_home" -> drawHomeSanctuaryGlyph(w, h, strokeW, t, tint, accentColor)
       "nav_symptoms" -> drawSymptomPulseGlyph(w, h, strokeW, t, tint, accentColor)
+      "nav_supplements_hygiene" -> drawSupplementsHygieneGlyph(w, h, strokeW, t, tint, accentColor)
+      "nav_pharmacist" -> drawPharmacistCareGlyph(w, h, strokeW, t, tint, accentColor)
       "nav_medicines" -> drawMedicineSyringeGlyph(w, h, strokeW, t, tint, accentColor)
       "nav_growth" -> drawGrowthBloomGlyph(w, h, strokeW, t, tint, accentColor)
       else -> drawDocumentedQaGlyph(w, h, strokeW, t, tint, accentColor)
@@ -596,3 +598,93 @@ private fun DrawScope.drawDocumentedQaGlyph(
     radius = w * (0.045f + 0.02f * t),
   )
 }
+
+private fun DrawScope.drawSupplementsHygieneGlyph(
+  w: Float,
+  h: Float,
+  strokeW: Float,
+  t: Float,
+  tint: Color,
+  accentColor: Color,
+) {
+  // Pure hygiene droplet paired with a protective vitamin leaf sparkle
+  val dropPath =
+    Path().apply {
+      moveTo(w * 0.44f, h * 0.16f)
+      cubicTo(w * 0.58f, h * 0.36f, w * 0.68f, h * 0.50f, w * 0.68f, h * 0.63f)
+      cubicTo(w * 0.68f, h * 0.78f, w * 0.57f, h * 0.86f, w * 0.44f, h * 0.86f)
+      cubicTo(w * 0.31f, h * 0.86f, w * 0.20f, h * 0.78f, w * 0.20f, h * 0.63f)
+      cubicTo(w * 0.20f, h * 0.50f, w * 0.30f, h * 0.36f, w * 0.44f, h * 0.16f)
+      close()
+    }
+  if (t > 0.04f) {
+    drawPath(path = dropPath, color = accentColor.copy(alpha = 0.20f * t))
+  }
+  drawPath(
+    path = dropPath,
+    color = tint,
+    style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round),
+  )
+
+  // Inner soft reflection arc inside droplet
+  val shine =
+    Path().apply {
+      moveTo(w * 0.32f, h * 0.62f)
+      quadraticTo(w * 0.33f, h * 0.73f, w * 0.42f, h * 0.75f)
+    }
+  drawPath(
+    path = shine,
+    color = tint.copy(alpha = 0.65f + 0.35f * t),
+    style = Stroke(width = strokeW * 0.75f, cap = StrokeCap.Round),
+  )
+
+  // Vitamin sparkle star at upper right
+  val sx = w * 0.76f
+  val sy = h * 0.30f
+  val sr = w * (0.11f + 0.03f * t)
+  drawLine(tint, Offset(sx, sy - sr), Offset(sx, sy + sr), strokeW * 0.85f, StrokeCap.Round)
+  drawLine(tint, Offset(sx - sr, sy), Offset(sx + sr, sy), strokeW * 0.85f, StrokeCap.Round)
+}
+
+private fun DrawScope.drawPharmacistCareGlyph(
+  w: Float,
+  h: Float,
+  strokeW: Float,
+  t: Float,
+  tint: Color,
+  accentColor: Color,
+) {
+  // Rounded consultation bubble housing a reassuring pharmacy cross
+  val bubblePath =
+    Path().apply {
+      moveTo(w * 0.24f, h * 0.17f)
+      lineTo(w * 0.76f, h * 0.17f)
+      quadraticTo(w * 0.86f, h * 0.17f, w * 0.86f, h * 0.27f)
+      lineTo(w * 0.86f, h * 0.64f)
+      quadraticTo(w * 0.86f, h * 0.74f, w * 0.76f, h * 0.74f)
+      lineTo(w * 0.63f, h * 0.74f)
+      lineTo(w * 0.50f, h * 0.86f)
+      lineTo(w * 0.44f, h * 0.74f)
+      lineTo(w * 0.24f, h * 0.74f)
+      quadraticTo(w * 0.14f, h * 0.74f, w * 0.14f, h * 0.64f)
+      lineTo(w * 0.14f, h * 0.27f)
+      quadraticTo(w * 0.14f, h * 0.17f, w * 0.24f, h * 0.17f)
+      close()
+    }
+  if (t > 0.04f) {
+    drawPath(path = bubblePath, color = accentColor.copy(alpha = 0.20f * t))
+  }
+  drawPath(
+    path = bubblePath,
+    color = tint,
+    style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round),
+  )
+
+  // Pharmacy plus emblem inside the consultation bubble
+  val cx = w * 0.50f
+  val cy = h * 0.455f
+  val arm = w * (0.14f + 0.02f * t)
+  drawLine(tint, Offset(cx, cy - arm), Offset(cx, cy + arm), strokeW * 1.05f, StrokeCap.Round)
+  drawLine(tint, Offset(cx - arm, cy), Offset(cx + arm, cy), strokeW * 1.05f, StrokeCap.Round)
+}
+

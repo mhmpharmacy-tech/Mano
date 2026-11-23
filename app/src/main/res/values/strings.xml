@@ -32,4 +32,6 @@
     <string name="onboarding_subtitle">با ثبت نام مستعار، تاریخ تولد و وزن کودک، تقویم واکسن، سرنگ mL و نمودار رشد WHO از همان دقیقه اول شخصی‌سازی می‌شوند.</string>
     <string name="release_tuning_title">تنظیمات دستگاه و آماده‌سازی انتشار</string>
     <string name="release_tuning_subtitle">تنظیم شدت بازخورد لرزشی، بهینه‌سازی WebGL برای گوشی‌های میان‌رده و بررسی زنده دامنه‌های manokid.ir و manokid.com.</string>
+    <string name="treatment_plan_reminder_channel_name">یادآوری برنامه درمانی کودک</string>
+    <string name="treatment_plan_reminder_channel_desc">اعلان یادآوری هوشمند نوبت داروهای نسخه کودک در مانو کید</string>
 </resources>
