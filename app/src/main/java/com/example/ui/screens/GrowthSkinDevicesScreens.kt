@@ -68,6 +68,7 @@ import com.example.ui.components.ManoBannerFrame
 import com.example.ui.components.ManoCircularProgressSize
 import com.example.ui.components.ManoFramedIllustration
 import com.example.ui.components.ManoHealthRingTone
+import com.example.ui.components.ManoCarePageIntro
 import com.example.ui.components.ManoHealthStatusRingCard
 import com.example.ui.components.ManoPoseAvatar
 import com.example.ui.components.PharmacistCtaCard
@@ -119,6 +120,15 @@ fun GrowthScreen(
       contentPadding = ManoTheme.spacing.screenContentPadding,
       verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
     ) {
+      item {
+        ManoCarePageIntro(
+          titleFa = "رشد کودک",
+          descriptionFa = "ثبت اندازه‌ها و پیگیری روند رشد با داده واقعی؛ تفسیر تخصصی جداگانه انجام می‌شود.",
+          icon = Icons.AutoMirrored.Rounded.ShowChart,
+          accent = androidx.compose.ui.graphics.Color(0xFF2F83B9),
+          modifier = Modifier.testTag("care_growth_intro"),
+        )
+      }
       item {
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
           Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
