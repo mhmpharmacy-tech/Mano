@@ -51,7 +51,7 @@ test("preview server serves only whitelisted app assets", async () => {
     const page = await fetch(origin + "/");
     assert.equal(page.status, 200);
     assert.match(page.headers.get("content-type"), /text\/html/);
-    assert.match(await page.text(), /Care Home/);
+    assert.match(await page.text(), /MANO Kid/);
     for (const path of ["/src/app.js", "/src/app.css"]) {
       const res = await fetch(origin + path);
       assert.equal(res.status, 200, path);
