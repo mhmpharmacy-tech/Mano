@@ -91,6 +91,7 @@ import com.example.ui.theme.SuccessSurface
 import com.example.ui.theme.manoBorderColor
 import com.example.ui.theme.manoSemanticAccent
 import com.example.ui.theme.manoTintedSurface
+import com.example.ui.components.ManoCarePageIntro
 import com.example.ui.viewmodel.SafetyChecklistUiState
 import com.example.ui.viewmodel.SymptomWizardState
 
@@ -156,8 +157,17 @@ fun SymptomNavigatorScreen(
         verticalArrangement = Arrangement.spacedBy(ManoTheme.spacing.sectionGap),
       ) {
         item {
+          ManoCarePageIntro(
+            titleFa = "بررسی علائم کودک",
+            descriptionFa = "غربالگری اولیه و شناسایی علائم هشدار؛ جایگزین معاینه پزشکی نیست.",
+            icon = Icons.Rounded.HealthAndSafety,
+            accent = androidx.compose.ui.graphics.Color(0xFFCB634E),
+            modifier = Modifier.testTag("care_symptom_intro"),
+          )
+        }
+        item {
           Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("راهنمای علائم کودک", modifier = Modifier.weight(1f),
+            Text("انتخاب علائم و مراحل بررسی", modifier = Modifier.weight(1f),
               style = MaterialTheme.typography.titleLarge)
             TextButton(
               onClick = { selectedCompanionSymptoms = emptyList(); showCompanions = false; search = ""; onReset() },
