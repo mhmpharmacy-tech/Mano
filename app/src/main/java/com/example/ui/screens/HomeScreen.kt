@@ -114,6 +114,7 @@ import androidx.compose.ui.zIndex
 import com.example.R
 import com.example.data.ManoHapticIntensity
 import com.example.domain.model.AgeBand
+import com.example.domain.model.ChildProfileDemo
 import com.example.domain.model.PreviousCare
 import com.example.domain.model.Article
 import com.example.domain.util.FeverDoseTimelineEngine
@@ -322,7 +323,31 @@ fun HomeScreen(
   onContinueCare: (PreviousCare) -> Unit = {},
   scrollToTopTrigger: Int = 0,
   hapticIntensity: ManoHapticIntensity = ManoHapticIntensity.MEDIUM,
+  // Opt-in from ManoApp; legacy home remains available for regression tests.
+  useCareHomeDesign: Boolean = false,
+  childProfile: ChildProfileDemo? = null,
 ) {
+  if (useCareHomeDesign) {
+    ManoCareHomeScreen(
+      childProfile = childProfile,
+      ageBandLabelFa = selectedAgeBand?.labelFa,
+      vaccineBadgeLabelFa = vaccineBadgeLabelFa,
+      previousCare = previousCare,
+      onContinueCare = onContinueCare,
+      onOpenCareCards = onCareCards,
+      onOpenChild = onNavigateMyChild,
+      onCheckSymptoms = { onNavigateSymptoms("fever") },
+      onAskPharmacist = onNavigateAskPharmacist,
+      onMedicines = onNavigateMedicines,
+      onVaccines = onNavigateVaccines,
+      onGrowth = onNavigateGrowth,
+      onNutrition = onNavigateNutrition,
+      onFeverCalculator = onNavigateFeverCalculator,
+      onOpenGlobalSearch = onOpenGlobalSearch,
+      scrollToTopTrigger = scrollToTopTrigger,
+    )
+    return
+  }
   val isDark = LocalManoDarkTheme.current
   val listState = rememberLazyListState()
 
