@@ -1188,6 +1188,8 @@ fun ManoApp(
                   PreviousCare.latest(uid, localFeverLogs, activeCloudFeverLogs, history)
                 }
                 HomeScreen(
+                  useCareHomeDesign = true,
+                  childProfile = effectiveChildProfile,
                   onCareCards = if (uid != null) ({ navController.navigate(com.example.ui.navigation.CareCardsRoute) }) else null,
                   previousCare = previousCare,
                   onContinueCare = { care ->
