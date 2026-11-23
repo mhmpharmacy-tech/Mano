@@ -271,6 +271,9 @@ fun ManoCareHomeScreen(
   onAskPharmacist: () -> Unit,
   onMedicines: () -> Unit,
   onSyrupScanner: () -> Unit,
+  onSupplementsHygiene: () -> Unit,
+  onTreatmentPlan: () -> Unit,
+  treatmentPlanMedCount: Int,
   onVaccines: () -> Unit,
   onGrowth: () -> Unit,
   onNutrition: () -> Unit,
@@ -410,6 +413,15 @@ fun ManoCareHomeScreen(
             )
             androidx.compose.material3.HorizontalDivider(color = p.outline)
             CareTodayRow(
+              icon = Icons.Rounded.HealthAndSafety,
+              color = CareForest,
+              title = "برنامه درمان کودک",
+              detail = if (treatmentPlanMedCount > 0) "$treatmentPlanMedCount قلم در برنامه درمان؛ برای بررسی و ثبت نوبت‌ها وارد شوید." else "برای مشاهده یا تنظیم برنامه درمان، وارد این بخش شوید.",
+              onClick = onTreatmentPlan,
+              testTag = "home_treatment_plan_card",
+            )
+            androidx.compose.material3.HorizontalDivider(color = p.outline)
+            CareTodayRow(
               icon = Icons.Rounded.CalendarMonth,
               color = CareBlue,
               title = "واکسن و پیگیری",
@@ -483,6 +495,22 @@ fun ManoCareHomeScreen(
             modifier = Modifier.weight(1f),
             onClick = onFeverCalculator,
           )
+        }
+      }
+    }
+    item {
+      CareCard(modifier = Modifier.fillMaxWidth().widthIn(max = 680.dp).testTag("home_menu_supplements_hygiene"), onClick = onSupplementsHygiene) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+          CareIcon(Icons.Rounded.Spa, CareForest, p.paleAccent)
+          Column(modifier = Modifier.weight(1f)) {
+            Text("مکمل‌ها و بهداشت کودک", style = MaterialTheme.typography.titleMedium, color = p.ink, fontWeight = FontWeight.Bold)
+            Text("راهنمای انتخاب و مصرف ایمن محصولات مراقبتی", style = MaterialTheme.typography.bodySmall, color = p.muted)
+          }
+          Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null, tint = p.muted, modifier = Modifier.size(20.dp))
         }
       }
     }
