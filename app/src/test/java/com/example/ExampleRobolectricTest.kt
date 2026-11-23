@@ -162,7 +162,8 @@ class ExampleRobolectricTest {
     composeTestRule.onNodeWithTag("wizard_next_btn").performClick()
     composeTestRule.waitForIdle()
 
-    composeTestRule.onNodeWithTag("wizard_age_newborn").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("symptom_navigator_list").performScrollToNode(hasTestTag("wizard_age_newborn"))
+    composeTestRule.onNodeWithTag("wizard_age_newborn").performClick()
     composeTestRule.onNodeWithTag("wizard_temp_input").performScrollTo().performTextInput("38.0")
     composeTestRule.onNodeWithTag("wizard_next_btn").performClick()
     composeTestRule.waitForIdle()
@@ -175,7 +176,8 @@ class ExampleRobolectricTest {
   fun nonurgentSymptomJourneyPreviewsScreeningInThePharmacistForm() {
     composeTestRule.onNodeWithTag("nav_symptoms").performClick()
     composeTestRule.onNodeWithTag("wizard_next_btn").performClick()
-    composeTestRule.onNodeWithTag("wizard_age_preschool_3_6y").performScrollTo().performClick()
+    composeTestRule.onNodeWithTag("symptom_navigator_list").performScrollToNode(hasTestTag("wizard_age_preschool_3_6y"))
+    composeTestRule.onNodeWithTag("wizard_age_preschool_3_6y").performClick()
     composeTestRule.onNodeWithTag("wizard_temp_input").performScrollTo().performTextInput("37.2")
     composeTestRule.onNodeWithTag("wizard_duration_input").performScrollTo().performTextInput("6")
     composeTestRule.onNodeWithTag("wizard_next_btn").performClick()
@@ -193,6 +195,7 @@ class ExampleRobolectricTest {
   @Test
   fun parentActionsAreVisibleOnEntryAndGrowthHistoryContainsTheActualReading() {
     composeTestRule.onNodeWithTag("nav_symptoms").performClick()
+    composeTestRule.onNodeWithTag("symptom_navigator_list").performScrollToNode(hasTestTag("symptom_choice_fever"))
     composeTestRule.onNodeWithTag("symptom_choice_fever").assertIsDisplayed()
     composeTestRule.onNodeWithTag("companion_symptom_chip_0").assertDoesNotExist()
     composeTestRule.onNodeWithTag("symptom_toggle_companions").performScrollTo().performClick()
