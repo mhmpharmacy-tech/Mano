@@ -326,6 +326,9 @@ fun HomeScreen(
   // Opt-in from ManoApp; legacy home remains available for regression tests.
   useCareHomeDesign: Boolean = false,
   childProfile: ChildProfileDemo? = null,
+  onNavigateSupplementsHygiene: () -> Unit = {},
+  onNavigateTreatmentPlan: () -> Unit = {},
+  treatmentPlanMedCount: Int = 0,
 ) {
   if (useCareHomeDesign) {
     ManoCareHomeScreen(
@@ -339,6 +342,9 @@ fun HomeScreen(
       onAskPharmacist = onNavigateAskPharmacist,
       onMedicines = onNavigateMedicines,
       onSyrupScanner = onNavigateSyrupScanner,
+      onSupplementsHygiene = onNavigateSupplementsHygiene,
+      onTreatmentPlan = onNavigateTreatmentPlan,
+      treatmentPlanMedCount = treatmentPlanMedCount,
       onVaccines = onNavigateVaccines,
       onGrowth = onNavigateGrowth,
       onNutrition = onNavigateNutrition,

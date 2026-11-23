@@ -699,6 +699,8 @@ fun MyChildScreen(
   onSignedOut: () -> Unit = {},
   onOpenNutritionAdvisor: () -> Unit = {},
   onOpenVaccinesSchedule: () -> Unit = {},
+  onOpenTreatmentPlan: () -> Unit = {},
+  treatmentPlanMedCount: Int = 0,
   pendingCloudSync: Boolean = false,
   isSyncingOfflineQueue: Boolean = false,
   onRetryCloudSync: () -> Unit = {},
@@ -813,6 +815,15 @@ fun MyChildScreen(
           onAuthError = onCloudAuthError,
           onSignedOut = onSignedOut,
         )
+      }
+
+      item {
+        OutlinedButton(
+          onClick = onOpenTreatmentPlan,
+          modifier = Modifier.fillMaxWidth().minimumInteractiveComponentSize().testTag("child_profile_treatment_plan_btn"),
+        ) {
+          Text(if (treatmentPlanMedCount > 0) "برنامه درمان کودک ($treatmentPlanMedCount قلم)" else "مشاهده برنامه درمان کودک")
+        }
       }
 
       if (currentUser != null && pendingCloudSync) {
