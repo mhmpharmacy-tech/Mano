@@ -260,7 +260,6 @@ private fun CareCompactTool(
 @Composable
 fun ManoCareHomeScreen(
   childProfile: ChildProfileDemo?,
-  ageBandLabelFa: String?,
   vaccineBadgeLabelFa: String,
   previousCare: PreviousCare?,
   onContinueCare: (PreviousCare) -> Unit,
@@ -324,7 +323,7 @@ fun ManoCareHomeScreen(
                 color = p.ink,
               )
               Text(
-                childProfile?.birthDateOrAgeFa?.takeIf { it.isNotBlank() } ?: ageBandLabelFa ?: "برای شخصی‌سازی، اطلاعات کودک را وارد کنید",
+                childProfile?.birthDateOrAgeFa?.takeIf { it.isNotBlank() } ?: "برای شخصی‌سازی، اطلاعات کودک را وارد کنید",
                 style = MaterialTheme.typography.bodySmall,
                 color = p.muted,
                 maxLines = 2,
