@@ -49,6 +49,8 @@ try {
   await page.locator('input[name="age"]').fill("2");
   await page.locator('input[name="temp"]').fill("38.1");
   await page.locator("#symptom-form button[type=submit]").click();
+  assert.equal(await page.locator('select[name="topic"]').inputValue(),"تب","Symptom choice should persist after review");
+  assert.equal(await page.locator('input[name="temp"]').inputValue(),"38.1","Temperature should persist after review");
   const triage = await page.locator(".care-message.danger").allTextContents();
   assert.ok(triage.some(s=>s.includes("ارزیابی فوری پزشکی")));
   await page.screenshot({path:"web-artifacts/triage-412.png",fullPage:true});
