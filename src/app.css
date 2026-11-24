@@ -178,3 +178,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+/* QA design refinement: preserve hit targets and original mascot; reduce decorative art. */
+.action-art{width:40px;height:40px}
+.action-art svg{max-width:38px;max-height:38px}
+.careicon svg{width:34px;height:34px}
+.toolicon,.toolicon svg{width:34px;height:34px}
+.screen-tool-glyph{width:32px;height:32px;font-size:17px}
+.action{min-height:150px}
+.tool{min-height:92px}
+.primary .action-art svg>rect:first-child{display:none}
+.toolicon svg>circle:last-child,.careicon svg>circle:last-child{display:none}
+@media(max-width:370px){.action{min-height:148px}}

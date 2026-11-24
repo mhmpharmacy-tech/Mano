@@ -39,7 +39,11 @@ test("no fabricated pediatric dosing, vaccine deadline or real pharmacist confir
   assert.match(js, /ارسال واقعی غیرفعال است/);
   assert.match(js, /state\.profile=null/);
   assert.match(js, /بستن یا تازه‌سازی پاک می‌شود/);
-  assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest/);
+  assert.doesNotMatch(js, /localStorage|fetch\(|XMLHttpRequest/);
+  assert.match(js, /sessionStorage\.setItem\(demoKey,"1"\)/);
+  assert.equal((js.match(/sessionStorage\.setItem\(/g)||[]).length,1);
+  assert.match(js, /rawMonths===""\|\|!Number\.isInteger/);
+  assert.match(js, /addEventListener\("offline",refreshConnection\)/);
 });
 
 test("preview server serves only whitelisted app assets", async () => {

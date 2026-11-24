@@ -68,6 +68,25 @@ try {
   assert.equal(await page.locator(".profilename").textContent(),"پرونده کودک","patient state must not persist across refresh");
   assert.ok((await page.locator(".caredesc").first().textContent()).includes("هنوز دارویی ثبت نشده"));
 
+  await page.locator(".profile").click();
+  await context.setOffline(true);
+  await page.locator("#profile-connection").filter({hasText:"اتصال اینترنت در دسترس نیست"}).waitFor();
+  await page.locator('input[name="name"]').fill("آزمون موقت قطع اینترنت");
+  await page.locator('input[name="months"]').fill("0");
+  await page.locator('#profile-form button[type="submit"]').click();
+  assert.ok((await page.locator("#care-screen").textContent()).includes("آزمون موقت قطع اینترنت"));
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem("mano.qa.fixed-demo.v1")),null);
+  await page.locator('[data-action="clear-session"]').click();
+  await page.locator('[data-action="demo-profile"]').click();
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem("mano.qa.fixed-demo.v1")),"1");
+  await context.setOffline(false);
+  await page.reload({waitUntil:"networkidle"});
+  assert.ok((await page.locator("#care-screen").textContent()).includes("نمونه ساختگی QA"));
+  await page.locator('[data-action="clear-session"]').click();
+  await page.reload({waitUntil:"networkidle"});
+  assert.ok(await page.locator('[data-action="demo-profile"]').isVisible());
+  await page.locator('[data-route="home"]').first().click();
+
   for (const width of [360,412]) {
     await page.setViewportSize({width,height:780});
     await page.reload({waitUntil:"networkidle"});

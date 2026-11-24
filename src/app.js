@@ -1,12 +1,20 @@
 /*
  * MANO Kid Care Home — AI Studio Build web entry.
  * Browser-side review UI only. No APIs, invented schedules or clinical decisions.
- * Health entries are intentionally held in memory; refresh clears them.
+ * User-entered health entries remain in memory; only a fixed synthetic QA marker may survive refresh.
  */
 (function () {
   "use strict";
   var routes = ["home","profile","symptoms","pharmacist","care","growth","vaccines","medicines","treatment","supplements","alerts","search","tools","addDrug"];
   var state = { route:"home", profile:null, measurements:[], vaccines:[], treatment:[], question:"", symptom:null, symptomInput:{topic:"",age:"",temp:"",danger:[]}, lastMessage:"" };
+  var demoKey="mano.qa.fixed-demo.v1", demoActive=false;
+  function demoProfile(){return {name:"نمونه ساختگی QA",months:24,birth:""};}
+  // Only the literal flag is persisted: never user input, clinical data, or a patient identifier.
+  function restoreDemo(){try{if(window.sessionStorage.getItem(demoKey)==="1"){state.profile=demoProfile();demoActive=true;}}catch(_){/* memory-only fallback */}}
+  function setDemoMarker(enabled){try{if(enabled){window.sessionStorage.setItem(demoKey,"1");return window.sessionStorage.getItem(demoKey)==="1";}window.sessionStorage.removeItem(demoKey);return window.sessionStorage.getItem(demoKey)===null;}catch(_){return false;}}
+  function connectionText(){return navigator.onLine===false?"اتصال اینترنت در دسترس نیست؛ ثبت موقت این صفحه به اینترنت وابسته نیست.":"ثبت موقت مستقل از اینترنت است؛ هیچ همگام‌سازی ابری انجام نمی‌شود.";}
+  function refreshConnection(){var el=document.getElementById("profile-connection");if(el)el.textContent=connectionText();}
+  restoreDemo();
   var shell = document.querySelector(".shell");
   var home = document.querySelector(".main");
   var nav = document.querySelector(".bottom");
@@ -46,12 +54,14 @@
   function renderProfile() {
     var p=state.profile||{};
     return label('پرونده کودک','بدون عکس کودک، با کنترل کامل والدین بر اطلاعات')
+      +note('<span id="profile-connection" role="status">'+connectionText()+'</span>','muted')
       +card('<form id="profile-form" class="field-stack"><label>نام مستعار کودک<input type="text" name="name" maxlength="30" value="'+esc(p.name||'')+'" placeholder="مثلاً فرزند من" autocomplete="off" required></label>'
       +'<label>سن دقیق بر حسب ماه<input type="number" inputmode="numeric" min="0" max="216" step="1" name="months" value="'+esc(p.months==null?'':p.months)+'" placeholder="مثلاً ۲۴" required></label>'
       +'<label>تاریخ تولد (اختیاری، فقط برای نمایش)<input type="text" maxlength="30" name="birth" value="'+esc(p.birth||'')+'" placeholder="مثلاً ۱۴۰۳/۰۵/۰۱"></label>'
       +'<button class="solid-cta" type="submit">ثبت در این نشست</button></form>')
-      +note('ثبت این فرم در حافظه موقت همین صفحه انجام می‌شود و با بستن یا تازه‌سازی پاک می‌شود. برای پرونده واقعی اتصال امن و رضایت آگاهانه لازم است.','muted')
-      +card('<div class="line-between"><strong>اطلاعات ثبت‌شده در این نشست</strong><span class="mini-chip">'+(state.profile?'ثبت موقت':'خالی')+'</span></div>'
+      +note('داده‌های واردشده در این فرم با بستن یا تازه‌سازی پاک می‌شود. اطلاعات واقعی کودک را در این پیش‌نمایش وارد نکنید. برای پرونده واقعی اتصال امن و رضایت آگاهانه لازم است.','muted')
+      +(!state.profile&&!state.measurements.length&&!state.vaccines.length&&!state.treatment.length&&!state.question&&!state.symptom?card('<h2>آزمون بازیابی پرونده</h2><p class="muted-text">فقط یک پرونده کاملاً ساختگی و ثابت ایجاد می‌شود؛ هیچ اطلاعات واردشده‌ای ذخیره نمی‌شود. نشانگر آزمایشی تا پایان تب مرورگر باقی می‌ماند.</p><button type="button" class="outline-cta" data-action="demo-profile">ایجاد نمونه ساختگی و آزمون بازیابی</button>'):'')
+      +card('<div class="line-between"><strong>اطلاعات ثبت‌شده در این نشست</strong><span class="mini-chip">'+(state.profile?(demoActive?'نمونه ساختگی QA':'ثبت موقت'):'خالی')+'</span></div>'
       +(state.profile?'<p class="muted-text">'+esc(p.name)+' · '+fa(p.months)+' ماه</p>':blank('هنوز هیچ پرونده‌ای ثبت نشده است.'))
       +'<button type="button" class="text-danger" data-action="clear-session">پاک‌سازی تمام داده‌های این نشست</button>');
   }
@@ -163,7 +173,7 @@
     var name=document.querySelector(".profilename");
     var sub=document.querySelector(".profilesub");
     if(name) name.textContent=p?(p.name+' · پرونده کودک'):'پرونده کودک';
-    if(sub) sub.textContent=p?(fa(p.months)+' ماه · ثبت موقت در این نشست'):'برای شخصی‌سازی، اطلاعات کودک را وارد کنید';
+    if(sub) sub.textContent=p?(fa(p.months)+' ماه · '+(demoActive?'نمونه ساختگی QA':'ثبت موقت در این نشست')):'برای شخصی‌سازی، اطلاعات کودک را وارد کنید';
     var details=document.querySelectorAll(".caredesc");
     if(details[0]) details[0].textContent=state.treatment.length?fa(state.treatment.length)+' مورد در پیش‌نویس درمان این نشست':'هنوز دارویی ثبت نشده است.';
     if(details[1]) details[1].textContent=state.vaccines.length?fa(state.vaccines.length)+' سابقه خوداظهاری در این نشست':'نمایش موعد بعدی فقط پس از تکمیل سوابق معتبر';
@@ -231,17 +241,25 @@
     var route=event.target.closest("[data-route]");
     if(route){event.preventDefault();go(route.getAttribute("data-route"));return;}
     var action=event.target.closest("[data-action]");
+    if(action&&action.getAttribute("data-action")==="demo-profile"){
+      if(state.profile||state.measurements.length||state.vaccines.length||state.treatment.length||state.question||state.symptom)return;
+      if(!setDemoMarker(true)){showMessage("ذخیره نشانگر آزمایشی ممکن نیست؛ هیچ پرونده‌ای ایجاد نشد");return;}
+      state.profile=demoProfile();demoActive=true;render();showMessage("نمونه ساختگی ثبت شد؛ بازیابی فقط در همین تب");return;
+    }
     if(action&&action.getAttribute("data-action")==="clear-session") {
+      var markerCleared=setDemoMarker(false);
+      demoActive=false;
       state.profile=null;state.treatment=[];state.vaccines=[];state.measurements=[];state.question="";state.symptom=null;state.symptomInput={topic:"",age:"",temp:"",danger:[]};
-      showMessage("داده‌های موقت پاک شدند");render();
+      render();showMessage(markerCleared?"داده‌های موقت پاک شدند":"حافظه موقت پاک شد؛ حذف نشانگر آزمایشی قابل تأیید نیست، تب را ببندید");
     }
   });
   host.addEventListener("submit",function(event){
     event.preventDefault();var f=event.target;
     if(f.id==="profile-form"){
-      var months=Number(value(f,"months"));var name=value(f,"name");
-      if(!name||!Number.isInteger(months)||months<0||months>216){showMessage("سن ماهانه یا نام مستعار معتبر نیست");return;}
-      state.profile={name:name,months:months,birth:value(f,"birth")};showMessage("پرونده موقت ثبت شد");render();return;
+      var rawMonths=value(f,"months"),months=Number(rawMonths),name=value(f,"name");
+      if(!name||rawMonths===""||!Number.isInteger(months)||months<0||months>216){showMessage("سن ماهانه یا نام مستعار معتبر نیست");return;}
+      if(demoActive){showMessage("ابتدا نمونه ساختگی و داده‌های نشست را پاک کنید");return;}
+      state.profile={name:name,months:months,birth:value(f,"birth")};render();showMessage("پرونده موقت ثبت شد؛ ارسال یا ذخیره ابری انجام نشد");return;
     }
     if(f.id==="symptom-form"){
       var data=new FormData(f), age=Number(data.get("age")), tempS=value(f,"temp"),temp=tempS===""?null:Number(tempS);
@@ -265,6 +283,8 @@
   window.hide=function(){go("home");};
   window.switchTab=function(button,key){go(key);};
   window.screenAlert=function(){go("symptoms");};
+  window.addEventListener("online",refreshConnection);
+  window.addEventListener("offline",refreshConnection);
   window.addEventListener("hashchange",function(){var k=sanitizeRoute(location.hash.replace("#",""));if(state.route!==k){state.route=k;render();}});
   document.addEventListener("keydown",function(e){if(e.key==="Escape"&&state.route!=="home")go("home");});
   state.route=sanitizeRoute(window.location.hash.replace("#",""));
