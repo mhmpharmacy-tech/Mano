@@ -47,14 +47,12 @@ export function matchCalibratedFormulation(
       if (formulation.key === 'IBUPROFEN_SYRUP_100_5') expectedIngredient = 'IBUPROFEN';
       if (formulation.key === 'CETIRIZINE_SYRUP_5_5') expectedIngredient = 'CETIRIZINE';
 
-      let matchingForm = false;
-      if (formulation.key === 'ACETAMINOPHEN_DROPS_100') {
-        matchingForm = dosageForm === 'DROPS';
-      } else if (formulation.key === 'CETIRIZINE_SYRUP_5_5') {
-        matchingForm = dosageForm === 'SYRUP';
-      } else {
-        matchingForm = dosageForm === 'SYRUP' || dosageForm === 'SUSPENSION';
-      }
+      const matchingForm =
+        formulation.key === 'ACETAMINOPHEN_DROPS_100'
+          ? dosageForm === 'DROPS'
+          : formulation.key === 'CETIRIZINE_SYRUP_5_5'
+            ? dosageForm === 'SYRUP'
+            : dosageForm === 'SYRUP' || dosageForm === 'SUSPENSION';
 
       const tolerance = Math.max(0.02, formulation.mgPerMl * 0.005);
       return (

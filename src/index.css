@@ -1,0 +1,178 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/vazirmatn.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/vazirmatn_medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/vazirmatn_semibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/vazirmatn_bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/vazirmatn_extrabold.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lalezar";
+  src: url("/fonts/lalezar.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("/fonts/ibm_plex_sans_arabic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("/fonts/ibm_plex_sans_arabic_semibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --mano-bg: #fffbf6;
+  --mano-surface: #ffffff;
+  --mano-surface-soft: #f5f9f6;
+  --mano-ink: #122823;
+  --mano-muted: #546963;
+  --mano-border: #dce7e1;
+  --mano-primary: #105b48;
+  --mano-primary-soft: #e9f5eb;
+  --mano-gold: #c6862e;
+  --mano-gold-soft: #fdf4e4;
+  --mano-danger: #c42b3c;
+  --mano-danger-soft: #fdf0f1;
+}
+
+.dark {
+  --mano-bg: #0b1220;
+  --mano-surface: #111c2e;
+  --mano-surface-soft: #16243b;
+  --mano-ink: #edf4f7;
+  --mano-muted: #9eb3c4;
+  --mano-border: #23344d;
+  --mano-primary: #00d7c7;
+  --mano-primary-soft: #0f333a;
+  --mano-gold: #f0b85c;
+  --mano-gold-soft: #312617;
+  --mano-danger: #ff6b7d;
+  --mano-danger-soft: #3a1a23;
+}
+
+@layer base {
+  html {
+    direction: rtl;
+    font-family: "Vazirmatn", "IBM Plex Sans Arabic", system-ui, -apple-system, sans-serif;
+    background-color: var(--mano-bg);
+    color: var(--mano-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--mano-bg);
+    color: var(--mano-ink);
+    overflow-x: hidden;
+  }
+
+  button,
+  [role="button"],
+  a,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+}
+
+.font-display-fa {
+  font-family: "Lalezar", "Vazirmatn", sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Official Pediatric Treatment Plan Paper Theme */
+.rx-paper {
+  background-color: #faf7f0;
+  color: #133b2e;
+  border-color: #d6c9a5;
+}
+
+.dark .rx-paper {
+  background-color: #12202b;
+  color: #edf4f7;
+  border-color: #2f4b56;
+}
+
+.rx-gold-rule {
+  background: linear-gradient(90deg, transparent, #b99137, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .rx-paper {
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+  }
+}
