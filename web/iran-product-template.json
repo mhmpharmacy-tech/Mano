@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "status": "EMPTY_UNVERIFIED_TEMPLATE",
+  "country": "IR",
+  "clinicalUseEnabled": false,
+  "substitutionAuthorized": false,
+  "brand": null,
+  "manufacturer": null,
+  "irc": null,
+  "gtin": null,
+  "genericName": null,
+  "dosageForm": null,
+  "route": null,
+  "strengths": [
+    {
+      "ingredient": null,
+      "activeMoietyOrSaltBasis": null,
+      "amount": null,
+      "unit": null,
+      "referenceVolume": null,
+      "referenceVolumeUnit": null,
+      "afterReconstitution": null
+    }
+  ],
+  "packageVolume": null,
+  "reconstitutionInstructions": null,
+  "storageBeforeOpening": null,
+  "storageAfterReconstitution": null,
+  "discardAfterReconstitution": null,
+  "excipientsAndAllergens": null,
+  "indicationsOnLocalLabel": null,
+  "pediatricAgeRestrictionsOnLocalLabel": null,
+  "labelRevisionDate": null,
+  "sourceRecordUrl": null,
+  "labelReference": null,
+  "sourceCheckedAt": null,
+  "reviewer": null,
+  "reviewedAt": null,
+  "reviewNotes": null
+}
