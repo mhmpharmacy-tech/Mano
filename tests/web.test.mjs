@@ -9,18 +9,23 @@ const css = await readFile(resolve("src/app.css"), "utf8");
 
 test("approved visual identity survives AI Studio import", () => {
   assert.match(index, /MANO\s*<em>Kid<\/em>/);
-  assert.match(index, /class="robot"/);
+  assert.match(index, /class="robot/);
+  assert.match(index, /hero-orbit-bot/);
+  assert.match(index, /سلام، من مانو هستم\./);
+  assert.match(index, /show\('careCard'\)/);
   assert.match(index, /data:image\/[a-zA-Z+.-]+;base64,/);
   assert.match(index, /class="hero"/);
   assert.match(index, /class="bottom"/);
   assert.doesNotMatch(index, /آراد|۴ سال و ۳ ماه/);
   assert.doesNotMatch(index, /maximum-scale=1/);
-  assert.match(css, /--deep:#0e5840/);
+  assert.match(css, /--deep:#174F46/);
+  assert.match(css, /--cream:#F8F7F2/);
+  assert.match(css, /--cyan:#A7E1DF/);
   assert.match(css, /\.screen-main/);
 });
 
 test("all approved home actions lead to a real interactive view", () => {
-  for (const key of ["symptoms","pharmacist","profile","growth","vaccines","care","medicines","search","alerts","addDrug","tools"]) {
+  for (const key of ["symptoms","pharmacist","profile","growth","vaccines","care","careCard","medicines","search","alerts","addDrug","tools"]) {
     assert.match(index, new RegExp("show\\('"+key+"'\\)|switchTab\\(this,'"+key+"'\\)"));
   }
   for (const form of ["profile-form","symptom-form","question-form","growth-form","vaccine-form","treatment-form"]) {
@@ -40,6 +45,33 @@ test("no fabricated pediatric dosing, vaccine deadline or real pharmacist confir
   assert.match(js, /state\.profile=null/);
   assert.match(js, /بستن یا تازه‌سازی پاک می‌شود/);
   assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest/);
+});
+
+test("supplements and hygiene home card renders categorized duo-tone rows and safe sheet", () => {
+  assert.match(index, /id="supplements-home-card"/);
+  assert.match(css, /\.supplements-card/);
+  assert.match(css, /\.supp-tab\.active/);
+  assert.match(js, /renderSupplementsHomeCard/);
+  assert.match(js, /openProductSheet/);
+  assert.match(js, /rec_vit_d3/);
+  assert.match(js, /rec_zinc_cream/);
+  assert.match(js, /نکات ایمن انتخاب و مصرف/);
+});
+
+test("care card preview and dedicated empty states render calm graphics and next steps", () => {
+  assert.match(js, /function renderCareCard/);
+  assert.match(js, /نمونه آموزشی/);
+  assert.match(js, /data-care-check/);
+  assert.match(css, /\.care-card-sheet/);
+  assert.match(css, /\.empty-state-card/);
+  assert.match(js, /function renderEmptyStateCard/);
+  assert.match(js, /پیشنهاد اقدام بعدی:/);
+  assert.match(js, /domain:\s*"medicines"/);
+  assert.match(js, /domain:\s*"vaccines"/);
+  assert.match(js, /domain:\s*"supplements"/);
+  assert.match(js, /id="supp-search"/);
+  assert.match(js, /data-supp-filter/);
+  assert.match(js, /reset-supp-filter/);
 });
 
 test("preview server serves only whitelisted app assets", async () => {

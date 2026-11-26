@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   ChevronDown,
@@ -8,15 +8,22 @@ import {
   Search,
   Sparkles,
   Stethoscope,
+  XCircle,
 } from 'lucide-react';
-import { ALL_FAQS, getSourceCitationLabel } from '../data/contentRepository.ts';
+import { ALL_FAQS } from '../data/contentRepository.ts';
 import { AGE_BANDS, type AgeBandId, type DocumentedQaResponse } from '../domain/models.ts';
+import type { GatewayResponseMeta } from '../domain/aiGatewayContracts.ts';
 import { scoreMatch, toPersianDigits } from '../domain/persianNormalizer.ts';
 import { findMatchingFaqsForQa } from '../domain/symptomSearch.ts';
-import { ApiClientError, requestDocumentedQa } from '../api/geminiClient.ts';
+import {
+  ApiClientError,
+  isRequestCancelledError,
+  requestDocumentedQa,
+} from '../api/geminiClient.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
 import { SourceBadge } from '../components/SourceBadge.tsx';
+import { GatewayMetaBanner } from '../components/GatewayMetaBanner.tsx';
 
 export const FaqScreen: React.FC = () => {
   const { childProfile, navigate } = useMano();
@@ -30,7 +37,16 @@ export const FaqScreen: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<DocumentedQaResponse | null>(null);
+  const [gatewayMeta, setGatewayMeta] = useState<GatewayResponseMeta | null>(null);
+  const [policyError, setPolicyError] = useState<string | null>(null);
   const [noMatchHint, setNoMatchHint] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const categories = useMemo(
     () => ['همه', ...Array.from(new Set(ALL_FAQS.map((f) => f.categoryFa)))],
@@ -56,12 +72,25 @@ export const FaqScreen: React.FC = () => {
   const activeAgeLabel =
     AGE_BANDS.find((b) => b.id === childProfile.ageBand)?.labelFa ?? 'کودک';
 
+  const handleCancelQa = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setAiLoading(false);
+    setAiError('جست‌وجو و ساده‌سازی پاسخ توسط کاربر لغو شد.');
+  };
+
   const handleDocumentedQaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = aiQuestion.trim();
     if (!trimmed) return;
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setAiError(null);
+    setPolicyError(null);
+    setGatewayMeta(null);
     setNoMatchHint(false);
     setAiResult(null);
 
@@ -77,16 +106,23 @@ export const FaqScreen: React.FC = () => {
         question: trimmed,
         ageBandFa: activeAgeLabel,
         matchedFaqs: matched,
-        sourceLookup: getSourceCitationLabel,
+        signal: controller.signal,
       });
-      setAiResult(response);
+      setAiResult(response.data);
+      setGatewayMeta(response.meta);
+      setPolicyError(response.policyError ?? null);
     } catch (err) {
-      if (err instanceof ApiClientError) {
+      if (isRequestCancelledError(err)) {
+        setAiError('درخواست توسط کاربر لغو شد.');
+      } else if (err instanceof ApiClientError) {
         setAiError(err.message);
       } else {
-        setAiError('در حال حاضر ارتباط با سرویس پاسخ مستند برقرار نشد.');
+        setAiError('در حال حاضر ارتباط با درگاه پاسخ مستند برقرار نشد.');
       }
     } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
       setAiLoading(false);
     }
   };
@@ -154,23 +190,35 @@ export const FaqScreen: React.FC = () => {
               {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               <span>{aiLoading ? 'در حال جست‌وجو و تنظیم...' : 'دریافت پاسخ مستند'}</span>
             </button>
+            {aiLoading ? (
+              <button
+                type="button"
+                onClick={handleCancelQa}
+                className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-[#E7B5BC] bg-[#FDF0F1] px-4 text-xs font-bold text-[#B32334] dark:border-[#6A2C3B] dark:bg-[#2F161E] dark:text-[#FF8594]"
+              >
+                <XCircle className="h-4 w-4" />
+                <span>لغو</span>
+              </button>
+            ) : null}
           </div>
 
           {noMatchHint ? (
             <SeverityAlert
               severity="caution"
-              title="مورد منطبق مستقیمی در پرسش‌های متداول یافت نشد"
-              body="برای جلوگیری از پاسخ غیردقیق، پاسخ‌گوی مستند فقط به موضوعات موجود در پایگاه دانش مانو کید پاسخ می‌دهد. لطفاً با واژه‌های ساده‌تر جست‌وجو کنید یا به بخش بررسی علائم / پرسش از داروساز مراجعه نمایید."
+              title="مورد منطبق مستقیمی در پرسش‌های متداول یافت نشد (UNKNOWN)"
+              body="برای جلوگیری از پاسخ غیردقیق یا ساخت مرجع، دستیار هوشمند فقط مطالب مرور‌شده پایگاه دانش مانو کید را ساده‌سازی می‌کند. لطفاً با واژه‌های ساده‌تر جست‌وجو کنید یا به بخش بررسی علائم / پرسش از داروساز مراجعه نمایید."
             />
           ) : null}
 
           {aiError ? (
             <SeverityAlert
               severity="caution"
-              title="سرویس هوش مصنوعی در دسترس نیست"
+              title="وضعیت پاسخ‌گوی مستند"
               body={aiError}
             />
           ) : null}
+
+          {gatewayMeta ? <GatewayMetaBanner meta={gatewayMeta} policyError={policyError} /> : null}
 
           {aiResult ? (
             <div className="space-y-3 rounded-2xl border border-[#B6DFC1] bg-[#F5FBF6] p-4 dark:border-[#21594B] dark:bg-[#102B25]">

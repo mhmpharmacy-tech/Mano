@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertOctagon,
   ArrowRight,
@@ -7,17 +7,24 @@ import {
   PhoneCall,
   Sparkles,
   Stethoscope,
+  XCircle,
 } from 'lucide-react';
 import { SYMPTOM_FLOWS } from '../data/contentRepository.ts';
 import { AGE_BANDS, type AgeBandId, type SafetyChecklistReport } from '../domain/models.ts';
+import type { GatewayResponseMeta } from '../domain/aiGatewayContracts.ts';
 import { evaluateTriage } from '../domain/triageEngine.ts';
 import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
 import { buildChildContextSummaryFa } from '../domain/promptBuilders.ts';
-import { requestSafetyChecklist, ApiClientError } from '../api/geminiClient.ts';
+import {
+  ApiClientError,
+  isRequestCancelledError,
+  requestSafetyChecklist,
+} from '../api/geminiClient.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
 import { SourceBadge } from '../components/SourceBadge.tsx';
 import { VisitDraftStudioPanel } from '../components/VisitDraftStudioPanel.tsx';
+import { GatewayMetaBanner } from '../components/GatewayMetaBanner.tsx';
 
 export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ initialFlowId }) => {
   const { childProfile, navigate } = useMano();
@@ -28,8 +35,17 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
   const [checkedFlags, setCheckedFlags] = useState<Set<string>>(new Set());
 
   const [aiChecklist, setAiChecklist] = useState<SafetyChecklistReport | null>(null);
+  const [gatewayMeta, setGatewayMeta] = useState<GatewayResponseMeta | null>(null);
+  const [policyError, setPolicyError] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const flow = useMemo(
     () => SYMPTOM_FLOWS.find((f) => f.id === selectedFlowId) ?? SYMPTOM_FLOWS[0],
@@ -69,24 +85,52 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
     });
   };
 
+  const handleCancelChecklist = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setAiLoading(false);
+    setAiError('تولید توضیح چک‌لیست ایمنی توسط کاربر لغو شد.');
+  };
+
   const handleRequestChecklist = async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setAiLoading(true);
     setAiError(null);
+    setPolicyError(null);
+    setGatewayMeta(null);
     try {
       const selectedLabels = flow.redFlags
         .filter((r) => checkedFlags.has(r.id))
         .map((r) => r.labelFa);
-      const report = await requestSafetyChecklist({
+      const result = await requestSafetyChecklist({
+        flowId: flow.id,
         flowTitleFa: flow.titleFa,
         urgencyLevel: evaluation.outcome,
         evaluationSummaryFa: evaluation.summaryFa,
         selectedSymptomsFa: selectedLabels,
         childContextSummaryFa: buildChildContextSummaryFa(childProfile),
+        signal: controller.signal,
       });
-      setAiChecklist(report);
+      setAiChecklist(result.data);
+      setGatewayMeta(result.meta);
+      setPolicyError(result.policyError ?? null);
     } catch (err) {
-      setAiError(err instanceof ApiClientError || err instanceof Error ? err.message : 'خطا در دریافت چک‌لیست ایمنی.');
+      if (isRequestCancelledError(err)) {
+        setAiError('درخواست توسط کاربر لغو شد.');
+      } else {
+        setAiError(
+          err instanceof ApiClientError || err instanceof Error
+            ? err.message
+            : 'خطا در دریافت توضیح چک‌لیست ایمنی.',
+        );
+      }
     } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
       setAiLoading(false);
     }
   };
@@ -128,9 +172,12 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                 type="button"
                 data-testid={`symptom-flow-btn-${f.id}`}
                 onClick={() => {
+                  abortRef.current?.abort();
                   setSelectedFlowId(f.id);
                   setCheckedFlags(new Set());
                   setAiChecklist(null);
+                  setGatewayMeta(null);
+                  setPolicyError(null);
                   setAiError(null);
                 }}
                 className={`flex items-start gap-3 rounded-2xl border p-3.5 text-right transition-colors ${
@@ -338,18 +385,31 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                       تهیه فهرست پایش خانگی و پرسش‌های مطب با هوش مصنوعی
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={aiLoading}
-                    onClick={handleRequestChecklist}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white disabled:opacity-60 dark:bg-[#00D7C7] dark:text-[#0B1220]"
-                  >
-                    {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    <span>تولید چک‌لیست ایمنی</span>
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={aiLoading}
+                      onClick={handleRequestChecklist}
+                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white disabled:opacity-60 dark:bg-[#00D7C7] dark:text-[#0B1220]"
+                    >
+                      {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      <span>توضیح چک‌لیست ایمنی</span>
+                    </button>
+                    {aiLoading ? (
+                      <button
+                        type="button"
+                        onClick={handleCancelChecklist}
+                        className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-[#E7B5BC] bg-[#FDF0F1] px-3 text-xs font-bold text-[#B32334] dark:border-[#6A2C3B] dark:bg-[#2F161E] dark:text-[#FF8594]"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        <span>لغو</span>
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
 
                 {aiError ? <SeverityAlert severity="caution" title="یادآوری" body={aiError} /> : null}
+                {gatewayMeta ? <GatewayMetaBanner meta={gatewayMeta} policyError={policyError} /> : null}
 
                 {aiChecklist ? (
                   <div className="space-y-3 rounded-2xl bg-[#F5F9F6] p-4 text-xs leading-6 dark:bg-[#16243B]">

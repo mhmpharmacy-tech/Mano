@@ -695,4 +695,102 @@ test("care card spans delivery, family activity, reply and explicit closure", as
   assert.equal(inbox[0].careCard?.events[0].actor, staff.uid);
   assert.equal(inbox[0].careCard?.events[1].actor, parent.uid);
   assert.equal(family[0].careCard?.events.length,inbox[0].careCard?.events.length);
+  assert.equal(family[0].careCard?.version, 1);
+  assert.ok(typeof family[0].careCard?.shareToken === "string" && family[0].careCard!.shareToken!.startsWith("mc_"));
 });
+
+test("structured care card fields and staff revise preserve version, provenance, and UID stripping", async () => {
+  const { store, caseService } = await setupEnv();
+  const parent = makeParent();
+  const staff = makePharmacistCaller("pharm_uid_1", "pharm_a");
+  const pass = await caseService.issueConsultationTriagePass(parent, {
+    ageBandId: "toddler_1_3y",
+    symptomFlowId: "fever",
+    temperatureCelsius: 37.8,
+    questionSummaryFa: "پرسش درباره غلظت شربت استامینوفن کودک دو ساله",
+  });
+  const createdCase = await caseService.submitConsultationCase(parent, {
+    pharmacyId: "pharm_a",
+    triagePassId: pass.triagePassId!,
+    categoryName: "OTC",
+    ageBandId: "toddler_1_3y",
+    symptomFlowId: "fever",
+    questionSummaryFa: "لطفاً دستور مصرف شربت استامینوفن ۱۲۰ میلی‌گرم بر ۵ میلی‌لیتر را یادآوری کنید.",
+    hasUrgentFlag: false,
+    consentAccepted: true,
+    consentVersion: "v1",
+  });
+  const ids = { pharmacyId: "pharm_a", caseId: createdCase.caseId };
+  await caseService.reviewConsultationCase(staff, {
+    ...ids,
+    nextStatus: "RECEIVED",
+    internalNote: "بررسی وزن و غلظت بطری",
+  });
+  await caseService.reviewConsultationCase(staff, {
+    ...ids,
+    nextStatus: "REVIEWED",
+    parentReply: "لطفاً دوز را دقیقاً مطابق سرنگ مدرج و بر اساس وزن فعلی کودک اندازه‌گیری کنید.",
+    pharmacistAttestation: true,
+  });
+
+  const sendPayload = {
+    ...ids,
+    action: "send",
+    requestId: "send_structured_1",
+    confirmed: true,
+    child: "آرتا",
+    medicine: "شربت استامینوفن کودکان",
+    strength: "۱۲۰ میلی‌گرم / ۵ میلی‌لیتر",
+    dosageForm: "شربت خوراکی",
+    route: "خوراکی با سرنگ مدرج",
+    doseAmount: "۴ میلی‌لیتر (مطابق وزن)",
+    frequency: "در صورت تب هر ۶ ساعت",
+    duration: "حداکثر ۴۸ ساعت بدون معاینه مجدد",
+    instructions: "بطری را پیش از کشیدن با سرنگ تکان دهید و از قاشق خانگی استفاده نکنید.",
+    precautions: "در صورت تداوم تب بیش از ۴۸ ساعت یا بی‌حالی شدید فوراً به پزشک مراجعه کنید.",
+    followUp: "۲۴ ساعت آینده",
+    pharmacyNameFa: "داروخانه شبانه‌روزی الف",
+  };
+  await updateCare(store, staff, sendPayload);
+
+  // Parent cannot revise card
+  await assert.rejects(
+    () => updateCare(store, parent, { ...sendPayload, action: "revise", requestId: "parent_revise" }),
+    (err: unknown) => err instanceof AppError && err.code === "permission-denied",
+  );
+
+  // Unconfirmed revise rejected
+  await assert.rejects(
+    () => updateCare(store, staff, { ...sendPayload, action: "revise", requestId: "revise_1", confirmed: false }),
+    (err: unknown) => err instanceof AppError && err.code === "failed-precondition",
+  );
+
+  // Staff revises duration and precautions
+  const revisePayload = {
+    ...sendPayload,
+    action: "revise",
+    requestId: "revise_1",
+    confirmed: true,
+    duration: "۲۴ تا ۴۸ ساعت با پایش دما",
+    precautions: "هرگز هم‌زمان با فرآورده دیگر استامینوفن مصرف نشود.",
+    text: "اصلاح مدت پیگیری و تذکر عدم هم‌پوشانی استامینوفن",
+  };
+  await updateCare(store, staff, revisePayload);
+  // Idempotent retry works
+  await updateCare(store, staff, revisePayload);
+
+  const family = await caseService.listParentConsultations(parent);
+  const card = family[0].careCard!;
+  assert.equal(card.version, 2);
+  assert.equal(card.dosageForm, "شربت خوراکی");
+  assert.equal(card.route, "خوراکی با سرنگ مدرج");
+  assert.equal(card.doseAmount, "۴ میلی‌لیتر (مطابق وزن)");
+  assert.equal(card.frequency, "در صورت تب هر ۶ ساعت");
+  assert.equal(card.duration, "۲۴ تا ۴۸ ساعت با پایش دما");
+  assert.equal(card.precautions, "هرگز هم‌زمان با فرآورده دیگر استامینوفن مصرف نشود.");
+  assert.equal(card.pharmacyNameFa, "داروخانه شبانه‌روزی الف");
+  assert.ok(typeof card.reviewDateMs === "number" && card.reviewDateMs > 0);
+  assert.ok(card.events.every((e) => !("actor" in e)));
+  assert.deepEqual(card.events.map((e) => e.action), ["send", "revise"]);
+});
+

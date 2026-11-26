@@ -1,5 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowRight, Calculator, Camera, Loader2, ScanLine, ShieldAlert } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowRight,
+  Calculator,
+  Camera,
+  Loader2,
+  ScanLine,
+  ShieldAlert,
+  XCircle,
+} from 'lucide-react';
 import {
   LIQUID_FORMULATION_LIST,
   initialAgeMonthsFromProfile,
@@ -12,12 +20,18 @@ import {
   reconcileFromAiPayload,
 } from '../domain/syrupConcentrationMatcher.ts';
 import type { SyrupDosageForm, SyrupIngredientKey, SyrupScanConfidence } from '../domain/models.ts';
+import type { GatewayResponseMeta } from '../domain/aiGatewayContracts.ts';
 import { buildChildContextSummaryFa } from '../domain/promptBuilders.ts';
-import { requestSyrupScan, ApiClientError } from '../api/geminiClient.ts';
+import {
+  ApiClientError,
+  isRequestCancelledError,
+  requestSyrupScan,
+} from '../api/geminiClient.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
 import { VisualSyringeCanvas } from '../components/VisualSyringeCanvas.tsx';
 import { SourceBadge } from '../components/SourceBadge.tsx';
+import { GatewayMetaBanner } from '../components/GatewayMetaBanner.tsx';
 
 export const SyrupScannerScreen: React.FC = () => {
   const { childProfile, vaccineBirthDateEpochMs, savedSyrupScans, saveSyrupScan, navigate } =
@@ -39,6 +53,15 @@ export const SyrupScannerScreen: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [gatewayMeta, setGatewayMeta] = useState<GatewayResponseMeta | null>(null);
+  const [policyError, setPolicyError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const reconciled = useMemo(() => {
     const mg = Number.parseFloat(mgAmountText);
@@ -93,41 +116,64 @@ export const SyrupScannerScreen: React.FC = () => {
     setParentVerified(false);
   };
 
+  const handleCancelScan = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setScanning(false);
+    setScanError('تحلیل تصویر برچسب توسط کاربر لغو شد.');
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setScanError(null);
+    setPolicyError(null);
+    setGatewayMeta(null);
     setParentVerified(false);
 
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = typeof reader.result === 'string' ? reader.result : '';
       if (!dataUrl) return;
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setPreviewUrl(dataUrl);
       setScanning(true);
       try {
-        const payload = await requestSyrupScan({
+        const result = await requestSyrupScan({
           imageBase64: dataUrl,
           mimeType: file.type || 'image/jpeg',
           childContextSummaryFa: buildChildContextSummaryFa(childProfile),
+          signal: controller.signal,
         });
-        const rec = reconcileFromAiPayload(payload, childProfile, vaccineBirthDateEpochMs);
+        const rec = reconcileFromAiPayload(result.data, childProfile, vaccineBirthDateEpochMs);
         setPresetOverride(rec.matchedFormulation);
         setDrugNameFa(rec.drugNameFa);
         setIngredientKey(rec.ingredientKey);
         setDosageForm(rec.dosageForm);
-        setMgAmountText(String(rec.mgAmount || ''));
-        setPerMlAmountText(String(rec.perMlAmount || ''));
+        setMgAmountText(rec.mgAmount > 0 ? String(rec.mgAmount) : '');
+        setPerMlAmountText(rec.perMlAmount > 0 ? String(rec.perMlAmount) : '');
         setConfidence(rec.confidence);
         setAiSafetyNote(rec.safetyNoteFa);
+        setGatewayMeta(result.meta);
+        setPolicyError(result.policyError ?? null);
         setParentVerified(false);
       } catch (err) {
-        setScanError(
-          err instanceof ApiClientError || err instanceof Error
-            ? err.message
-            : 'تحلیل تصویر برچسب با خطا مواجه شد. می‌توانید غلظت بطری را به‌صورت دستی در پایین انتخاب کنید.',
-        );
+        if (isRequestCancelledError(err)) {
+          setScanError('تحلیل تصویر توسط کاربر لغو شد.');
+        } else {
+          setScanError(
+            err instanceof ApiClientError || err instanceof Error
+              ? err.message
+              : 'تحلیل تصویر برچسب با خطا مواجه شد. می‌توانید غلظت بطری را به‌صورت دستی در پایین انتخاب کنید.',
+          );
+        }
       } finally {
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
         setScanning(false);
       }
     };
@@ -209,6 +255,17 @@ export const SyrupScannerScreen: React.FC = () => {
             )}
           </label>
 
+          {scanning ? (
+            <button
+              type="button"
+              onClick={handleCancelScan}
+              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl border border-[#E7B5BC] bg-[#FDF0F1] px-3.5 text-xs font-bold text-[#B32334] dark:border-[#6A2C3B] dark:bg-[#2F161E] dark:text-[#FF8594]"
+            >
+              <XCircle className="h-4 w-4" />
+              <span>لغو اسکن تصویر</span>
+            </button>
+          ) : null}
+
           {previewUrl ? (
             <img
               src={previewUrl}
@@ -218,6 +275,7 @@ export const SyrupScannerScreen: React.FC = () => {
           ) : null}
 
           {scanError ? <SeverityAlert severity="caution" title="نتیجه اسکن تصویر" body={scanError} /> : null}
+          {gatewayMeta ? <GatewayMetaBanner meta={gatewayMeta} policyError={policyError} /> : null}
 
           <div>
             <div className="mb-2 text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">

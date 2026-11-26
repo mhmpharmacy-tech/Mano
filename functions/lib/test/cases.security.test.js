@@ -485,19 +485,127 @@ async function setupEnv() {
     });
     const ids = { pharmacyId: "pharm_a", caseId: createdCase.caseId };
     const issue = { ...ids, action: "send", requestId: "send1", confirmed: true, child: "کودک", medicine: "نمونه", strength: "نمونه", instructions: "دستور آزمایشی", followUp: "فردا" };
-    await strict_1.default.rejects((0, care_1.updateCare)(store, parent, issue));
+    // No medication handoff may precede a clinical review attested by the pharmacist.
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, parent, issue), (err) => err instanceof config_1.AppError && err.code === "permission-denied");
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, staff, issue), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
+    await caseService.reviewConsultationCase(staff, {
+        ...ids, nextStatus: "RECEIVED", internalNote: "Received for human review",
+    });
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, staff, issue), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
+    await caseService.reviewConsultationCase(staff, {
+        ...ids, nextStatus: "REVIEWED", parentReply: "Human pharmacist reviewed the demonstration consultation.",
+        pharmacistAttestation: true,
+    });
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, staff, { ...issue, confirmed: false }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
     await (0, care_1.updateCare)(store, staff, issue);
-    await (0, care_1.updateCare)(store, staff, issue);
-    const transact = (who, action) => (0, care_1.updateCare)(store, who, { ...ids, action, requestId: action, text: "آزمایشی" });
-    await strict_1.default.rejects(transact(makeParent("another"), "open"));
+    await (0, care_1.updateCare)(store, staff, issue); // Same request may be retried without duplicating events.
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, staff, { ...issue, strength: "different strength" }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, staff, { ...issue, instructions: "changed instructions" }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
+    const transact = (who, action) => (0, care_1.updateCare)(store, who, { ...ids, action, requestId: action, text: "آزمایشی", confirmed: action === "dose" || action === "close" });
+    await strict_1.default.rejects(() => transact(makeParent("another"), "open"), (err) => err instanceof config_1.AppError && err.code === "permission-denied");
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, parent, { ...ids, action: "dose", requestId: "unconfirmed" }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
     for (const action of ["open", "dose", "dose", "question", "checkin"])
         await transact(parent, action);
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, parent, { ...ids, action: "checkin", requestId: "question", text: "آزمایشی" }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, parent, { ...ids, action: "question", requestId: "question", text: "changed payload" }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
     await transact(staff, "reply");
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, staff, { ...ids, action: "close", requestId: "unconfirmed_close" }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
     await transact(staff, "close");
-    await strict_1.default.rejects((0, care_1.updateCare)(store, parent, { ...ids, action: "dose", requestId: "late" }));
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, parent, { ...ids, action: "dose", requestId: "late", confirmed: true }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
     const family = await caseService.listParentConsultations(parent);
+    const single = await caseService.getParentConsultation(parent, ids);
     const inbox = await caseService.getPharmacyInbox(staff, { pharmacyId: "pharm_a" });
     strict_1.default.deepEqual(family[0].careCard?.events.map(e => e.action), ["send", "open", "dose", "question", "checkin", "reply", "close"]);
-    strict_1.default.deepEqual(family[0].careCard, inbox[0].careCard);
+    strict_1.default.equal(family[0].careCard?.events.find(e => e.action === "dose")?.text.includes("مقدار/زمان واقعی"), true);
+    strict_1.default.ok(family[0].careCard?.events.every(e => !("actor" in e)));
+    strict_1.default.ok(single.careCard?.events.every(e => !("actor" in e)));
+    strict_1.default.equal(inbox[0].careCard?.events[0].actor, staff.uid);
+    strict_1.default.equal(inbox[0].careCard?.events[1].actor, parent.uid);
+    strict_1.default.equal(family[0].careCard?.events.length, inbox[0].careCard?.events.length);
+    strict_1.default.equal(family[0].careCard?.version, 1);
+    strict_1.default.ok(typeof family[0].careCard?.shareToken === "string" && family[0].careCard.shareToken.startsWith("mc_"));
+});
+(0, node_test_1.default)("structured care card fields and staff revise preserve version, provenance, and UID stripping", async () => {
+    const { store, caseService } = await setupEnv();
+    const parent = makeParent();
+    const staff = makePharmacistCaller("pharm_uid_1", "pharm_a");
+    const pass = await caseService.issueConsultationTriagePass(parent, {
+        ageBandId: "toddler_1_3y",
+        symptomFlowId: "fever",
+        temperatureCelsius: 37.8,
+        questionSummaryFa: "پرسش درباره غلظت شربت استامینوفن کودک دو ساله",
+    });
+    const createdCase = await caseService.submitConsultationCase(parent, {
+        pharmacyId: "pharm_a",
+        triagePassId: pass.triagePassId,
+        categoryName: "OTC",
+        ageBandId: "toddler_1_3y",
+        symptomFlowId: "fever",
+        questionSummaryFa: "لطفاً دستور مصرف شربت استامینوفن ۱۲۰ میلی‌گرم بر ۵ میلی‌لیتر را یادآوری کنید.",
+        hasUrgentFlag: false,
+        consentAccepted: true,
+        consentVersion: "v1",
+    });
+    const ids = { pharmacyId: "pharm_a", caseId: createdCase.caseId };
+    await caseService.reviewConsultationCase(staff, {
+        ...ids,
+        nextStatus: "RECEIVED",
+        internalNote: "بررسی وزن و غلظت بطری",
+    });
+    await caseService.reviewConsultationCase(staff, {
+        ...ids,
+        nextStatus: "REVIEWED",
+        parentReply: "لطفاً دوز را دقیقاً مطابق سرنگ مدرج و بر اساس وزن فعلی کودک اندازه‌گیری کنید.",
+        pharmacistAttestation: true,
+    });
+    const sendPayload = {
+        ...ids,
+        action: "send",
+        requestId: "send_structured_1",
+        confirmed: true,
+        child: "آرتا",
+        medicine: "شربت استامینوفن کودکان",
+        strength: "۱۲۰ میلی‌گرم / ۵ میلی‌لیتر",
+        dosageForm: "شربت خوراکی",
+        route: "خوراکی با سرنگ مدرج",
+        doseAmount: "۴ میلی‌لیتر (مطابق وزن)",
+        frequency: "در صورت تب هر ۶ ساعت",
+        duration: "حداکثر ۴۸ ساعت بدون معاینه مجدد",
+        instructions: "بطری را پیش از کشیدن با سرنگ تکان دهید و از قاشق خانگی استفاده نکنید.",
+        precautions: "در صورت تداوم تب بیش از ۴۸ ساعت یا بی‌حالی شدید فوراً به پزشک مراجعه کنید.",
+        followUp: "۲۴ ساعت آینده",
+        pharmacyNameFa: "داروخانه شبانه‌روزی الف",
+    };
+    await (0, care_1.updateCare)(store, staff, sendPayload);
+    // Parent cannot revise card
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, parent, { ...sendPayload, action: "revise", requestId: "parent_revise" }), (err) => err instanceof config_1.AppError && err.code === "permission-denied");
+    // Unconfirmed revise rejected
+    await strict_1.default.rejects(() => (0, care_1.updateCare)(store, staff, { ...sendPayload, action: "revise", requestId: "revise_1", confirmed: false }), (err) => err instanceof config_1.AppError && err.code === "failed-precondition");
+    // Staff revises duration and precautions
+    const revisePayload = {
+        ...sendPayload,
+        action: "revise",
+        requestId: "revise_1",
+        confirmed: true,
+        duration: "۲۴ تا ۴۸ ساعت با پایش دما",
+        precautions: "هرگز هم‌زمان با فرآورده دیگر استامینوفن مصرف نشود.",
+        text: "اصلاح مدت پیگیری و تذکر عدم هم‌پوشانی استامینوفن",
+    };
+    await (0, care_1.updateCare)(store, staff, revisePayload);
+    // Idempotent retry works
+    await (0, care_1.updateCare)(store, staff, revisePayload);
+    const family = await caseService.listParentConsultations(parent);
+    const card = family[0].careCard;
+    strict_1.default.equal(card.version, 2);
+    strict_1.default.equal(card.dosageForm, "شربت خوراکی");
+    strict_1.default.equal(card.route, "خوراکی با سرنگ مدرج");
+    strict_1.default.equal(card.doseAmount, "۴ میلی‌لیتر (مطابق وزن)");
+    strict_1.default.equal(card.frequency, "در صورت تب هر ۶ ساعت");
+    strict_1.default.equal(card.duration, "۲۴ تا ۴۸ ساعت با پایش دما");
+    strict_1.default.equal(card.precautions, "هرگز هم‌زمان با فرآورده دیگر استامینوفن مصرف نشود.");
+    strict_1.default.equal(card.pharmacyNameFa, "داروخانه شبانه‌روزی الف");
+    strict_1.default.ok(typeof card.reviewDateMs === "number" && card.reviewDateMs > 0);
+    strict_1.default.ok(card.events.every((e) => !("actor" in e)));
+    strict_1.default.deepEqual(card.events.map((e) => e.action), ["send", "revise"]);
 });
 //# sourceMappingURL=cases.security.test.js.map

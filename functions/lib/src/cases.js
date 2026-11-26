@@ -41,8 +41,13 @@ const config_1 = require("./config");
 const rateLimit_1 = require("./rateLimit");
 const triage_1 = require("./triage");
 function toParentConsultationView(doc) {
+    const publicCareCard = doc.careCard && {
+        ...doc.careCard,
+        // Staff Firebase UIDs are internal audit data and must never reach families.
+        events: doc.careCard.events.map(({ actor: _actor, ...publicEvent }) => publicEvent),
+    };
     return {
-        ...(doc.careCard ? { careCard: doc.careCard } : {}),
+        ...(publicCareCard ? { careCard: publicCareCard } : {}),
         caseId: doc.caseId,
         pharmacyId: doc.pharmacyId,
         categoryName: doc.categoryName,

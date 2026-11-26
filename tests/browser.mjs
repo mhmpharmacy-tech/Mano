@@ -34,6 +34,16 @@ try {
   assert.ok(await page.locator(".bottom").isVisible());
   assert.equal(await page.locator(".bottom .tab").count(),5);
   assert.equal(await page.locator(".profilename").textContent(),"پرونده کودک");
+  await page.locator("#supplements-home-card").waitFor({state:"visible"});
+  assert.equal(await page.locator('#supplements-home-card [data-product]').count(), 3);
+  await page.locator('#supplements-home-card [data-supp-group="hygiene"]').click();
+  assert.ok(await page.locator('#supplements-home-card [data-product="rec_zinc_cream"]').isVisible());
+  await page.locator('#supplements-home-card [data-product="rec_zinc_cream"]').click();
+  await page.locator("#cover.show #dialog").waitFor({state:"visible"});
+  assert.ok((await page.locator("#dialog").textContent()).includes("نکات ایمن انتخاب و مصرف"));
+  await page.locator("#dialog [data-sheet-pharmacist]").click();
+  assert.equal(await page.locator('select[name="category"]').inputValue(), "مکمل و بهداشت");
+  await page.locator('[data-route="home"]').first().click();
   await page.screenshot({path:"web-artifacts/home-412.png",fullPage:true});
 
   await page.locator(".profile").click();

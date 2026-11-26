@@ -1,73 +1,122 @@
 import type {
-  DocumentedQaResponse,
-  FaqItem,
-  GeminiSyrupScanPayload,
-  NutritionMealItem,
-  NutritionPlan,
-  SafetyChecklistReport,
-} from '../domain/models.ts';
+  GatewayHealthStatus,
+  GatewayResponseMeta,
+  RestrictedDocumentedQaPayload,
+  RestrictedNutritionPayload,
+  RestrictedSafetyChecklistPayload,
+  RestrictedSyrupScanPayload,
+  VisitDraftStructuredPayload,
+} from '../domain/aiGatewayContracts.ts';
+import type { FaqItem, NutritionPlan } from '../domain/models.ts';
 
-export interface HealthStatus {
-  ok: boolean;
-  hasGeminiKey: boolean;
-  model: string;
+export type HealthStatus = GatewayHealthStatus;
+
+export interface GatewayClientResult<T> {
+  data: T;
+  meta: GatewayResponseMeta;
+  policyError?: string;
 }
 
 export class ApiClientError extends Error {
   status: number;
   code?: string;
+  meta?: GatewayResponseMeta;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, meta?: GatewayResponseMeta) {
     super(message);
     this.name = 'ApiClientError';
     this.status = status;
     this.code = code;
+    this.meta = meta;
   }
 }
 
-async function parseErrorResponse(res: Response): Promise<never> {
-  let msg = 'خطایی در ارتباط با سرور رخ داد. لطفاً دوباره تلاش کنید.';
-  let code: string | undefined;
+export function isRequestCancelledError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const anyErr = err as { name?: string; code?: string; status?: number };
+  return (
+    anyErr.name === 'AbortError' ||
+    anyErr.code === 'REQUEST_CANCELLED' ||
+    anyErr.status === 499
+  );
+}
+
+interface RawEnvelope<T> {
+  data?: T;
+  meta?: GatewayResponseMeta;
+  error?: string;
+  code?: string;
+}
+
+async function parseEnvelopeResponse<T>(res: Response): Promise<GatewayClientResult<T>> {
+  let parsed: RawEnvelope<T> | null;
   try {
-    const data = (await res.json()) as { error?: string; code?: string };
-    if (data?.error) msg = data.error;
-    if (data?.code) code = data.code;
+    parsed = (await res.json()) as RawEnvelope<T>;
   } catch {
-    // fallback message
+    parsed = null;
   }
-  throw new ApiClientError(msg, res.status, code);
+
+  const canUseFallbackEnvelope =
+    (res.status === 200 || res.status === 422 || res.status === 429) &&
+    parsed?.data !== undefined &&
+    parsed?.meta !== undefined;
+
+  if (canUseFallbackEnvelope && parsed?.data !== undefined && parsed?.meta !== undefined) {
+    return {
+      data: parsed.data,
+      meta: parsed.meta,
+      policyError: parsed.error,
+    };
+  }
+
+  const msg = parsed?.error || 'خطایی در ارتباط با سرور رخ داد. لطفاً دوباره تلاش کنید.';
+  throw new ApiClientError(msg, res.status, parsed?.code, parsed?.meta);
 }
 
-export async function fetchApiHealth(): Promise<HealthStatus> {
-  const res = await fetch('/api/health');
-  if (!res.ok) await parseErrorResponse(res);
+export async function fetchApiHealth(signal?: AbortSignal): Promise<HealthStatus> {
+  const res = await fetch('/api/health', { signal });
+  if (!res.ok) {
+    throw new ApiClientError('بررسی وضعیت سرویس هوش مصنوعی ناموفق بود.', res.status);
+  }
   return (await res.json()) as HealthStatus;
 }
 
 export async function requestVisitDraftStream(
-  promptText: string,
+  params: {
+    promptText: string;
+    chiefComplaintFa?: string;
+    selectedSymptomsFa?: string[];
+    parentNotesFa?: string;
+    childContextSummaryFa?: string;
+    tempPointsFa?: string[];
+    dosePointsFa?: string[];
+    signal?: AbortSignal;
+  },
   onProgress?: (accumulatedText: string) => void,
-): Promise<string> {
+): Promise<GatewayClientResult<VisitDraftStructuredPayload>> {
+  const { signal, ...payloadBody } = params;
   const res = await fetch('/api/gemini/visit-draft', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ promptText, stream: true }),
+    signal,
+    body: JSON.stringify({ ...payloadBody, stream: true }),
   });
 
-  if (!res.ok) {
-    await parseErrorResponse(res);
-  }
-
   const contentType = res.headers.get('content-type') || '';
-  if (!contentType.includes('text/event-stream') || !res.body) {
-    const json = (await res.json()) as { text?: string };
-    return (json.text || '').trim();
+  if (!res.ok || !contentType.includes('text/event-stream') || !res.body) {
+    const result = await parseEnvelopeResponse<VisitDraftStructuredPayload>(res);
+    if (result.data.formattedDraftFa) {
+      onProgress?.(result.data.formattedDraftFa);
+    }
+    return result;
   }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
   let latestText = '';
+  let finalData: VisitDraftStructuredPayload | null = null;
+  let finalMeta: GatewayResponseMeta | null = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -76,15 +125,15 @@ export async function requestVisitDraftStream(
     const events = buffer.split('\n\n');
     buffer = events.pop() || '';
     for (const evt of events) {
-      const line = evt
-        .split('\n')
-        .find((l) => l.startsWith('data:'));
+      const line = evt.split('\n').find((l) => l.startsWith('data:'));
       if (!line) continue;
       const jsonStr = line.slice(5).trim();
       if (!jsonStr) continue;
       const parsed = JSON.parse(jsonStr) as {
         delta?: string;
         text?: string;
+        data?: VisitDraftStructuredPayload;
+        meta?: GatewayResponseMeta;
         done?: boolean;
         error?: string;
       };
@@ -95,13 +144,19 @@ export async function requestVisitDraftStream(
         latestText = parsed.text;
         onProgress?.(latestText);
       }
+      if (parsed.data) finalData = parsed.data;
+      if (parsed.meta) finalMeta = parsed.meta;
     }
   }
 
-  if (!latestText.trim()) {
-    throw new ApiClientError('پاسخی برای خلاصه ویزیت دریافت نشد.', 502);
+  if (!finalData || !finalMeta || !latestText.trim()) {
+    throw new ApiClientError('پاسخ ساختاریافته معتبر برای خلاصه ویزیت دریافت نشد.', 502);
   }
-  return latestText.trim();
+
+  return {
+    data: finalData,
+    meta: finalMeta,
+  };
 }
 
 export async function requestNutritionPlan(params: {
@@ -110,33 +165,31 @@ export async function requestNutritionPlan(params: {
   allergiesFa: string;
   dietGoalFa: string;
   childContextSummaryFa: string;
-}): Promise<NutritionPlan> {
+  signal?: AbortSignal;
+}): Promise<{ plan: NutritionPlan; meta: GatewayResponseMeta; policyError?: string }> {
+  const { signal, ...body } = params;
   const res = await fetch('/api/gemini/nutrition', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    signal,
+    body: JSON.stringify(body),
   });
 
-  if (!res.ok) await parseErrorResponse(res);
-
-  const raw = (await res.json()) as {
-    planTitleFa: string;
-    overviewFa: string;
-    growthNutritionFocusFa: string;
-    hydrationTipFa: string;
-    meals: NutritionMealItem[];
-  };
-
+  const envelope = await parseEnvelopeResponse<RestrictedNutritionPayload>(res);
   return {
-    id: `nut_${Date.now()}`,
-    planTitleFa: raw.planTitleFa,
-    overviewFa: raw.overviewFa,
-    growthNutritionFocusFa: raw.growthNutritionFocusFa,
-    hydrationTipFa: raw.hydrationTipFa,
-    meals: Array.isArray(raw.meals) ? raw.meals : [],
-    ageMonthsSnapshot: params.ageMonths,
-    goalSnapshotFa: params.dietGoalFa || 'برنامه غذایی ایمن متناسب با سن',
-    createdAtLabelFa: 'هم‌اکنون',
+    plan: {
+      id: `nut_${Date.now()}`,
+      planTitleFa: envelope.data.planTitleFa,
+      overviewFa: envelope.data.overviewFa,
+      growthNutritionFocusFa: envelope.data.growthNutritionFocusFa,
+      hydrationTipFa: envelope.data.hydrationTipFa,
+      meals: Array.isArray(envelope.data.meals) ? envelope.data.meals : [],
+      ageMonthsSnapshot: params.ageMonths,
+      goalSnapshotFa: params.dietGoalFa || 'برنامه غذایی آموزشی متناسب با سن',
+      createdAtLabelFa: 'هم‌اکنون',
+    },
+    meta: envelope.meta,
+    policyError: envelope.policyError,
   };
 }
 
@@ -144,75 +197,52 @@ export async function requestSyrupScan(params: {
   imageBase64: string;
   mimeType: string;
   childContextSummaryFa: string;
-}): Promise<GeminiSyrupScanPayload> {
+  signal?: AbortSignal;
+}): Promise<GatewayClientResult<RestrictedSyrupScanPayload>> {
+  const { signal, ...body } = params;
   const res = await fetch('/api/gemini/syrup-scan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    signal,
+    body: JSON.stringify(body),
   });
-  if (!res.ok) await parseErrorResponse(res);
-  return (await res.json()) as GeminiSyrupScanPayload;
+  return parseEnvelopeResponse<RestrictedSyrupScanPayload>(res);
 }
 
 export async function requestSafetyChecklist(params: {
+  flowId?: string;
   flowTitleFa: string;
   urgencyLevel: string;
   evaluationSummaryFa: string;
   selectedSymptomsFa: string[];
   childContextSummaryFa: string;
-}): Promise<SafetyChecklistReport> {
+  signal?: AbortSignal;
+}): Promise<GatewayClientResult<RestrictedSafetyChecklistPayload>> {
+  const { signal, ...body } = params;
   const res = await fetch('/api/gemini/safety-checklist', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    signal,
+    body: JSON.stringify(body),
   });
-  if (!res.ok) await parseErrorResponse(res);
-  const report = (await res.json()) as SafetyChecklistReport;
-  return {
-    ...report,
-    clinicalSourceCitationFa:
-      'خروجی کمکی هوش مصنوعی بر اساس اطلاعات ثبت‌شده؛ جایگزین معاینه حضوری پزشک اطفال نیست.',
-  };
+  return parseEnvelopeResponse<RestrictedSafetyChecklistPayload>(res);
 }
 
 export async function requestDocumentedQa(params: {
   question: string;
   ageBandFa: string;
   matchedFaqs: FaqItem[];
-  sourceLookup: (id: string) => string;
-}): Promise<DocumentedQaResponse> {
-  const payloadFaqs = params.matchedFaqs.slice(0, 4).map((faq) => ({
-    question: faq.questionFa,
-    shortAnswer: faq.shortAnswerFa,
-    clinicalDetail: faq.clinicalDetailFa,
-    citation: faq.sourceIds.map(params.sourceLookup).filter(Boolean).join(' • '),
-  }));
-
+  signal?: AbortSignal;
+}): Promise<GatewayClientResult<RestrictedDocumentedQaPayload>> {
   const res = await fetch('/api/gemini/documented-qa', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: params.signal,
     body: JSON.stringify({
       question: params.question,
       ageBandFa: params.ageBandFa,
-      matchedFaqs: payloadFaqs,
+      matchedFaqIds: params.matchedFaqs.slice(0, 4).map((faq) => faq.id),
     }),
   });
-  if (!res.ok) await parseErrorResponse(res);
-  const raw = (await res.json()) as DocumentedQaResponse;
-
-  // Deterministic citation override grounded directly in matched FAQs
-  const verifiedCitations = Array.from(
-    new Set(
-      params.matchedFaqs
-        .slice(0, 4)
-        .flatMap((faq) => faq.sourceIds.map(params.sourceLookup).filter(Boolean)),
-    ),
-  );
-
-  return {
-    ...raw,
-    citedSourcesFa: verifiedCitations.length > 0 ? verifiedCitations : raw.citedSourcesFa,
-    safetyDisclaimerFa:
-      'این پاسخ کمکی صرفاً بر اساس مستندات داخلی مانو کید تنظیم شده و جایگزین ویزیت پزشک یا مشاوره مستقیم داروساز نیست.',
-  };
+  return parseEnvelopeResponse<RestrictedDocumentedQaPayload>(res);
 }
