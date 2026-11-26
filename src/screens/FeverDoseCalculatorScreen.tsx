@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowRight, CheckSquare, ClipboardCopy, Minus, Plus, Save, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CheckSquare, ClipboardCopy, Save, ShieldCheck } from 'lucide-react';
 import {
   LIQUID_FORMULATION_LIST,
   evaluateLiquidDose,
   formatAgeFa,
   formatKg,
-  initialAgeMonthsFromProfile,
-  initialWeightKgFromProfile,
+  parseLiquidDoseInputs,
+  canRevealLiquidDose,
   type LiquidFormulation,
 } from '../domain/liquidDoseVisualizerEngine.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
@@ -19,29 +19,26 @@ import { SourceBadge } from '../components/SourceBadge.tsx';
 export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string }> = ({
   prefillFormulationId,
 }) => {
-  const { childProfile, vaccineBirthDateEpochMs, addDoseLog, navigate, notify } = useMano();
+  const { addDoseLog, navigate, notify } = useMano();
 
   const initialFormulation =
     LIQUID_FORMULATION_LIST.find((f) => f.id === prefillFormulationId) ??
     LIQUID_FORMULATION_LIST[1];
 
   const [formulation, setFormulation] = useState<LiquidFormulation>(initialFormulation);
-  const [ageMonths, setAgeMonths] = useState<number>(() => {
-    const inferred = initialAgeMonthsFromProfile(childProfile, vaccineBirthDateEpochMs);
-    return inferred ?? (childProfile.ageBand === 'NEWBORN' ? 2 : 18);
-  });
-  const [weightKg, setWeightKg] = useState<number>(() => {
-    const inferred = initialWeightKgFromProfile(childProfile);
-    return inferred ?? 11.0;
-  });
+  // Explicit, current measurements only. Never infer a dose from an empty profile.
+  const [ageText, setAgeText] = useState('');
+  const [weightText, setWeightText] = useState('');
   const [labelConfirmed, setLabelConfirmed] = useState(false);
-
+  const { ageMonths, weightKg } = useMemo(
+    () => parseLiquidDoseInputs(ageText, weightText),
+    [ageText, weightText],
+  );
   const result = useMemo(
     () => evaluateLiquidDose(formulation, ageMonths, weightKg),
     [formulation, ageMonths, weightKg],
   );
-
-  const canRevealDose = labelConfirmed && !result.isBlocked;
+  const canRevealDose = canRevealLiquidDose(result, labelConfirmed);
 
   const handleSaveToTimeline = () => {
     if (!canRevealDose) return;
@@ -131,116 +128,21 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
         </div>
       </section>
 
-      {/* Step 2: Age & Weight Inputs */}
+      {/* Step 2: Explicit age and measured weight; no sliders or sample presets. */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-3xl border border-[#DCE7E1] bg-white p-5 space-y-3 dark:border-[#23344D] dark:bg-[#111C2E]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-[#122823] dark:text-[#EDF4F7]">۲. سن دقیق کودک (به ماه)</h2>
-            <span data-testid="dose-age-display" className="tabular-nums text-sm font-extrabold text-[#105B48] dark:text-[#00D7C7]">
-              {formatAgeFa(ageMonths)} ({toPersianDigits(ageMonths)} ماه)
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              data-testid="dose-age-minus"
-              aria-label="کاهش سن به ماه"
-              onClick={() => {
-                setAgeMonths((m) => Math.max(0, m - 1));
-                setLabelConfirmed(false);
-              }}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={144}
-              value={ageMonths}
-              aria-label="اسلایدر سن به ماه"
-              onChange={(e) => {
-                setAgeMonths(Number(e.target.value));
-                setLabelConfirmed(false);
-              }}
-              className="flex-1 accent-[#105B48]"
-            />
-            <button
-              type="button"
-              data-testid="dose-age-plus"
-              aria-label="افزایش سن به ماه"
-              onClick={() => {
-                setAgeMonths((m) => Math.min(144, m + 1));
-                setLabelConfirmed(false);
-              }}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: '۲ ماه (نوزاد)', val: 2 },
-              { label: '۴ ماه', val: 4 },
-              { label: '۱۸ ماه', val: 18 },
-              { label: '۴ سال (۴۸ ماه)', val: 48 },
-            ].map((q) => (
-              <button
-                key={q.val}
-                type="button"
-                data-testid={`quick-age-${q.val}`}
-                onClick={() => {
-                  setAgeMonths(q.val);
-                  setLabelConfirmed(false);
-                }}
-                className="min-h-[36px] rounded-xl border border-[#DCE7E1] px-2.5 text-xs font-semibold hover:border-[#105B48] dark:border-[#23344D]"
-              >
-                {q.label}
-              </button>
-            ))}
-          </div>
+          <label htmlFor="dose-age-input" className="block text-sm font-extrabold text-[#122823] dark:text-[#EDF4F7]">۲. سن واقعی کودک (ماه کامل)</label>
+          <input id="dose-age-input" data-testid="dose-age-input" type="text" inputMode="numeric"
+            value={ageText} autoComplete="off" onChange={(e) => { setAgeText(e.target.value); setLabelConfirmed(false); }}
+            className="min-h-[48px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] p-3 dark:border-[#23344D] dark:bg-[#16243B]" />
+          <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">سن را به ماه کامل وارد کنید؛ اگر مطمئن نیستید، از داروساز کمک بگیرید.</p>
         </div>
-
         <div className="rounded-3xl border border-[#DCE7E1] bg-white p-5 space-y-3 dark:border-[#23344D] dark:bg-[#111C2E]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-[#122823] dark:text-[#EDF4F7]">۳. وزن واقعی کودک (کیلوگرم)</h2>
-            <span data-testid="dose-weight-display" className="tabular-nums text-sm font-extrabold text-[#105B48] dark:text-[#00D7C7]">
-              {formatKg(weightKg)}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              data-testid="dose-weight-minus"
-              aria-label="کاهش وزن"
-              onClick={() => setWeightKg((w) => Math.max(3.0, Math.round((w - 0.5) * 10) / 10))}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <input
-              type="range"
-              min={3}
-              max={40}
-              step={0.5}
-              value={weightKg}
-              aria-label="اسلایدر وزن به کیلوگرم"
-              onChange={(e) => setWeightKg(Number(e.target.value))}
-              className="flex-1 accent-[#105B48]"
-            />
-            <button
-              type="button"
-              data-testid="dose-weight-plus"
-              aria-label="افزایش وزن"
-              onClick={() => setWeightKg((w) => Math.min(40.0, Math.round((w + 0.5) * 10) / 10))}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">
-            در صورت نبود ترازو، بدون حدس زدن وزن دارو ندهید؛ به نزدیک‌ترین داروخانه یا مرکز بهداشت مراجعه کنید.
-          </p>
+          <label htmlFor="dose-weight-input" className="block text-sm font-extrabold text-[#122823] dark:text-[#EDF4F7]">۳. وزن اندازه‌گیری‌شده کودک (کیلوگرم)</label>
+          <input id="dose-weight-input" data-testid="dose-weight-input" type="text" inputMode="decimal"
+            value={weightText} autoComplete="off" onChange={(e) => { setWeightText(e.target.value); setLabelConfirmed(false); }}
+            className="min-h-[48px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] p-3 dark:border-[#23344D] dark:bg-[#16243B]" />
+          <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">وزن را حدس نزنید؛ اگر اندازه‌گیری نشده است، محاسبه را ادامه ندهید.</p>
         </div>
       </section>
 
@@ -263,18 +165,16 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
               className="mt-1 h-5 w-5 shrink-0 accent-[#105B48]"
             />
             <span>
-              برچسب روی بطری دارو را خوانده‌ام و مطمئن هستم دقیقاً برابر «{formulation.titleFa}» ({formulation.concentrationLabelFa}) است.
+              تأیید می‌کنم سن و وزن واردشده واقعی و متعلق به همین کودک است و برچسب دارو دقیقاً برابر «{formulation.titleFa}» ({formulation.concentrationLabelFa}) است.
             </span>
           </label>
         </section>
       )}
 
       {/* Step 4: Visual Syringe & Numeric Output */}
-      <VisualSyringeCanvas
-        formulation={formulation}
-        result={result}
-        showExactValues={canRevealDose}
-      />
+      {canRevealDose && (
+        <VisualSyringeCanvas formulation={formulation} result={result} showExactValues={true} />
+      )}
 
       {canRevealDose ? (
         <section

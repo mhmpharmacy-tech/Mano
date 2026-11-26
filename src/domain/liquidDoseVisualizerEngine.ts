@@ -1,4 +1,4 @@
-import { parseClinicalDecimal } from './clinicalNumberInput.ts';
+import { parseClinicalDecimal, parseClinicalInteger } from './clinicalNumberInput.ts';
 import { AGE_BANDS, type AlertSeverity, type ChildProfile } from './models.ts';
 import { normalizePersian } from './persianNormalizer.ts';
 
@@ -155,6 +155,23 @@ export function formatMl(ml: number): string {
 export function formatKg(kg: number | null | undefined): string {
   if (kg === null || kg === undefined || !Number.isFinite(kg)) return 'وزن ثبت نشده';
   return `${kg.toFixed(1)} kg`;
+}
+
+// Reject blank and internally spaced input instead of coercing or concatenating it.
+export function parseLiquidDoseInputs(ageText: string, weightText: string): {
+  ageMonths: number | null;
+  weightKg: number | null;
+} {
+  const age = ageText.trim();
+  const weight = weightText.trim();
+  return {
+    ageMonths: /\s/.test(age) ? null : parseClinicalInteger(age),
+    weightKg: /\s/.test(weight) ? null : parseClinicalDecimal(weight),
+  };
+}
+
+export function canRevealLiquidDose(result: LiquidDoseVisualizationResult, confirmed: boolean): boolean {
+  return confirmed && !result.isBlocked;
 }
 
 export function evaluateLiquidDose(

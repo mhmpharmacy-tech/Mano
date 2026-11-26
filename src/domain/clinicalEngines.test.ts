@@ -14,6 +14,8 @@ import {
   LIQUID_FORMULATIONS,
   evaluateLiquidDose,
   parseAgeMonthsFromText,
+  parseLiquidDoseInputs,
+  canRevealLiquidDose,
 } from './liquidDoseVisualizerEngine.ts';
 import { evaluateWhoGrowth, interpolateLms } from './whoGrowthStandardsEngine.ts';
 import {
@@ -116,6 +118,26 @@ describe('TriageEngine clinical safety gates', () => {
 });
 
 describe('FeverDoseCalculatorEngine & LiquidDoseVisualizerEngine', () => {
+  it('does not turn missing, malformed or ambiguous caregiver inputs into a dose', () => {
+    const drug = LIQUID_FORMULATIONS.ACETAMINOPHEN_SYRUP_120_5;
+    for (const [age, weight] of [['', ''], ['18', ''], ['', '11'], ['1 8', '11'], ['18', '1 1'], ['3.5', '11'], ['18', 'NaN'], ['18', '0'], ['145', '11']]) {
+      const input = parseLiquidDoseInputs(age, weight);
+      const result = evaluateLiquidDose(drug, input.ageMonths, input.weightKg);
+      assert.equal(result.isBlocked, true);
+      assert.equal(canRevealLiquidDose(result, true), false);
+    }
+  });
+
+  it('requires explicit confirmation even for valid Persian age and weight inputs', () => {
+    const input = parseLiquidDoseInputs('۱۸', '۱۱٫۵');
+    assert.deepEqual(input, { ageMonths: 18, weightKg: 11.5 });
+    const result = evaluateLiquidDose(LIQUID_FORMULATIONS.ACETAMINOPHEN_SYRUP_120_5, input.ageMonths, input.weightKg);
+    assert.equal(result.isBlocked, false);
+    assert.equal(canRevealLiquidDose(result, false), false);
+    assert.equal(canRevealLiquidDose(result, true), true);
+    const infant = evaluateLiquidDose(LIQUID_FORMULATIONS.ACETAMINOPHEN_SYRUP_120_5, 2, 5);
+    assert.equal(canRevealLiquidDose(infant, true), false);
+  });
   it('blocks home fever dosing under 3 months', () => {
     const res = calculateFeverDose('UNDER_3_MONTHS', LIQUID_FORMULATIONS.ACETAMINOPHEN_DROPS_100, 5.0);
     assert.equal(res.isBlocked, true);

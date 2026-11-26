@@ -9,7 +9,8 @@
     "start": "tsx server.ts",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "tsx --test src/domain/clinicalEngines.test.ts server/aiGateway/gatewayService.test.ts"
+    "test": "tsx --test src/domain/clinicalEngines.test.ts server/aiGateway/gatewayService.test.ts",
+    "check": "npm test && npm run lint"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
