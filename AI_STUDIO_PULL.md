@@ -1,46 +1,37 @@
-# MANO Kid — Google AI Studio Build Care Home
+# MANO Kid — importing the web app into AI Studio
 
-**Purpose:** Make the approved, restrained premium mobile Care Home appear when this GitHub repository is imported/pulled into a correctly linked **Google AI Studio Build web app**.
+## Entrypoints
 
-## Where the website actually lives
+- `/` is the React application: `index.html` → `src/main.tsx` → `src/App.tsx`.
+- `/preview/` preserves the previous approved Care Home design as a separate, in-memory review demo. Its assets remain `src/app.js` and `src/app.css`.
+- `server.ts` is the Express/Vite server; `server.mjs` is no longer an entrypoint.
+- `app/` contains separate Kotlin sources. Importing the web app does not build or validate Android.
 
-- Root \`index.html\`: approved Persian RTL dashboard design, unchanged original MANO face and round luminous eyes (embedded from the approved reference prototype).
-- \`src/app.css\`: premium green/cream visual tokens and accessible responsive interior pages.
-- \`src/app.js\`: functional, client-side navigation; clinical safety warnings; profile, growth, vaccine-history and treatment-plan **temporary drafts**.
-- \`server.mjs\`: dependency-free restricted preview server, port 3000 by default.
-- \`metadata.json\`: existing Google AI Studio app metadata remains in place.
-- \`app/\`: separate Android Jetpack Compose project; a web Pull does **not** convert Android Kotlin into web UI.
-- \`public/care/\`: a separate Firebase card feature; nothing here deploys to Firebase.
+Both HTML entrypoints are built into `dist/`. The main React app has an internal-preview notice and persists local drafts in this browser; the legacy demo clears its in-memory drafts on reload. Use synthetic data only.
 
-## Run / verify
+## Run and verify
 
-\`\`\`bash
+```bash
 npm ci
 npm run check
 npm run build
 npm run dev
-\`\`\`
+```
 
-The app should appear at \`http://localhost:3000\`. Build output is \`dist/\`. No third-party packages, live network APIs or API keys are required.
+Open `http://localhost:3000` for React and `/preview/` for the retained design. For a production-mode local smoke test, use `NODE_ENV=production npm start` after building. Run `npx playwright install --with-deps chromium` followed by `npm run test:browser` to test the built app in Chromium.
 
-## How to pull into Google AI Studio
+## Pull into AI Studio
 
-1. Back up the existing AI Studio project or GitHub branch first.
-2. Open **Build** and the existing project, then check **Settings → GitHub** to verify the **same repo** \`mhmpharmacy-tech/Mano\` and branch \`main\` are linked.
-3. After this web PR is merged to \`main\`, select **Pull changes** in the GitHub tab. If an existing workspace cannot rebind to the repo, use **+ → Import from GitHub** as a separate preview instead of overwriting the original project.
-4. Confirm that the loaded entrypoint is the **root \`index.html\`** and server command is \`npm run dev\`, not \`app/src/main/java/.../HomeScreen.kt\`.
-5. Check the five bottom tabs and the primary actions; original robot eyes must not change.
-6. If UI Studio still shows a prior app despite a successful GitHub Pull, that workspace is not running the newly imported root entrypoint. Check its attached repository and its preview logs; do not assume pulling Android files changes React.
+1. Verify the linked repository is `mhmpharmacy-tech/Mano` and select the intended branch.
+2. Pull the reviewed changes or import the branch into a separate preview workspace.
+3. Confirm the start command is `npm run dev` and the root entry loads `src/main.tsx`.
+4. Open the dose calculator with a fresh browser profile: age and weight must be blank, and confirming a label must not reveal a dose until both are valid.
+5. Confirm `/preview/` still loads the retained design and the default API reports `CLINICAL_SERVICE_DISABLED`.
 
-## Definition of done and limitations
+The GitHub workflow validates code, the built web app and browser flows. An actual AI Studio import or workspace pull still requires verification in that workspace; passing CI does not attest deployment.
 
-- [x] Final premium Care Home layout + original MANO visual identity, no human child portrait, no sleep icon, one small icon per feature.
-- [x] Interactive symptom wizard with conservative urgent stops; no diagnostic clearance.
-- [x] Child alias/age, growth measurement and vaccine history **in memory only**, reset on refresh.
-- [x] Pharmacist question and medication plan **draft only**; no real submission, dose suggestions, clinical approvals or reminder schedules.
-- [x] Internal build, smoke and Chromium responsive tests (360 and 412 px) in CI.
-- [ ] **Actual Google AI Studio workspace Pull verification**, requiring the user's connected UI.
-- [ ] Back-end integration with authenticated Firebase and validated real medical content; deliberately not attempted in this design sync.
-- [ ] Human review of clinical content, privacy/security and device tests before any public release.
+## AI access and release status
 
-**Data safety:** No real patient details should be entered in this demo. It neither sends data nor persists protected health information. Do not deploy as a patient-facing clinical product. The Android project remains a separate integration track.
+Setting `GEMINI_API_KEY` alone does not activate AI endpoints. They require the explicit clinical release flag and a server-only bearer token as documented in README.md. Do not add the token to browser code or build environment variables. Browser AI integration remains unavailable pending authenticated user sessions.
+
+This is an internal educational preview, not a release-cleared patient-facing service. Existing clinical signoff, privacy, Firebase/App Check and real-device release gates still apply.

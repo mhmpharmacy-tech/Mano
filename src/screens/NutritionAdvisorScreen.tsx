@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Loader2, ShieldAlert, Utensils, XCircle } from 'lucide-react';
-import { initialAgeMonthsFromProfile } from '../domain/liquidDoseVisualizerEngine.ts';
+import { resolveClinicalAge } from '../domain/clinicalAge.ts';
+import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
 import { buildChildContextSummaryFa } from '../domain/promptBuilders.ts';
 import type { GatewayResponseMeta } from '../domain/aiGatewayContracts.ts';
 import {
@@ -28,10 +29,11 @@ export const NutritionAdvisorScreen: React.FC = () => {
   const { childProfile, vaccineBirthDateEpochMs, nutritionPlans, saveNutritionPlan, navigate } =
     useMano();
 
-  const inferredAge = initialAgeMonthsFromProfile(childProfile, vaccineBirthDateEpochMs);
-  const [ageMonths, setAgeMonths] = useState<number>(
-    inferredAge ?? (childProfile.ageBand === 'NEWBORN' ? 2 : 12),
+  const ageResolution = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const [ageMonthsText, setAgeMonthsText] = useState(() =>
+    ageResolution.ageMonths === null ? '' : String(ageResolution.ageMonths),
   );
+  const ageMonths = parseClinicalDecimal(ageMonthsText);
   const [weightKg, setWeightKg] = useState(childProfile.weightKgText || '');
   const [allergiesFa, setAllergiesFa] = useState(childProfile.allergiesFa || '');
   const [dietGoalFa, setDietGoalFa] = useState('برنامه غذایی متعادل و متنوع برای رشد سالم');
@@ -48,11 +50,25 @@ export const NutritionAdvisorScreen: React.FC = () => {
     };
   }, []);
 
-  const isUnder6Months = ageMonths < 6;
+  const isProfileAgeBlocked = ageResolution.status === 'conflict' || ageResolution.status === 'invalid';
+  const hasValidAge = ageMonths !== null && ageMonths >= 0 && ageMonths <= 144;
+  const isUnder6Months = hasValidAge && ageMonths < 6;
   const hasRecordedAllergy = !NO_ALLERGY_TOKENS.has(allergiesFa.trim().toLowerCase());
-  const isBlocked = isUnder6Months || hasRecordedAllergy;
+  const isBlocked = isProfileAgeBlocked || !hasValidAge || isUnder6Months || hasRecordedAllergy;
 
-  const activePlan = useMemo(() => nutritionPlans[0] ?? null, [nutritionPlans]);
+  const activePlan = useMemo(
+    () => isBlocked ? null : nutritionPlans.find((plan) => plan.ageMonthsSnapshot === ageMonths) ?? null,
+    [isBlocked, nutritionPlans, ageMonths],
+  );
+
+  const resetRequest = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
+    setErrorMsg(null);
+    setGatewayMeta(null);
+    setPolicyError(null);
+  };
 
   const handleCancel = () => {
     abortRef.current?.abort();
@@ -63,7 +79,7 @@ export const NutritionAdvisorScreen: React.FC = () => {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isBlocked) return;
+    if (isBlocked || ageMonths === null) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -79,13 +95,20 @@ export const NutritionAdvisorScreen: React.FC = () => {
         weightKg: weightKg.trim(),
         allergiesFa: allergiesFa.trim(),
         dietGoalFa: dietGoalFa.trim(),
-        childContextSummaryFa: buildChildContextSummaryFa(childProfile),
+        childContextSummaryFa: buildChildContextSummaryFa({
+          ...childProfile,
+          ageMonthsExact: ageMonths,
+          weightKgText: weightKg.trim(),
+          allergiesFa: allergiesFa.trim(),
+        }),
         signal: controller.signal,
       });
+      if (controller.signal.aborted || abortRef.current !== controller) return;
       saveNutritionPlan(result.plan);
       setGatewayMeta(result.meta);
       setPolicyError(result.policyError ?? null);
     } catch (err) {
+      if (abortRef.current !== controller) return;
       if (isRequestCancelledError(err)) {
         setErrorMsg('درخواست توسط کاربر لغو شد.');
       } else {
@@ -94,8 +117,8 @@ export const NutritionAdvisorScreen: React.FC = () => {
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
+        setLoading(false);
       }
-      setLoading(false);
     }
   };
 
@@ -126,22 +149,34 @@ export const NutritionAdvisorScreen: React.FC = () => {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-xs font-bold">سن کودک (ماه)</label>
+            <label htmlFor="nutrition-age-input" className="block text-xs font-bold">سن کودک (ماه)</label>
             <input
-              type="number"
-              min={0}
-              max={144}
-              value={ageMonths}
-              onChange={(e) => setAgeMonths(Math.max(0, Number(e.target.value) || 0))}
+              id="nutrition-age-input"
+              data-testid="nutrition-age-input"
+              type="text"
+              inputMode="decimal"
+              value={ageMonthsText}
+              readOnly={ageResolution.status === 'known'}
+              onChange={(e) => {
+                resetRequest();
+                setAgeMonthsText(e.target.value);
+              }}
+              placeholder="سن واقعی به ماه"
               className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm tabular-nums dark:border-[#23344D] dark:bg-[#16243B]"
             />
+            {ageResolution.status === 'known' ? (
+              <p className="mt-1 text-xs text-[#546963] dark:text-[#9EB3C4]">سن از پرونده کودک خوانده شده است؛ برای اصلاح آن پرونده را ویرایش کنید.</p>
+            ) : null}
           </div>
           <div>
             <label className="block text-xs font-bold">وزن فعلی (کیلوگرم، اختیاری)</label>
             <input
               type="text"
               value={weightKg}
-              onChange={(e) => setWeightKg(e.target.value)}
+              onChange={(e) => {
+                resetRequest();
+                setWeightKg(e.target.value);
+              }}
               placeholder="مثلاً 9.5"
               className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm tabular-nums dark:border-[#23344D] dark:bg-[#16243B]"
             />
@@ -151,7 +186,10 @@ export const NutritionAdvisorScreen: React.FC = () => {
             <input
               type="text"
               value={allergiesFa}
-              onChange={(e) => setAllergiesFa(e.target.value)}
+              onChange={(e) => {
+                resetRequest();
+                setAllergiesFa(e.target.value);
+              }}
               placeholder="ندارد (یا نام حساسیت)"
               className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
             />
@@ -163,12 +201,29 @@ export const NutritionAdvisorScreen: React.FC = () => {
           <input
             type="text"
             value={dietGoalFa}
-            onChange={(e) => setDietGoalFa(e.target.value)}
+            onChange={(e) => {
+              resetRequest();
+              setDietGoalFa(e.target.value);
+            }}
             className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
           />
         </div>
 
-        {isUnder6Months ? (
+        {isProfileAgeBlocked ? (
+          <SeverityAlert
+            severity="caution"
+            title="سن پرونده نیاز به اصلاح دارد"
+            body={ageResolution.messageFa || 'سن و تاریخ تولد پرونده هماهنگ نیستند. پیش از دریافت راهنمای تغذیه، پرونده را اصلاح کنید.'}
+            testId="nutrition-profile-age-lock"
+          />
+        ) : !hasValidAge ? (
+          <SeverityAlert
+            severity="caution"
+            title="سن واقعی کودک ثبت نشده یا نامعتبر است"
+            body="برای بررسی محدودیت‌های تغذیه، سن واقعی را از ۰ تا ۱۴۴ ماه وارد کنید؛ سن کودک حدس زده نمی‌شود."
+            testId="nutrition-age-required-lock"
+          />
+        ) : isUnder6Months ? (
           <SeverityAlert
             severity="danger"
             title="قفل ایمنی زیر ۶ ماه: تغذیه تکمیلی غیرفعال است"
@@ -186,6 +241,7 @@ export const NutritionAdvisorScreen: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
+              data-testid="nutrition-generate-btn"
               disabled={loading}
               className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#105B48] px-5 text-sm font-bold text-white disabled:opacity-60 dark:bg-[#00D7C7] dark:text-[#0B1220]"
             >
@@ -205,18 +261,22 @@ export const NutritionAdvisorScreen: React.FC = () => {
           </div>
         )}
 
+        <button type="button" onClick={() => navigate({ name: 'my-child' })} className="min-h-[40px] text-xs font-bold text-[#105B48] dark:text-[#00D7C7]">
+          بررسی و اصلاح سن در پرونده کودک
+        </button>
+
         {errorMsg ? <SeverityAlert severity="caution" title="وضعیت راهنمای تغذیه" body={errorMsg} /> : null}
         {gatewayMeta ? <GatewayMetaBanner meta={gatewayMeta} policyError={policyError} /> : null}
       </form>
 
-      {ageMonths < 12 && !isUnder6Months ? (
+      {!isBlocked && ageMonths !== null && ageMonths < 12 ? (
         <div className="flex items-center gap-2 rounded-2xl border border-[#E7B5BC] bg-[#FDF0F1] p-3 text-xs font-bold text-[#B32334] dark:border-[#6A2C3B] dark:bg-[#2F161E] dark:text-[#FF8594]">
           <ShieldAlert className="h-4 w-4 shrink-0" />
           <span>محدودیت زیر ۱۲ ماه: عسل، شیر گاو به عنوان نوشیدنی، نمک افزوده، انگور و آجیل کامل اکیداً ممنوع هستند.</span>
         </div>
       ) : null}
 
-      {activePlan ? (
+      {activePlan && !isBlocked ? (
         <section className="space-y-4">
           <div className="rounded-3xl border border-[#DCE7E1] bg-white p-5 space-y-2 dark:border-[#23344D] dark:bg-[#111C2E]">
             <h2 className="text-base font-extrabold text-[#105B48] dark:text-[#00D7C7]">

@@ -1,79 +1,13 @@
 name: MANO internal preview manual verification
+
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
+
 jobs:
-  web-smoke:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: d7cafd27f15d905ee5f1cf37ce1d68e84ffbbe7a
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Syntax check
-        run: |
-          node --check web/logic.js
-          node --check web/app.js
-          node --check web/staff-demo.js
-          node --check web/modules.js
-          node --check web/review.js
-          node --check web/tools/review-queue.cjs
-      - name: Behavior and asset checks
-        run: node --test web/tests/smoke.test.cjs web/tests/release-gate.test.cjs web/tests/quality-gates.test.cjs web/tests/review.test.cjs
-
-  browser-qa:
-    name: Real Chromium responsive and safety flow
-    # Playwright 1.56 supports Ubuntu 24.04; hosted ubuntu-latest now resolves to 26.04.
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: d7cafd27f15d905ee5f1cf37ce1d68e84ffbbe7a
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install pinned Playwright and Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1 axe-core@4.10.3
-          npx playwright install --with-deps chromium
-      - name: Run browser E2E tests
-        run: node --test web/tests/browser.test.cjs
-      - name: Upload web screenshots and reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mano-kids-chromium-screenshots
-          path: web/browser-artifacts/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  package-preview:
-    name: Build internal review ZIP
-    needs: [web-smoke, browser-qa]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: d7cafd27f15d905ee5f1cf37ce1d68e84ffbbe7a
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Verify and assemble static preview
-        run: node web/tools/build-preview.cjs "$RUNNER_TEMP/mano-preview"
-      - name: Upload ready-to-open internal preview
-        uses: actions/upload-artifact@v4
-        with:
-          name: mano-kids-internal-review-preview
-          path: ${{ runner.temp }}/mano-preview/
-          if-no-files-found: error
-          retention-days: 7
+  validate-selected-ref:
+    # The reusable workflow checks out the ref selected when this workflow runs.
+    # A historical pinned SHA must never stand in for validation of current code.
+    uses: ./.github/workflows/manokid-aistudio-web.yml

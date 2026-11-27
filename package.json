@@ -9,7 +9,11 @@
     "start": "tsx server.ts",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "tsx --test src/domain/clinicalEngines.test.ts server/aiGateway/gatewayService.test.ts"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/domain/*.test.ts src/state/*.test.ts src/api/*.test.ts server/*.test.ts server/aiGateway/*.test.ts",
+    "test:web": "node --test tests/web.test.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:web"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
@@ -28,6 +32,7 @@
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.8",
+    "playwright": "1.56.1",
     "tailwindcss": "^4.3.5",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",

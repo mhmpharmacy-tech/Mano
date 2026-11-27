@@ -213,6 +213,7 @@ export interface TimelineTempPoint {
   id: string;
   tempCelsius: number;
   timestampMs: number;
+  recordedAtMs?: number;
   timeLabelFa: string;
   siteFa: string;
   caregiverFa: string;
@@ -227,6 +228,7 @@ export interface TimelineDosePoint {
   dosageFormFa: string;
   volumeMlText: string;
   timestampMs: number;
+  recordedAtMs?: number;
   givenAtLabelFa: string;
   noteFa: string;
   isSyncedCloud?: boolean;

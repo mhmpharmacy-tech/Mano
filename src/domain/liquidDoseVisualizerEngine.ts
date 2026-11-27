@@ -1,6 +1,7 @@
 import { parseClinicalDecimal } from './clinicalNumberInput.ts';
-import { AGE_BANDS, type AlertSeverity, type ChildProfile } from './models.ts';
-import { normalizePersian } from './persianNormalizer.ts';
+import { type AlertSeverity, type ChildProfile } from './models.ts';
+import { resolveClinicalAge } from './clinicalAge.ts';
+export { parseAgeMonthsFromText } from './clinicalAge.ts';
 
 export type LiquidFormulationKey =
   | 'ACETAMINOPHEN_DROPS_100'
@@ -141,7 +142,7 @@ export const MAX_AGE_MONTHS = 144;
 
 export function formatAgeFa(ageMonths: number | null | undefined): string {
   if (ageMonths === null || ageMonths === undefined || ageMonths < 0) return 'سن ثبت نشده';
-  const m = Math.min(MAX_AGE_MONTHS, Math.max(MIN_AGE_MONTHS, Math.round(ageMonths)));
+  const m = Math.min(MAX_AGE_MONTHS, Math.max(MIN_AGE_MONTHS, ageMonths));
   if (m === 0) return 'نوزاد تازه متولدشده';
   if (m < 12) return `${m} ماه`;
   if (m % 12 === 0) return `${m / 12} سال`;
@@ -298,43 +299,12 @@ export function evaluateLiquidDose(
   };
 }
 
-export function parseAgeMonthsFromText(raw: string): number | null {
-  const clean = normalizePersian(raw);
-  if (!clean) return null;
-  if (AGE_BANDS.some((b) => normalizePersian(b.labelFa) === clean)) return null;
-  if (/\d+\s*(?:تا|الی|-|–|to)\s*\d+/i.test(clean)) return null;
-  const match = clean.match(/^(?:(\d{1,2})\s*سال)?(?:\s*(?:و\s*)?(\d{1,3})\s*ماه)?$/);
-  if (!match || (!match[1] && !match[2])) return null;
-  const years = match[1] ? Number.parseInt(match[1], 10) : 0;
-  const months = match[2] ? Number.parseInt(match[2], 10) : 0;
-  const total = 12 * years + months;
-  return total >= MIN_AGE_MONTHS && total <= MAX_AGE_MONTHS ? total : null;
-}
-
 export function initialAgeMonthsFromProfile(
   profile: ChildProfile | null | undefined,
   birthDateEpochMs?: number | null,
   nowMs = Date.now(),
 ): number | null {
-  const effectiveBirthMs = birthDateEpochMs ?? profile?.birthDateEpochMs ?? null;
-  if (effectiveBirthMs && effectiveBirthMs > 0 && effectiveBirthMs <= nowMs) {
-    const birth = new Date(effectiveBirthMs);
-    const now = new Date(nowMs);
-    let months =
-      (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 +
-      (now.getUTCMonth() - birth.getUTCMonth());
-    if (now.getUTCDate() < birth.getUTCDate()) {
-      months -= 1;
-    }
-    if (months >= MIN_AGE_MONTHS && months <= MAX_AGE_MONTHS) {
-      return months;
-    }
-  }
-  const explicit = profile?.ageMonthsExact ?? parseAgeMonthsFromText(profile?.birthDateOrAgeFa ?? '');
-  if (explicit !== null && explicit !== undefined && explicit >= MIN_AGE_MONTHS && explicit <= MAX_AGE_MONTHS) {
-    return explicit;
-  }
-  return null;
+  return resolveClinicalAge(profile, birthDateEpochMs, nowMs).ageMonths;
 }
 
 export function initialWeightKgFromProfile(profile: ChildProfile | null | undefined): number | null {

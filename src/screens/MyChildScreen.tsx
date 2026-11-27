@@ -11,7 +11,8 @@ import {
   Trash2,
   Utensils,
 } from 'lucide-react';
-import { AGE_BANDS, type AgeBandId } from '../domain/models.ts';
+import { AGE_BANDS } from '../domain/models.ts';
+import { ageBandFromMonths, resolveClinicalAge } from '../domain/clinicalAge.ts';
 import { getArticleBySlug, getMedicationBySlug } from '../data/contentRepository.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
 import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
@@ -21,6 +22,7 @@ import { SeverityAlert } from '../components/SeverityAlert.tsx';
 export const MyChildScreen: React.FC = () => {
   const {
     childProfile,
+    vaccineBirthDateEpochMs,
     updateChildProfile,
     savedVisitDrafts,
     deleteVisitDraft,
@@ -33,7 +35,6 @@ export const MyChildScreen: React.FC = () => {
   } = useMano();
 
   const [aliasFa, setAliasFa] = useState(childProfile.aliasFa);
-  const [ageBand, setAgeBand] = useState<AgeBandId>(childProfile.ageBand);
   const [ageMonthsStr, setAgeMonthsStr] = useState(
     childProfile.ageMonthsExact !== null && childProfile.ageMonthsExact !== undefined
       ? String(childProfile.ageMonthsExact)
@@ -43,21 +44,43 @@ export const MyChildScreen: React.FC = () => {
   const [weightKgText, setWeightKgText] = useState(childProfile.weightKgText);
   const [allergiesFa, setAllergiesFa] = useState(childProfile.allergiesFa);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [clearBirthDate, setClearBirthDate] = useState(false);
+  const [ageError, setAgeError] = useState<string | null>(null);
+  const currentAge = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const hasBirthDate = childProfile.birthDateEpochMs != null || vaccineBirthDateEpochMs != null;
+  const parsedAge = parseClinicalDecimal(ageMonthsStr);
+  const draftAge = resolveClinicalAge({
+    ...childProfile,
+    ageMonthsExact: parsedAge,
+    birthDateOrAgeFa: '',
+    birthDateEpochMs: clearBirthDate ? null : childProfile.birthDateEpochMs,
+  }, clearBirthDate ? null : vaccineBirthDateEpochMs);
+  const derivedBand = ageBandFromMonths(draftAge.ageMonths);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     const parsedMonths = parseClinicalDecimal(ageMonthsStr);
+    if (ageMonthsStr.trim() && (parsedMonths === null || parsedMonths < 0 || parsedMonths > 144)) {
+      setAgeError('سن را به صورت عدد واقعی از ۰ تا ۱۴۴ ماه وارد کنید؛ اعشار سن به بالا گرد نمی‌شود.');
+      return;
+    }
+    if (draftAge.status === 'conflict' || draftAge.status === 'invalid') {
+      setAgeError(draftAge.messageFa);
+      return;
+    }
+    setAgeError(null);
     updateChildProfile({
       aliasFa: aliasFa.trim() || 'کودک من',
-      ageBand,
-      ageMonthsExact:
-        parsedMonths !== null && parsedMonths >= 0 && parsedMonths <= 216
-          ? Math.round(parsedMonths)
-          : null,
+      ageBand: derivedBand ?? childProfile.ageBand,
+      ageMonthsExact: draftAge.source === 'birth-date' ? null : parsedMonths,
+      birthDateOrAgeFa: '',
+      birthDateEpochMs: clearBirthDate ? null : childProfile.birthDateEpochMs ?? vaccineBirthDateEpochMs,
       sex: sex === 'unset' ? null : sex,
       weightKgText: weightKgText.trim(),
       allergiesFa: allergiesFa.trim(),
     });
+    if (draftAge.source === 'birth-date') setAgeMonthsStr('');
+    setClearBirthDate(false);
   };
 
   return (
@@ -84,9 +107,12 @@ export const MyChildScreen: React.FC = () => {
       {/* Privacy Notice */}
       <SeverityAlert
         severity="info"
-        title="حریم خصوصی محلی: داده‌ها فقط در مرورگر همین دستگاه نگهداری می‌شوند"
-        body="مانو کید هیچ نام کامل، کد ملی یا پرونده‌ای را به سرور ارسال یا همگام‌سازی ابری نمی‌کند. تمام سوابق رشد، تب و یادداشت‌ها در حافظه مرورگر همین دستگاه قرار دارند."
+        title="سوابق و پیش‌نویس‌ها در مرورگر همین دستگاه ذخیره می‌شوند"
+        body="ذخیره سوابق به صورت محلی است. قابلیت‌های هوش مصنوعی در نسخه فعلی مرورگر در دسترس نیستند؛ در صورت فعال‌سازی اختیاری آن‌ها، اطلاعات انتخاب‌شده فقط پس از رضایت شما برای پردازش ارسال می‌شود."
       />
+      {(currentAge.status === 'conflict' || currentAge.status === 'invalid') && !clearBirthDate ? (
+        <SeverityAlert severity="caution" title="سن پرونده نیاز به اصلاح دارد" body={currentAge.messageFa ?? ''} testId="age-profile-conflict" />
+      ) : null}
 
       {/* Profile Editor */}
       <form
@@ -117,14 +143,15 @@ export const MyChildScreen: React.FC = () => {
 
           <div>
             <label htmlFor="child-age-band" className="block text-xs font-bold">
-              رده سنی
+              رده سنی بر پایه سن واقعی
             </label>
             <select
               id="child-age-band"
-              value={ageBand}
-              onChange={(e) => setAgeBand(e.target.value as AgeBandId)}
+              value={derivedBand ?? ''}
+              disabled
               className="mt-1 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
             >
+              <option value="">سن ثبت نشده یا نیازمند اصلاح است</option>
               {AGE_BANDS.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.labelFa}
@@ -140,9 +167,12 @@ export const MyChildScreen: React.FC = () => {
             <input
               id="child-age-months"
               type="text"
-              inputMode="numeric"
+              inputMode="decimal"
               value={ageMonthsStr}
-              onChange={(e) => setAgeMonthsStr(e.target.value)}
+              onChange={(e) => {
+                setAgeMonthsStr(e.target.value);
+                setAgeError(null);
+              }}
               placeholder="مثلاً ۱۸"
               className="mt-1 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
             />
@@ -193,6 +223,17 @@ export const MyChildScreen: React.FC = () => {
             />
           </div>
         </div>
+
+        {hasBirthDate ? (
+          <div className="space-y-2 rounded-2xl border border-[#DCE7E1] p-3 text-xs leading-6 dark:border-[#23344D]">
+            <p>تاریخ تولد در پرونده واکسیناسیون ثبت شده است. با نگه‌داشتن آن، سن از تاریخ تولد محاسبه می‌شود و سن عددی جداگانه ذخیره نمی‌شود.</p>
+            <label className="flex items-start gap-2">
+              <input type="checkbox" data-testid="child-clear-birthdate" checked={clearBirthDate} onChange={(e) => { setClearBirthDate(e.target.checked); setAgeError(null); }} className="mt-1 h-5 w-5 accent-[#105B48]" />
+              <span>حذف تاریخ تولد ثبت‌شده و استفاده از سن عددی را تأیید می‌کنم؛ زمان‌بندی واکسن تا ثبت دوباره تاریخ تولد غیرفعال می‌شود.</span>
+            </label>
+          </div>
+        ) : null}
+        {ageError ? <SeverityAlert severity="caution" title="سن ذخیره نشد" body={ageError} testId="child-age-error" /> : null}
 
         <button
           type="submit"

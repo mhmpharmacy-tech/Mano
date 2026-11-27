@@ -2,6 +2,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { AiGatewayService, type GatewayHttpResult } from './server/aiGateway/gatewayService.ts';
+import {
+  isGatewayAccessConfigured,
+  requireGatewayAccess,
+  resolveGatewayAccessPolicy,
+  type GatewayAccessPolicy,
+} from './server/accessPolicy.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,13 +52,19 @@ function sendGatewayResult<T>(res: Response, result: GatewayHttpResult<T>) {
 export interface CreateAppOptions {
   gateway?: AiGatewayService;
   serveStatic?: boolean;
+  accessPolicy?: GatewayAccessPolicy;
 }
 
 export async function createApp(options?: CreateAppOptions) {
   const gateway = options?.gateway ?? new AiGatewayService();
   const serveStatic = options?.serveStatic ?? true;
+  const accessPolicy = options?.accessPolicy ?? resolveGatewayAccessPolicy();
 
   const app = express();
+  // Guard the route families before parsing bodies, including future AI routes.
+  // The deployment token must only be held by trusted server callers.
+  app.use('/api/gemini', requireGatewayAccess(accessPolicy, { requireClinicalRelease: true }));
+  app.use('/api/ai-gateway/audit', requireGatewayAccess(accessPolicy, { requireClinicalRelease: false }));
   app.use(express.json({ limit: '10mb' }));
 
   app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
@@ -77,7 +89,16 @@ export async function createApp(options?: CreateAppOptions) {
   });
 
   app.get('/api/health', (_req: Request, res: Response) => {
-    res.json(gateway.getHealthStatus());
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      ok: true,
+      clinicalServiceEnabled: accessPolicy.clinicalServiceEnabled,
+      aiServiceAvailable:
+        accessPolicy.clinicalServiceEnabled &&
+        isGatewayAccessConfigured(accessPolicy) &&
+        gateway.getHealthStatus().hasGeminiKey,
+      offlineEnginesIndependent: true,
+    });
   });
 
   app.get('/api/ai-gateway/audit', (req: Request, res: Response) => {
@@ -104,7 +125,7 @@ export async function createApp(options?: CreateAppOptions) {
 
       if (wantsStream && result.httpStatus === 200) {
         res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Cache-Control', 'no-store, no-transform');
         res.setHeader('Connection', 'keep-alive');
 
         const formattedText = result.body.data.formattedDraftFa;

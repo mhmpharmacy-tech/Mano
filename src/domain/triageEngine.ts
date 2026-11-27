@@ -1,4 +1,6 @@
 import type { AgeBandId, SymptomFlow, TriageEvaluationResult } from './models.ts';
+import { ageBandFromMonths } from './clinicalAge.ts';
+export { ageBandFromMonths } from './clinicalAge.ts';
 
 export function isExtremeTemperature(celsius: number | null | undefined): boolean {
   return (
@@ -13,7 +15,7 @@ export function isExtremeTemperature(celsius: number | null | undefined): boolea
 
 export interface EvaluateTriageInput {
   flow: SymptomFlow;
-  ageBand: AgeBandId;
+  ageBand: AgeBandId | null;
   temperatureCelsius: number | null;
   durationHours: number | null;
   selectedRedFlagIds: Set<string>;
@@ -28,6 +30,9 @@ export function evaluateTriage({
   selectedRedFlagIds,
   ageMonthsExact = null,
 }: EvaluateTriageInput): TriageEvaluationResult {
+  // A measured/dated age takes precedence over a saved or selected broad band.
+  const exactAgeBand = ageBandFromMonths(ageMonthsExact);
+  const effectiveAgeBand = ageMonthsExact === null ? ageBand : exactAgeBand;
   const checkedImmediateFlags = flow.redFlags.filter(
     (rf) => selectedRedFlagIds.has(rf.id) && rf.isImmediateEmergency,
   );
@@ -57,7 +62,7 @@ export function evaluateTriage({
 
   // Rule 2: Fever >= 38.0 °C (or fever flow without confirmed low temp) in infant < 3 months
   if (
-    ageBand === 'NEWBORN' &&
+    effectiveAgeBand === 'NEWBORN' &&
     ((temperatureCelsius !== null && temperatureCelsius >= 38.0) ||
       (flow.id === 'fever' && temperatureCelsius === null))
   ) {
@@ -113,13 +118,9 @@ export function evaluateTriage({
     (!Number.isFinite(temperatureCelsius) || temperatureCelsius < 34.0 || temperatureCelsius > 43.0);
   const invalidDuration =
     durationHours !== null && (!Number.isFinite(durationHours) || durationHours < 0 || durationHours > 8760);
-  const invalidInfantAge =
-    ageMonthsExact !== null &&
-    ageMonthsExact !== undefined &&
-    ageBand === 'INFANT_3_12M' &&
-    (ageMonthsExact < 3 || ageMonthsExact > 11);
+  const invalidExactAge = ageMonthsExact !== null && exactAgeBand === null;
 
-  if (invalidTemp || invalidDuration || hasUnknownFlag || invalidInfantAge) {
+  if (invalidTemp || invalidDuration || hasUnknownFlag || invalidExactAge) {
     return {
       outcome: 'NEEDS_TIMELY_REVIEW',
       titleFa: 'اطلاعات نیاز به اصلاح دارد',
@@ -141,6 +142,32 @@ export function evaluateTriage({
     };
   }
 
+  if (
+    effectiveAgeBand === null ||
+    durationHours === null ||
+    ((flow.asksTemperature || flow.id === 'fever') && temperatureCelsius === null)
+  ) {
+    return {
+      outcome: 'NEEDS_TIMELY_REVIEW',
+      titleFa: 'اطلاعات برای ارزیابی کامل نیست',
+      summaryFa:
+        'بازه سنی واقعی کودک، مدت علامت و دمای اندازه‌گیری‌شده در صورت درخواست را وارد کنید. تا تکمیل اطلاعات، توصیه مراقبت خانگی یا نتیجه اطمینان‌بخش ارائه نمی‌شود.',
+      immediateActionsFa: [
+        'اگر کودک تنفس سخت، تشنج یا کاهش هوشیاری دارد، منتظر تکمیل فرم نمانید و فوراً کمک پزشکی بگیرید.',
+      ],
+      escalationCriteriaFa: flow.escalationCriteriaFa,
+      relatedArticleSlug: flow.relatedArticleSlug,
+      canShowSelfCare: false,
+      triggeredRule: {
+        id: 'rule_incomplete_input',
+        descriptionFa: 'سن یا اطلاعات ضروری علامت ثبت نشده است؛ بدون توصیه مراقبت خانگی',
+        outcome: 'NEEDS_TIMELY_REVIEW',
+        reviewStatus: 'NEEDS_CLINICAL_REVIEW',
+      },
+      showPharmacistOption: false,
+    };
+  }
+
   // Rule 3: Timely clinician review flags
   const checkedReviewFlags = flow.redFlags.filter(
     (rf) => selectedRedFlagIds.has(rf.id) && !rf.isImmediateEmergency,
@@ -148,14 +175,14 @@ export function evaluateTriage({
   const prolongedFever = flow.id === 'fever' && (durationHours ?? 0) >= 72;
   const prolongedCough = (flow.id === 'cough' || flow.id === 'wet_cough') && (durationHours ?? 0) >= 24 * 14;
   const youngInfantHighTemp =
-    ageBand === 'INFANT_3_12M' &&
+    effectiveAgeBand === 'INFANT_3_12M' &&
     (ageMonthsExact === null || ageMonthsExact === undefined || ageMonthsExact <= 6) &&
     (temperatureCelsius ?? 0) >= 39.0;
 
   const prolongedNasal = flow.id === 'runny_nose' && (durationHours ?? 0) >= 240;
   const youngInfant =
-    ageBand === 'NEWBORN' && (flow.id === 'eye' || flow.id === 'wet_cough' || flow.id === 'runny_nose');
-  const infantEar = flow.id === 'ear' && (ageBand === 'NEWBORN' || ageBand === 'INFANT_3_12M');
+    effectiveAgeBand === 'NEWBORN' && (flow.id === 'eye' || flow.id === 'wet_cough' || flow.id === 'runny_nose');
+  const infantEar = flow.id === 'ear' && (effectiveAgeBand === 'NEWBORN' || effectiveAgeBand === 'INFANT_3_12M');
   const persistentEar = flow.id === 'ear' && (durationHours ?? 0) >= 72;
   const earWarning = flow.id === 'ear' && checkedReviewFlags.length > 0;
   const sameDay =

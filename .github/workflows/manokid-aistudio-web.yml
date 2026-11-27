@@ -1,39 +1,51 @@
-name: MANO Kid AI Studio Care Home web
+name: MANO web validation
+
 on:
   push:
     branches: [main]
     paths:
       - "index.html"
-      - "package.json"
-      - "package-lock.json"
-      - "server.mjs"
+      - "preview/**"
+      - "public/**"
+      - "package*.json"
+      - "server.ts"
+      - "server/**"
       - "src/**"
-      - "tests/web.test.mjs"
-      - "tests/browser.mjs"
-      - "web-tools/build-web.mjs"
-      - ".github/workflows/manokid-aistudio-web.yml"
+      - "tests/**"
+      - "tsconfig.json"
+      - "vite.config.ts"
+      - "eslint.config.js"
+      - ".env.example"
+      - ".github/workflows/**"
   pull_request:
     paths:
       - "index.html"
-      - "package.json"
-      - "package-lock.json"
-      - "server.mjs"
+      - "preview/**"
+      - "public/**"
+      - "package*.json"
+      - "server.ts"
+      - "server/**"
       - "src/**"
-      - "tests/web.test.mjs"
-      - "tests/browser.mjs"
-      - "web-tools/build-web.mjs"
-      - ".github/workflows/manokid-aistudio-web.yml"
+      - "tests/**"
+      - "tsconfig.json"
+      - "vite.config.ts"
+      - "eslint.config.js"
+      - ".env.example"
+      - ".github/workflows/**"
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
   static-and-security:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -41,11 +53,14 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
-      - name: Upload static preview for internal review
+        env:
+          MANO_GATEWAY_ACCESS_TOKEN: ci-server-only-token-must-never-reach-browser-8d85a1d0
+      - name: Upload internal review build
         uses: actions/upload-artifact@v4
         with:
-          name: mano-kid-aistudio-static-preview
+          name: mano-web-internal-review
           path: dist/
+          if-no-files-found: error
           retention-days: 7
 
   chromium-ui:
@@ -54,20 +69,25 @@ jobs:
     needs: static-and-security
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
       - run: npm ci
-      - name: Install pinned Playwright for browser-only QA
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
-      - run: node tests/browser.mjs
-      - name: Upload mobile browser screenshots
+      - name: Install locked Chromium browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run build
+        env:
+          MANO_GATEWAY_ACCESS_TOKEN: ci-server-only-token-must-never-reach-browser-8d85a1d0
+      - name: Exercise the production server and browser safety flows
+        run: node tests/browser.mjs
+      - name: Upload mobile browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mano-kid-aistudio-mobile-screenshots
+          name: mano-web-mobile-screenshots
           path: web-artifacts/
           if-no-files-found: ignore
           retention-days: 7

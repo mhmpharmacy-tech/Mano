@@ -20,7 +20,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import { useMano } from '../state/ManoStore.tsx';
-import { AGE_BANDS } from '../domain/models.ts';
+import { initialAgeMonthsFromProfile } from '../domain/liquidDoseVisualizerEngine.ts';
 import { getTreatmentSlotCounts, resolvePlanChildSummary } from '../domain/treatmentPlan.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
 import { FeverDoseTimelineCard } from '../components/FeverDoseTimelineCard.tsx';
@@ -35,6 +35,7 @@ export const HomeScreen: React.FC = () => {
     homeViewStyle,
     setHomeViewStyle,
     childProfile,
+    vaccineBirthDateEpochMs,
     treatmentPlan,
     vaccineSummary,
     setSearchOpen,
@@ -43,7 +44,8 @@ export const HomeScreen: React.FC = () => {
   const [comfortSheetOpen, setComfortSheetOpen] = useState(false);
 
   const slotCounts = getTreatmentSlotCounts(treatmentPlan);
-  const ageBandLabel = AGE_BANDS.find((b) => b.id === childProfile.ageBand)?.labelFa ?? '';
+  const knownAgeMonths = initialAgeMonthsFromProfile(childProfile, vaccineBirthDateEpochMs);
+  const ageLabel = knownAgeMonths === null ? 'سن کودک ثبت نشده است' : `${toPersianDigits(knownAgeMonths)} ماه`;
 
   const orbitalOrGridTools = [
     {
@@ -197,8 +199,8 @@ export const HomeScreen: React.FC = () => {
               <div className="truncate text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">
                 {childProfile.aliasFa}
               </div>
-              <div className="text-xs text-[#546963] dark:text-[#9EB3C4]">
-                {ageBandLabel}
+              <div data-testid="home-child-age" className="text-xs text-[#546963] dark:text-[#9EB3C4]">
+                {ageLabel}
                 {childProfile.weightKgText ? ` · ${toPersianDigits(childProfile.weightKgText)} کیلوگرم` : ''}
               </div>
             </div>
@@ -311,7 +313,7 @@ export const HomeScreen: React.FC = () => {
 
             <div className="rounded-2xl bg-[#F5F9F6] p-3 text-xs space-y-1 dark:bg-[#16243B]">
               <div className="font-bold text-[#105B48] dark:text-[#00D7C7]">وضعیت واکسیناسیون</div>
-              <div className="text-[#122823] dark:text-[#EDF4F7]">
+              <div data-testid="home-vaccine-next-summary" className="text-[#122823] dark:text-[#EDF4F7]">
                 {vaccineSummary.nextUpcoming
                   ? `موعد بعدی: ${vaccineSummary.nextUpcoming.definition.titleFa}`
                   : 'تاریخ تولد کودک را برای زمان‌بندی واکسن‌ها ثبت کنید'}
@@ -342,7 +344,7 @@ export const HomeScreen: React.FC = () => {
               className="flex min-h-[48px] items-center gap-2 rounded-2xl border border-[#DCE7E1] bg-[#FAF7F0]/50 px-3 py-2.5 text-right text-xs font-bold text-[#122823] hover:border-[#105B48] hover:bg-[#E9F5EB]/60 dark:border-[#23344D] dark:bg-[#16243B] dark:text-[#EDF4F7] dark:hover:border-[#00D7C7]"
             >
               <sec.Icon className="h-4 w-4 shrink-0 text-[#105B48] dark:text-[#00D7C7]" />
-              <span className="truncate">{sec.label}</span>
+              <span className="min-w-0 whitespace-normal leading-5">{sec.label}</span>
             </button>
           ))}
         </div>

@@ -12,7 +12,8 @@ import {
 import { SYMPTOM_FLOWS } from '../data/contentRepository.ts';
 import { AGE_BANDS, type AgeBandId, type SafetyChecklistReport } from '../domain/models.ts';
 import type { GatewayResponseMeta } from '../domain/aiGatewayContracts.ts';
-import { evaluateTriage } from '../domain/triageEngine.ts';
+import { ageBandFromMonths, evaluateTriage } from '../domain/triageEngine.ts';
+import { resolveClinicalAge } from '../domain/clinicalAge.ts';
 import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
 import { buildChildContextSummaryFa } from '../domain/promptBuilders.ts';
 import {
@@ -27,11 +28,14 @@ import { VisitDraftStudioPanel } from '../components/VisitDraftStudioPanel.tsx';
 import { GatewayMetaBanner } from '../components/GatewayMetaBanner.tsx';
 
 export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ initialFlowId }) => {
-  const { childProfile, navigate } = useMano();
+  const { childProfile, vaccineBirthDateEpochMs, navigate } = useMano();
+  const profileAge = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const profileAgeMonths = profileAge.ageMonths;
+  const profileAgeBlocked = profileAge.status === 'conflict' || profileAge.status === 'invalid';
   const [selectedFlowId, setSelectedFlowId] = useState<string>(initialFlowId || SYMPTOM_FLOWS[0].id);
-  const [ageBand, setAgeBand] = useState<AgeBandId>(childProfile.ageBand);
-  const [tempText, setTempText] = useState('37.8');
-  const [durationHoursText, setDurationHoursText] = useState('12');
+  const [ageBand, setAgeBand] = useState<AgeBandId | null>(() => ageBandFromMonths(profileAgeMonths));
+  const [tempText, setTempText] = useState('');
+  const [durationHoursText, setDurationHoursText] = useState('');
   const [checkedFlags, setCheckedFlags] = useState<Set<string>>(new Set());
 
   const [aiChecklist, setAiChecklist] = useState<SafetyChecklistReport | null>(null);
@@ -67,16 +71,33 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
     () =>
       evaluateTriage({
         flow,
-        ageBand,
+        ageBand: profileAgeBlocked ? null : ageBand,
         temperatureCelsius: parsedTemp,
         durationHours: parsedDuration,
         selectedRedFlagIds: checkedFlags,
-        ageMonthsExact: childProfile.ageMonthsExact,
+        ageMonthsExact: profileAgeMonths,
       }),
-    [flow, ageBand, parsedTemp, parsedDuration, checkedFlags, childProfile.ageMonthsExact],
+    [flow, ageBand, parsedTemp, parsedDuration, checkedFlags, profileAgeMonths, profileAgeBlocked],
   );
 
+  const canUseAi =
+    !profileAgeBlocked && ageBand !== null &&
+    evaluation.outcome !== 'URGENT_EMERGENCY' &&
+    evaluation.triggeredRule.id !== 'rule_incomplete_input' &&
+    evaluation.triggeredRule.id !== 'rule_invalid_input';
+
+  const resetChecklist = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setAiChecklist(null);
+    setGatewayMeta(null);
+    setPolicyError(null);
+    setAiError(null);
+    setAiLoading(false);
+  };
+
   const toggleFlag = (id: string) => {
+    resetChecklist();
     setCheckedFlags((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -93,6 +114,7 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
   };
 
   const handleRequestChecklist = async () => {
+    if (!canUseAi || ageBand === null) return;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -111,13 +133,20 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
         urgencyLevel: evaluation.outcome,
         evaluationSummaryFa: evaluation.summaryFa,
         selectedSymptomsFa: selectedLabels,
-        childContextSummaryFa: buildChildContextSummaryFa(childProfile),
+        childContextSummaryFa: buildChildContextSummaryFa({
+          ...childProfile,
+          ageBand,
+          ageMonthsExact: profileAgeMonths,
+          birthDateOrAgeFa: profileAgeMonths === null ? '' : childProfile.birthDateOrAgeFa,
+        }),
         signal: controller.signal,
       });
+      if (abortRef.current !== controller) return;
       setAiChecklist(result.data);
       setGatewayMeta(result.meta);
       setPolicyError(result.policyError ?? null);
     } catch (err) {
+      if (abortRef.current !== controller) return;
       if (isRequestCancelledError(err)) {
         setAiError('درخواست توسط کاربر لغو شد.');
       } else {
@@ -130,8 +159,8 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
+        setAiLoading(false);
       }
-      setAiLoading(false);
     }
   };
 
@@ -159,6 +188,11 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
       </div>
 
       {/* Step 1: Choose Symptom Flow */}
+      {profileAgeBlocked ? (
+        <SeverityAlert severity="caution" title="سن پرونده نیاز به اصلاح دارد" body={profileAge.messageFa ?? ''} testId="age-profile-conflict">
+          <button type="button" onClick={() => navigate({ name: 'my-child' })} className="min-h-[40px] font-bold underline">اصلاح سن در پرونده کودک</button>
+        </SeverityAlert>
+      ) : null}
       <section className="rounded-3xl border border-[#DCE7E1] bg-white p-5 dark:border-[#23344D] dark:bg-[#111C2E]">
         <h2 className="mb-3 text-sm font-extrabold text-[#105B48] dark:text-[#00D7C7]">
           ۱. علامت اصلی کودک را انتخاب کنید
@@ -172,13 +206,9 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                 type="button"
                 data-testid={`symptom-flow-btn-${f.id}`}
                 onClick={() => {
-                  abortRef.current?.abort();
+                  resetChecklist();
                   setSelectedFlowId(f.id);
                   setCheckedFlags(new Set());
-                  setAiChecklist(null);
-                  setGatewayMeta(null);
-                  setPolicyError(null);
-                  setAiError(null);
                 }}
                 className={`flex items-start gap-3 rounded-2xl border p-3.5 text-right transition-colors ${
                   active
@@ -214,7 +244,12 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                   key={b.id}
                   type="button"
                   data-testid={`triage-age-${b.id}`}
-                  onClick={() => setAgeBand(b.id)}
+                  aria-pressed={ageBand === b.id}
+                  disabled={profileAgeMonths !== null || profileAgeBlocked}
+                  onClick={() => {
+                    resetChecklist();
+                    setAgeBand(b.id);
+                  }}
                   className={`min-h-[40px] rounded-xl border px-3 text-xs font-bold ${
                     ageBand === b.id
                       ? 'border-[#105B48] bg-[#E9F5EB] text-[#105B48] dark:border-[#00D7C7] dark:bg-[#0F333A] dark:text-[#00D7C7]'
@@ -225,6 +260,18 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                 </button>
               ))}
             </div>
+            <p data-testid="triage-age-status" className="mt-2 text-xs text-[#546963] dark:text-[#9EB3C4]">
+              {profileAgeMonths !== null
+                ? `سن واقعی ثبت‌شده در پرونده (${profileAgeMonths} ماه) برای ارزیابی استفاده می‌شود.`
+                : ageBand === null
+                  ? 'سن کودک ثبت نشده است؛ بازه سنی واقعی را انتخاب کنید.'
+                  : 'بازه سنی انتخاب‌شده برای این ارزیابی استفاده می‌شود.'}
+            </p>
+            {profileAgeMonths !== null ? (
+              <button type="button" onClick={() => navigate({ name: 'my-child' })} className="mt-2 min-h-[40px] text-xs font-bold text-[#105B48] dark:text-[#00D7C7]">
+                اصلاح سن در پرونده کودک
+              </button>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -239,7 +286,10 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                   type="text"
                   inputMode="decimal"
                   value={tempText}
-                  onChange={(e) => setTempText(e.target.value)}
+                  onChange={(e) => {
+                    resetChecklist();
+                    setTempText(e.target.value);
+                  }}
                   placeholder="مثلاً 38.3"
                   className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm tabular-nums dark:border-[#23344D] dark:bg-[#16243B]"
                 />
@@ -252,10 +302,14 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
               </label>
               <input
                 id="triage-duration-input"
+                data-testid="triage-duration-input"
                 type="text"
                 inputMode="numeric"
                 value={durationHoursText}
-                onChange={(e) => setDurationHoursText(e.target.value)}
+                onChange={(e) => {
+                  resetChecklist();
+                  setDurationHoursText(e.target.value);
+                }}
                 placeholder="مثلاً 12"
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm tabular-nums dark:border-[#23344D] dark:bg-[#16243B]"
               />
@@ -374,7 +428,7 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
             ) : null}
 
             {/* AI Safety Checklist Add-on (disabled during immediate emergency bypass) */}
-            {evaluation.outcome !== 'URGENT_EMERGENCY' ? (
+            {canUseAi ? (
               <section className="rounded-3xl border border-[#DCE7E1] bg-white p-5 space-y-3 dark:border-[#23344D] dark:bg-[#111C2E]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -388,6 +442,7 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
+                      data-testid="triage-ai-checklist-btn"
                       disabled={aiLoading}
                       onClick={handleRequestChecklist}
                       className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white disabled:opacity-60 dark:bg-[#00D7C7] dark:text-[#0B1220]"
@@ -441,10 +496,13 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
               </section>
             ) : null}
 
-            <VisitDraftStudioPanel
-              defaultComplaintFa={flow.titleFa}
-              selectedSymptomsFa={selectedFlagLabels}
-            />
+            {canUseAi && profileAgeMonths !== null ? (
+              <VisitDraftStudioPanel
+                key={`${flow.id}:${ageBand}:${tempText}:${durationHoursText}:${selectedFlagLabels.join('|')}`}
+                defaultComplaintFa={flow.titleFa}
+                selectedSymptomsFa={selectedFlagLabels}
+              />
+            ) : null}
           </div>
 
           <SourceBadge sourceIds={flow.sourceIds} reviewStatus={flow.reviewStatus} />

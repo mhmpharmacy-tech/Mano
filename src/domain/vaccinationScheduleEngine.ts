@@ -275,7 +275,10 @@ export function resolveVaccineSchedule(
 
   const nextUpcoming =
     items
-      .filter((i) => i.status === 'DUE_SOON' || i.status === 'UPCOMING' || i.status === 'OVERDUE')
+      .filter((i) =>
+        i.effectiveDueDateEpochMs !== null &&
+        (i.status === 'DUE_SOON' || i.status === 'UPCOMING' || i.status === 'OVERDUE'),
+      )
       .sort((a, b) => {
         const da = a.effectiveDueDateEpochMs ?? Number.MAX_SAFE_INTEGER;
         const db = b.effectiveDueDateEpochMs ?? Number.MAX_SAFE_INTEGER;

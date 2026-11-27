@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CareCardEntry,
   ChildProfile,
@@ -14,7 +14,6 @@ import type {
   VaccineReminderSettings,
 } from '../domain/models.ts';
 import {
-  HIGH_FEVER_ALERT_THRESHOLD_C,
   buildTimelineSnapshot,
   formatTempC,
   type FeverDoseTimelineSnapshot,
@@ -28,7 +27,11 @@ import {
   type TreatmentMedicationItem,
 } from '../domain/treatmentPlan.ts';
 import { resolveVaccineSchedule } from '../domain/vaccinationScheduleEngine.ts';
-import { toPersianDigits } from '../domain/persianNormalizer.ts';
+import { ageBandFromMonths, resolveClinicalAge, shouldShowFeverAlert } from '../domain/clinicalAge.ts';
+import {
+  clearLocalSnapshot, currentStorageEpoch, LEGACY_EPOCH, persistLocalSnapshot,
+  readLocalSnapshot, STORAGE_EPOCH_KEY, STORAGE_KEY, STORAGE_LOCK_NAME, type StorageLock,
+} from './localPersistence.ts';
 
 export type AppRoute =
   | { name: 'home' }
@@ -59,9 +62,8 @@ export interface ToastMessage {
   tone: 'info' | 'success' | 'danger';
 }
 
-const STORAGE_KEY = 'mano_kid_v2_store';
-
 interface PersistedState {
+  storageEpoch: string;
   theme: 'light' | 'dark';
   homeViewStyle: HomeViewStyle;
   onboardingSeen: boolean;
@@ -99,11 +101,12 @@ function defaultChildProfile(): ChildProfile {
   };
 }
 
-function createInitialPersistedState(): PersistedState {
+function createInitialPersistedState(storageEpoch = LEGACY_EPOCH): PersistedState {
   const autostart =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('autostart') === '1';
 
   return {
+    storageEpoch,
     theme: 'light',
     homeViewStyle: 'calm',
     onboardingSeen: autostart,
@@ -131,18 +134,19 @@ function loadPersistedState(): PersistedState {
   const fallback = createInitialPersistedState();
   if (typeof window === 'undefined') return fallback;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw) as Partial<PersistedState>;
+    const { snapshot: parsed, epoch } = readLocalSnapshot<Partial<PersistedState>>(window.localStorage);
+    const fresh = createInitialPersistedState(epoch);
+    if (!parsed) return fresh;
     const autostart = new URLSearchParams(window.location.search).get('autostart') === '1';
     const merged: PersistedState = {
-      ...fallback,
+      ...fresh,
       ...parsed,
+      storageEpoch: epoch,
       childProfile: {
-        ...fallback.childProfile,
+        ...fresh.childProfile,
         ...(parsed.childProfile || {}),
       },
-      treatmentPlan: normalizePlanForToday(parsed.treatmentPlan || fallback.treatmentPlan),
+      treatmentPlan: normalizePlanForToday(parsed.treatmentPlan || fresh.treatmentPlan),
       onboardingSeen: autostart ? true : Boolean(parsed.onboardingSeen),
     };
     return merged;
@@ -239,6 +243,8 @@ export function parseHashToRoute(hash: string): AppRoute {
 }
 
 interface ManoContextValue {
+  dataGeneration: string;
+  persistenceIssue: string | null;
   route: AppRoute;
   navigate: (next: AppRoute) => void;
   theme: 'light' | 'dark';
@@ -254,7 +260,7 @@ interface ManoContextValue {
   timelineSnapshot: FeverDoseTimelineSnapshot;
   activeHighFeverAlert: TimelineTempPoint | null;
   dismissHighFeverAlert: () => void;
-  addTempLog: (input: { tempCelsius: number; siteFa: string; caregiverFa: string; noteFa: string }) => void;
+  addTempLog: (input: { tempCelsius: number; siteFa: string; caregiverFa: string; noteFa: string; measuredAtMs?: number }) => void;
   deleteTempLog: (id: string) => void;
   addDoseLog: (input: {
     medicationSlug: string;
@@ -262,6 +268,7 @@ interface ManoContextValue {
     dosageFormFa: string;
     volumeMlText: string;
     noteFa: string;
+    administeredAtMs?: number;
   }) => void;
   deleteDoseLog: (id: string) => void;
   growthMeasurements: GrowthMeasurementEntry[];
@@ -307,10 +314,15 @@ interface ManoContextValue {
   setSearchOpen: (open: boolean) => void;
   toasts: ToastMessage[];
   notify: (text: string, tone?: ToastMessage['tone']) => void;
-  clearAllSavedLocalData: () => void;
+  clearAllSavedLocalData: () => Promise<void>;
 }
 
 const ManoContext = createContext<ManoContextValue | null>(null);
+
+const browserStorageLock: StorageLock = (operation) => {
+  if (!window.navigator.locks) return Promise.reject(new Error('Storage locking is unavailable'));
+  return window.navigator.locks.request(STORAGE_LOCK_NAME, operation);
+};
 
 export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<PersistedState>(() => loadPersistedState());
@@ -320,6 +332,20 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeHighFeverAlert, setActiveHighFeverAlert] = useState<TimelineTempPoint | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [persistenceIssue, setPersistenceIssue] = useState<string | null>(null);
+  const [timelineNowMs, setTimelineNowMs] = useState(() => Date.now());
+  const currentEpochRef = useRef(state.storageEpoch);
+
+  const resetToEpoch = useCallback((epoch: string) => {
+    if (currentEpochRef.current === epoch) return;
+    currentEpochRef.current = epoch;
+    const fresh = createInitialPersistedState(epoch);
+    fresh.onboardingSeen = true;
+    setState(fresh);
+    setActiveHighFeverAlert(null);
+    setSearchOpen(false);
+    setToasts([]);
+  }, []);
 
   // Sync dark class on <html>
   useEffect(() => {
@@ -331,14 +357,55 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [state.theme]);
 
-  // Persist to localStorage
+  // A cross-tab lock and deletion generation prevent stale snapshots from
+  // restoring deleted clinical data. Never persist without the lock.
   useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      // Ignore storage quota issues
-    }
-  }, [state]);
+    let active = true;
+    void (async () => {
+      try {
+        const result = await persistLocalSnapshot(window.localStorage, browserStorageLock, state);
+        if (!active) return;
+        if (!result.saved) resetToEpoch(result.epoch);
+        setPersistenceIssue(null);
+      } catch {
+        if (active) setPersistenceIssue('ذخیرهٔ تغییرات در این مرورگر انجام نشد. پیش از بستن صفحه از اطلاعات موردنیاز نسخه بردارید.');
+      }
+    })();
+    return () => { active = false; };
+  }, [state, resetToEpoch]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      try {
+        if (event.storageArea !== window.localStorage ||
+            (event.key !== STORAGE_EPOCH_KEY && event.key !== STORAGE_KEY && event.key !== null)) return;
+        if (event.key === null) {
+          // A browser-wide clear also needs a tombstone for surviving tabs.
+          void clearLocalSnapshot(window.localStorage, browserStorageLock, crypto.randomUUID())
+            .then(resetToEpoch)
+            .catch(() => setPersistenceIssue('پاک‌سازی اطلاعات در تب‌های باز تأیید نشد؛ تب‌های دیگر را ببندید و دوباره تلاش کنید.'));
+          return;
+        }
+        resetToEpoch(currentStorageEpoch(window.localStorage));
+      } catch {
+        setPersistenceIssue('همگام‌سازی حذف اطلاعات در مرورگر انجام نشد. صفحه را دوباره باز کنید.');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [resetToEpoch]);
+
+  useEffect(() => {
+    const refresh = () => setTimelineNowMs(Date.now());
+    const interval = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
 
   // Listen to browser hash navigation
   useEffect(() => {
@@ -396,29 +463,33 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const addTempLog = useCallback(
-    (input: { tempCelsius: number; siteFa: string; caregiverFa: string; noteFa: string }) => {
+    (input: { tempCelsius: number; siteFa: string; caregiverFa: string; noteFa: string; measuredAtMs?: number }) => {
       const now = Date.now();
+      const measuredAtMs = input.measuredAtMs ?? now;
+      if (!Number.isFinite(input.tempCelsius) || input.tempCelsius < 34 || input.tempCelsius > 43 ||
+          !input.siteFa.trim() || !Number.isFinite(measuredAtMs) || measuredAtMs <= 0 || measuredAtMs > now) {
+        notify('دمای واقعی، روش اندازه‌گیری و زمان معتبر ثبت شود.', 'danger');
+        return;
+      }
       const entry: TimelineTempPoint = {
-        id: `temp_${now}`,
+        id: `temp_${crypto.randomUUID()}`,
         tempCelsius: input.tempCelsius,
-        timestampMs: now,
-        timeLabelFa: currentTimeFa(now),
+        timestampMs: measuredAtMs,
+        recordedAtMs: now,
+        timeLabelFa: currentTimeFa(measuredAtMs),
         siteFa: input.siteFa,
-        caregiverFa: input.caregiverFa || 'والد',
+        caregiverFa: input.caregiverFa.trim() || 'ثبت‌کننده مشخص نشده',
         noteFa: input.noteFa.trim(),
       };
+      setTimelineNowMs(now);
       setState((prev) => ({ ...prev, feverLogs: [...prev.feverLogs, entry] }));
-      const isYoungInfant = state.childProfile.ageBand === 'NEWBORN';
-      if (
-        input.tempCelsius > HIGH_FEVER_ALERT_THRESHOLD_C ||
-        (isYoungInfant && input.tempCelsius >= 38.0)
-      ) {
+      if (shouldShowFeverAlert(input.tempCelsius, resolveClinicalAge(state.childProfile, state.vaccineBirthDateEpochMs))) {
         setActiveHighFeverAlert(entry);
       } else {
         notify(`دمای ${formatTempC(input.tempCelsius)} ثبت شد.`, 'success');
       }
     },
-    [notify, state.childProfile.ageBand],
+    [notify, state.childProfile, state.vaccineBirthDateEpochMs],
   );
 
   const deleteTempLog = useCallback((id: string) => {
@@ -432,18 +503,27 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dosageFormFa: string;
       volumeMlText: string;
       noteFa: string;
+      administeredAtMs?: number;
     }) => {
       const now = Date.now();
+      const administeredAtMs = input.administeredAtMs ?? now;
+      if (!input.medicationSlug.trim() || !input.medicationNameFa.trim() || !input.dosageFormFa.trim() ||
+          !input.volumeMlText.trim() || !Number.isFinite(administeredAtMs) || administeredAtMs <= 0 || administeredAtMs > now) {
+        notify('دارو، غلظت، مقدار واقعاً مصرف‌شده و زمان معتبر ثبت شود.', 'danger');
+        return;
+      }
       const entry: TimelineDosePoint = {
-        id: `dose_${now}`,
+        id: `dose_${crypto.randomUUID()}`,
         medicationSlug: input.medicationSlug,
         medicationNameFa: input.medicationNameFa,
         dosageFormFa: input.dosageFormFa,
         volumeMlText: input.volumeMlText,
-        timestampMs: now,
-        givenAtLabelFa: currentTimeFa(now),
+        timestampMs: administeredAtMs,
+        recordedAtMs: now,
+        givenAtLabelFa: currentTimeFa(administeredAtMs),
         noteFa: input.noteFa.trim(),
       };
+      setTimelineNowMs(now);
       setState((prev) => ({ ...prev, doseLogs: [...prev.doseLogs, entry] }));
       notify(`مصرف ${input.medicationNameFa} در جدول ۲۴ ساعته ثبت شد.`, 'success');
     },
@@ -455,8 +535,8 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const timelineSnapshot = useMemo(
-    () => buildTimelineSnapshot(state.feverLogs, state.doseLogs),
-    [state.feverLogs, state.doseLogs],
+    () => buildTimelineSnapshot(state.feverLogs, state.doseLogs, timelineNowMs),
+    [state.feverLogs, state.doseLogs, timelineNowMs],
   );
 
   const addGrowthMeasurement = useCallback(
@@ -491,12 +571,22 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setVaccineBirthDateEpochMs = useCallback(
     (epochMs: number | null) => {
+      const age = resolveClinicalAge({ ageMonthsExact: null, birthDateEpochMs: epochMs, birthDateOrAgeFa: '' });
+      if (epochMs !== null && age.status !== 'known') {
+        notify(age.messageFa || 'تاریخ تولد معتبر کودک را ثبت کنید.', 'danger');
+        return;
+      }
       setState((prev) => ({
         ...prev,
         vaccineBirthDateEpochMs: epochMs,
         childProfile: {
           ...prev.childProfile,
           birthDateEpochMs: epochMs,
+          ...(epochMs !== null ? {
+            ageMonthsExact: null,
+            birthDateOrAgeFa: '',
+            ageBand: ageBandFromMonths(age.ageMonths) ?? prev.childProfile.ageBand,
+          } : {}),
         },
       }));
       if (epochMs) {
@@ -759,14 +849,21 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState((prev) => ({ ...prev, careCards: prev.careCards.filter((c) => c.id !== id) }));
   }, []);
 
-  const clearAllSavedLocalData = useCallback(() => {
-    const fresh = createInitialPersistedState();
-    fresh.onboardingSeen = true;
-    setState(fresh);
-    notify(`همه ${toPersianDigits(0)} مورد محلی پاک‌سازی و بازنشانی شد.`, 'info');
-  }, [notify]);
+  const clearAllSavedLocalData = useCallback(async () => {
+    try {
+      const epoch = await clearLocalSnapshot(window.localStorage, browserStorageLock, crypto.randomUUID());
+      resetToEpoch(epoch);
+      setPersistenceIssue(null);
+      notify('اطلاعات محلی حذف شد؛ فرم‌ها و تب‌های باز نیز بازنشانی شدند.', 'info');
+    } catch {
+      setPersistenceIssue('حذف اطلاعات انجام نشد. دسترسی مرورگر به فضای ذخیره‌سازی را بررسی و دوباره تلاش کنید.');
+      notify('حذف اطلاعات تأیید نشد.', 'danger');
+    }
+  }, [notify, resetToEpoch]);
 
   const value: ManoContextValue = {
+    dataGeneration: state.storageEpoch,
+    persistenceIssue,
     route,
     navigate,
     theme: state.theme,
