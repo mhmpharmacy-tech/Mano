@@ -2,37 +2,35 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, Pill, Search, Stethoscope, HelpCircle, Sparkles, X } from 'lucide-react';
 import { runGlobalSearch } from '../data/contentRepository.ts';
 import { useMano } from '../state/ManoStore.tsx';
+import { AccessibleDialog } from './AccessibleDialog.tsx';
 
 export const GlobalSearchModal: React.FC = () => {
-  const { searchOpen, setSearchOpen, navigate } = useMano();
+  const { searchOpen, setSearchOpen, navigate, onboardingSeen, activeHighFeverAlert } = useMano();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        if (e.defaultPrevented || !onboardingSeen || activeHighFeverAlert) return;
+        const otherModal = Array.from(document.querySelectorAll('[aria-modal="true"]')).some(
+          (element) => !['mano-search-dialog', 'mano-tools-dialog'].includes(element.id),
+        );
+        if (otherModal) return;
         e.preventDefault();
         setSearchOpen(!searchOpen);
-      } else if (e.key === 'Escape' && searchOpen) {
-        setSearchOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [searchOpen, setSearchOpen]);
-
-  useEffect(() => {
-    if (searchOpen) {
-      setTimeout(() => inputRef.current?.focus(), 40);
-    }
-  }, [searchOpen]);
+  }, [searchOpen, setSearchOpen, onboardingSeen, activeHighFeverAlert]);
 
   const results = useMemo(() => {
     if (!query.trim()) return null;
     return runGlobalSearch(query);
   }, [query]);
 
-  if (!searchOpen) return null;
+  if (!searchOpen || !onboardingSeen || activeHighFeverAlert) return null;
 
   const totalHits = results
     ? results.symptomFlows.length +
@@ -43,17 +41,20 @@ export const GlobalSearchModal: React.FC = () => {
     : 0;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="جست‌وجوی سریع در دانش بالینی مانو کید"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-[#0B1220]/70 p-4 pt-12 backdrop-blur-sm"
-      onClick={() => setSearchOpen(false)}
+    <AccessibleDialog
+      id="mano-search-dialog"
+      label="جست‌وجوی سریع در دانش بالینی مانو کید"
+      describedBy="mano-search-description"
+      initialFocusRef={inputRef}
+      onClose={() => setSearchOpen(false)}
+      closeOnBackdrop
+      backdropClassName="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#0B1220]/70 p-4 pt-8 backdrop-blur-sm sm:pt-12"
+      panelClassName="flex max-h-[calc(100dvh-4rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-[#DCE7E1] bg-[#FFFFFF] shadow-2xl outline-none dark:border-[#23344D] dark:bg-[#111C2E]"
     >
-      <div
-        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[#DCE7E1] bg-[#FFFFFF] shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
-        onClick={(e) => e.stopPropagation()}
-      >
+        <p id="mano-search-description" className="sr-only">جست‌وجو در مطالب آموزشی ذخیره‌شده این پیش‌نمایش. برای بستن، کلید Escape را بزنید.</p>
+        <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+          {results ? `${totalHits.toLocaleString('fa-IR')} نتیجه برای ${query}` : 'برای جست‌وجو، یک عبارت وارد کنید.'}
+        </p>
         <div className="flex items-center gap-3 border-b border-[#DCE7E1] px-4 py-3 dark:border-[#23344D]">
           <Search className="h-5 w-5 shrink-0 text-[#105B48] dark:text-[#00D7C7]" />
           <input
@@ -63,7 +64,7 @@ export const GlobalSearchModal: React.FC = () => {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="جست‌وجوی علامت، دارو (استامینوفن، ایبوپروفن)، سرفه، واکسن..."
             aria-label="عبارت جست‌وجو"
-            className="min-h-[44px] w-full bg-transparent text-sm text-[#122823] placeholder-[#546963] focus:outline-none dark:text-[#EDF4F7] dark:placeholder-[#9EB3C4]"
+            className="min-h-[44px] w-full rounded-lg bg-transparent text-sm text-[#122823] placeholder-[#546963] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#105B48] dark:text-[#EDF4F7] dark:placeholder-[#9EB3C4] dark:focus-visible:ring-[#00D7C7]"
           />
           <button
             type="button"
@@ -75,11 +76,11 @@ export const GlobalSearchModal: React.FC = () => {
           </button>
         </div>
 
-        <div className="max-h-[65vh] overflow-y-auto p-4 space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           {!results ? (
             <div className="space-y-3">
               <p className="text-xs font-semibold text-[#546963] dark:text-[#9EB3C4]">
-                پیشنهادهای پرکاربرد والدین:
+                پیشنهادهای جست‌وجو:
               </p>
               <div className="flex flex-wrap gap-2">
                 {['تب نوزاد', 'استامینوفن', 'سرفه', 'اسهال ORS', 'واکسن', 'قطره آهن'].map((chip) => (
@@ -231,7 +232,6 @@ export const GlobalSearchModal: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </AccessibleDialog>
   );
 };

@@ -24,7 +24,6 @@ export const VisualSyringeCanvas: React.FC<VisualSyringeCanvasProps> = ({
   const fillRatio = maxScale > 0 ? clampedMl / maxScale : 0;
 
   const isDrops = formulation.key === 'ACETAMINOPHEN_DROPS_100';
-  const dropsCount = Math.round(clampedMl * 20);
   const majorTickStep = maxScale <= 3 ? 0.5 : maxScale <= 10 ? 2 : 5;
   const majorTicks: number[] = [];
   for (let v = 0; v <= maxScale + 0.001; v += majorTickStep) {
@@ -169,11 +168,9 @@ export const VisualSyringeCanvas: React.FC<VisualSyringeCanvasProps> = ({
         </div>
 
         <div className="rounded-xl bg-white p-2.5 border border-[#DCE7E1] dark:bg-[#111C2E] dark:border-[#23344D]">
-          <div className="text-[#546963] dark:text-[#9EB3C4]">معادل استاندارد قطره</div>
+          <div className="text-[#546963] dark:text-[#9EB3C4]">واحد نمایش</div>
           <div className="mt-0.5 tabular-nums text-sm font-bold text-[#122823] dark:text-[#EDF4F7]">
-            {showExactValues && displayMl > 0
-              ? `حدود ${toPersianDigits(dropsCount)} قطره استاندارد`
-              : '۱ سی‌سی = ۲۰ قطره استاندارد'}
+            میلی‌لیتر (mL)؛ تعداد قطره محاسبه نمی‌شود
           </div>
         </div>
 

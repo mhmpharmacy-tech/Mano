@@ -1,61 +1,30 @@
 import React, { useState } from 'react';
 import {
-  Baby,
-  BookOpen,
   Calculator,
-  ClipboardList,
-  Cpu,
-  HelpCircle,
   Home,
   LayoutGrid,
   Moon,
-  Pill,
-  QrCode,
   Scale,
-  ScanLine,
   Search,
-  Sparkles,
   Stethoscope,
   Sun,
-  Syringe,
-  UserCheck,
-  Utensils,
   X,
 } from 'lucide-react';
 import { useMano, type AppRoute } from '../state/ManoStore.tsx';
+import { FEATURES, FEATURE_GROUPS } from '../navigation/featureCatalog.ts';
+import { FEATURE_ICONS } from './featureIcons.ts';
+import { AccessibleDialog } from './AccessibleDialog.tsx';
 import { GlobalSearchModal } from './GlobalSearchModal.tsx';
 import { HighFeverUrgentAlertDialog } from './HighFeverUrgentAlertDialog.tsx';
 import { ManoOnboardingOverlay } from './ManoOnboardingOverlay.tsx';
 
-interface HubDestination {
-  labelFa: string;
-  descFa: string;
-  route: AppRoute;
-  Icon: React.FC<{ className?: string }>;
-}
-
-const ALL_HUB_DESTINATIONS: HubDestination[] = [
-  { labelFa: 'بررسی علائم کودک', descFa: 'ارزیابی تب، سرفه، گوش، چشم و گوارش', route: { name: 'symptoms' }, Icon: Stethoscope },
-  { labelFa: 'محاسبه‌گر ایمن تب‌بر', descFa: 'حجم میلی‌لیتر بر پایه وزن و سرنگ مدرج', route: { name: 'fever-dose' }, Icon: Calculator },
-  { labelFa: 'اسکنر هوشمند شربت', descFa: 'تشخیص غلظت بطری و هشدار قطره/شربت', route: { name: 'syrup-scanner' }, Icon: ScanLine },
-  { labelFa: 'برنامه درمانی روزانه', descFa: 'پیگیری نوبت‌های نسخه با داروساز', route: { name: 'treatment-plan' }, Icon: ClipboardList },
-  { labelFa: 'جدول واکسیناسیون', descFa: 'برنامه ایمن‌سازی کشوری و یادآور', route: { name: 'vaccines' }, Icon: Syringe },
-  { labelFa: 'رشد و تکامل WHO', descFa: 'منحنی صدک قد و وزن و نقاط عطف', route: { name: 'growth' }, Icon: Scale },
-  { labelFa: 'مشاور تغذیه کودک', descFa: 'برنامه غذایی بومی +۶ ماه با فیلتر ایمنی', route: { name: 'nutrition' }, Icon: Utensils },
-  { labelFa: 'دارونامه و تداخل', descFa: '۱۰ تک‌نگاشت دارو و چک تداخل', route: { name: 'medicines' }, Icon: Pill },
-  { labelFa: 'مکمل و بهداشت', descFa: 'ویتامین D، آهن، پروبیوتیک و بهداشت', route: { name: 'supplements-hygiene' }, Icon: Sparkles },
-  { labelFa: 'پوست و سوختگی پوشک', descFa: 'مراقبت ملایم پوست و مقایسه علمی', route: { name: 'skin' }, Icon: Baby },
-  { labelFa: 'تجهیزات خانگی کودک', descFa: 'اسپیسر، نبولایزر، دماسنج و سرنگ', route: { name: 'devices' }, Icon: Cpu },
-  { labelFa: 'کتابخانه مقالات', descFa: 'راهنماهای مستند مراقبت از کودک', route: { name: 'topics' }, Icon: BookOpen },
-  { labelFa: 'پرسش‌های متداول و AI', descFa: '۳۴ پرسش متداول + پاسخ مستند هوشمند', route: { name: 'faq' }, Icon: HelpCircle },
-  { labelFa: 'پرسش از داروساز', descFa: 'فرم مشاوره و میز محلی راهنما', route: { name: 'ask-pharmacist' }, Icon: UserCheck },
-  { labelFa: 'کارت‌های مراقبت', descFa: 'ساخت خلاصه و دعوت‌نامه داروخانه', route: { name: 'care-cards' }, Icon: QrCode },
-  { labelFa: 'پرونده کودک من', descFa: 'سن، وزن، حساسیت و تاریخچه ذخیره‌شده', route: { name: 'my-child' }, Icon: Baby },
-];
-
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { route, navigate, theme, toggleTheme, setSearchOpen, toasts, persistenceIssue } = useMano();
+  const {
+    route, navigate, theme, toggleTheme, searchOpen, setSearchOpen, toasts,
+    persistenceIssue, onboardingSeen, activeHighFeverAlert,
+  } = useMano();
   const [hubOpen, setHubOpen] = useState(false);
+  const hubVisible = hubOpen && onboardingSeen && !searchOpen && !activeHighFeverAlert;
 
   const isNavActive = (name: AppRoute['name']) => route.name === name;
 
@@ -68,9 +37,20 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   return (
     <div className="min-h-screen bg-[#FFFBF6] text-[#122823] dark:bg-[#0B1220] dark:text-[#EDF4F7]">
+      <a
+        href="#mano-main-content"
+        data-testid="skip-to-main-link"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('mano-main-content')?.focus();
+        }}
+        className="sr-only right-4 top-3 z-[60] rounded-xl bg-[#105B48] text-sm font-bold text-white focus:not-sr-only focus:fixed focus:px-4 focus:py-3 dark:bg-[#00D7C7] dark:text-[#0B1220]"
+      >
+        رفتن به محتوای اصلی
+      </a>
       {/* Strict 3-Zone Top Header Bar */}
       <header className="sticky top-0 z-30 border-b border-[#DCE7E1] bg-[#FFFBF6]/92 backdrop-blur-md dark:border-[#23344D] dark:bg-[#0B1220]/92">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-8 px-4 sm:px-6">
+        <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
           {/* Zone 1: Single-line Brand Title */}
           <button
             type="button"
@@ -81,20 +61,20 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           </button>
 
           {/* Zone 2: 5 concise single-line text nav links (Desktop) */}
-          <nav aria-label="ناوبری اصلی" className="hidden md:flex items-center gap-6">
-            <button type="button" onClick={() => navigate({ name: 'home' })} className={navLinkClass(isNavActive('home'))}>
+          <nav aria-label="ناوبری اصلی" className="hidden flex-wrap items-center justify-center gap-x-4 gap-y-2 md:flex">
+            <button type="button" onClick={() => navigate({ name: 'home' })} aria-current={isNavActive('home') ? 'page' : undefined} className={navLinkClass(isNavActive('home'))}>
               خانه
             </button>
-            <button type="button" onClick={() => navigate({ name: 'symptoms' })} className={navLinkClass(isNavActive('symptoms'))}>
+            <button type="button" onClick={() => navigate({ name: 'symptoms' })} aria-current={isNavActive('symptoms') ? 'page' : undefined} className={navLinkClass(isNavActive('symptoms'))}>
               بررسی علائم
             </button>
-            <button type="button" onClick={() => navigate({ name: 'fever-dose' })} className={navLinkClass(isNavActive('fever-dose'))}>
+            <button type="button" onClick={() => navigate({ name: 'fever-dose' })} aria-current={isNavActive('fever-dose') ? 'page' : undefined} className={navLinkClass(isNavActive('fever-dose'))}>
               محاسبه‌گر تب
             </button>
-            <button type="button" onClick={() => navigate({ name: 'vaccines' })} className={navLinkClass(isNavActive('vaccines'))}>
+            <button type="button" onClick={() => navigate({ name: 'vaccines' })} aria-current={isNavActive('vaccines') ? 'page' : undefined} className={navLinkClass(isNavActive('vaccines'))}>
               واکسیناسیون
             </button>
-            <button type="button" onClick={() => navigate({ name: 'medicines' })} className={navLinkClass(isNavActive('medicines') || isNavActive('medicine-detail'))}>
+            <button type="button" onClick={() => navigate({ name: 'medicines' })} aria-current={isNavActive('medicines') || isNavActive('medicine-detail') ? 'page' : undefined} className={navLinkClass(isNavActive('medicines') || isNavActive('medicine-detail'))}>
               دارو و راهنما
             </button>
           </nav>
@@ -105,6 +85,9 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               type="button"
               onClick={() => setHubOpen(true)}
               data-testid="open-hub-drawer-btn"
+              aria-haspopup="dialog"
+              aria-expanded={Boolean(hubVisible)}
+              aria-controls={hubVisible ? 'mano-tools-dialog' : undefined}
               className="inline-flex min-h-[40px] items-center gap-2 whitespace-nowrap rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white hover:bg-[#0C493A] dark:bg-[#00D7C7] dark:text-[#0B1220]"
             >
               <LayoutGrid className="h-4 w-4" />
@@ -114,9 +97,12 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
         </div>
       </header>
 
-      <div className="border-b border-[#DCE7E1] bg-[#FDF4E4] px-4 py-2 text-center text-xs leading-6 text-[#122823] dark:border-[#23344D] dark:bg-[#312617] dark:text-[#EDF4F7]" role="note">
-        پیش‌نمایش داخلی و آموزشی — برای تصمیم درمانی یا ثبت اطلاعات واقعی بیمار استفاده نشود.
-        <p>امکانات هوش مصنوعی آنلاین در این پیش‌نمایش فعال نیستند؛ ابزارهای محلی قابل استفاده‌اند.</p>
+      <div className="border-b border-[#DCE7E1] bg-[#FDF4E4] px-4 py-2 text-center text-[11px] leading-5 text-[#122823] dark:border-[#23344D] dark:bg-[#312617] dark:text-[#EDF4F7]" role="note">
+        <p>پیش‌نمایش آموزشی؛ برای تصمیم درمانی یا اطلاعات واقعی بیمار استفاده نشود.</p>
+        <details className="mx-auto max-w-3xl">
+          <summary className="cursor-pointer font-semibold underline underline-offset-4">درباره این پیش‌نمایش</summary>
+          <p className="pt-1">اطلاعات نمونه در مرورگر همین دستگاه ذخیره می‌شود. پاسخ هوش مصنوعی و تحلیل آنلاین تصویر فعال نیستند؛ ابزارهای محلی قابل مرورند.</p>
+        </details>
       </div>
       {persistenceIssue ? (
         <div role="alert" className="border-b border-[#E7B5BC] bg-[#FDF0F1] px-4 py-3 text-center text-xs leading-6 text-[#B32334]">
@@ -125,7 +111,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
       ) : null}
 
       {/* Main Content Container */}
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-5 sm:px-6 md:pb-12">{children}</main>
+      <main id="mano-main-content" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-24 pt-5 outline-none sm:px-6 md:pb-12">{children}</main>
 
       {/* Mobile Bottom Tab Bar (5 tabs, compact 56px height) */}
       <nav
@@ -143,6 +129,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               key={tab.label}
               type="button"
               onClick={() => navigate(tab.route)}
+              aria-current={tab.active ? 'page' : undefined}
               className={`flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold ${
                 tab.active
                   ? 'text-[#105B48] dark:text-[#00D7C7]'
@@ -156,6 +143,9 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <button
             type="button"
             onClick={() => setHubOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={Boolean(hubVisible)}
+            aria-controls={hubVisible ? 'mano-tools-dialog' : undefined}
             className="flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold text-[#546963] dark:text-[#9EB3C4]"
           >
             <LayoutGrid className="h-5 w-5" />
@@ -165,24 +155,22 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
       </nav>
 
       {/* Slide-Over Hub Drawer */}
-      {hubOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="فهرست کامل بخش‌های مانو کید"
-          className="fixed inset-0 z-50 flex justify-end bg-[#0B1220]/70 backdrop-blur-sm"
-          onClick={() => setHubOpen(false)}
+      {hubVisible ? (
+        <AccessibleDialog
+          id="mano-tools-dialog"
+          label="فهرست کامل بخش‌های مانو کید"
+          describedBy="mano-tools-description"
+          onClose={() => setHubOpen(false)}
+          closeOnBackdrop
+          backdropClassName="fixed inset-0 z-50 flex justify-end bg-[#0B1220]/70 backdrop-blur-sm"
+          panelClassName="flex h-full w-full max-w-md flex-col border-r border-[#DCE7E1] bg-[#FFFFFF] outline-none dark:border-[#23344D] dark:bg-[#111C2E]"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex h-full w-full max-w-md flex-col border-r border-[#DCE7E1] bg-[#FFFFFF] dark:border-[#23344D] dark:bg-[#111C2E]"
-          >
             <div className="flex items-center justify-between border-b border-[#DCE7E1] px-5 py-4 dark:border-[#23344D]">
               <div>
                 <h2 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">
-                  اکوسیستم ابزارهای مانو کید
+                  ابزارها و پرونده
                 </h2>
-                <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">دسترسی سریع به تمام بخش‌های بالینی و مراقبتی</p>
+                <p id="mano-tools-description" className="mt-1 text-xs leading-5 text-[#546963] dark:text-[#9EB3C4]">ابزارهای آموزشی و ثبت‌های همین دستگاه</p>
               </div>
               <button
                 type="button"
@@ -205,7 +193,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 className="flex min-h-[44px] flex-1 items-center gap-2 rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-xs font-bold text-[#122823] dark:border-[#23344D] dark:bg-[#16243B] dark:text-[#EDF4F7]"
               >
                 <Search className="h-4 w-4 text-[#105B48] dark:text-[#00D7C7]" />
-                <span>جست‌وجوی دانش بالینی</span>
+                <span>جست‌وجوی مطالب</span>
               </button>
 
               <button
@@ -220,29 +208,39 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {ALL_HUB_DESTINATIONS.map((dest) => (
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+              {FEATURE_GROUPS.map((group) => (
+                <section key={group.id} aria-labelledby={`mano-tools-group-${group.id}`}>
+                  <h3 id={`mano-tools-group-${group.id}`} className="mb-2 text-xs font-bold text-[#546963] dark:text-[#9EB3C4]">{group.titleFa}</h3>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {group.featureIds.map((id) => {
+                    const dest = FEATURES[id];
+                    const Icon = FEATURE_ICONS[dest.iconKey];
+                    return (
                   <button
-                    key={dest.labelFa}
+                    key={id}
                     type="button"
+                    data-testid={`hub-destination-${id}`}
+                    aria-current={isNavActive(dest.route.name) ? 'page' : undefined}
                     onClick={() => {
                       setHubOpen(false);
                       navigate(dest.route);
                     }}
                     className="flex items-start gap-2.5 rounded-2xl border border-[#DCE7E1] bg-[#FAF7F0]/40 p-3 text-right hover:border-[#105B48] hover:bg-[#E9F5EB]/50 dark:border-[#23344D] dark:bg-[#16243B]/60 dark:hover:border-[#00D7C7]"
                   >
-                    <dest.Icon className="mt-0.5 h-5 w-5 shrink-0 text-[#105B48] dark:text-[#00D7C7]" />
+                    <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[#105B48] dark:text-[#00D7C7]" />
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">{dest.labelFa}</div>
-                      <div className="mt-0.5 text-[11px] leading-4 text-[#546963] dark:text-[#9EB3C4]">{dest.descFa}</div>
+                      <div className="mt-0.5 text-[11px] leading-5 text-[#546963] dark:text-[#9EB3C4]">{dest.descriptionFa}</div>
                     </div>
                   </button>
-                ))}
-              </div>
+                    );
+                  })}
+                  </div>
+                </section>
+              ))}
             </div>
-          </div>
-        </div>
+        </AccessibleDialog>
       ) : null}
 
       {/* Modals & Non-blocking Toast Host */}

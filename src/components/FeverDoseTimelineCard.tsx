@@ -163,7 +163,7 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
       </div>
 
       {/* Interval Safety Status Row */}
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+      {(!compact || events.length > 0) && <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
         {[acetStatus, ibuStatus].map((st) => (
           <div
             key={st.medicationKey}
@@ -184,7 +184,7 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
             <p className="mt-1">{st.statusMessageFa}</p>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* Chronological Event Feed */}
       <div className="mt-4">

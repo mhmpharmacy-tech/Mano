@@ -83,11 +83,11 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
   const handleCopyCaregiverShare = async () => {
     if (!canRevealDose) return;
     const text = [
-      `محاسبه ایمن داروی مایع کودک — مانو کید`,
+      `نمایش آموزشی حجم داروی مایع — مانو کید`,
       `فرآورده: ${formulation.titleFa}`,
       `سن: ${formatAgeFa(ageMonths)} | وزن: ${formatKg(weightKg)}`,
       `حجم پیشنهادی آموزشی: ${result.recommendedMl.toFixed(1)} mL (${Math.round(result.recommendedMg)} mg)`,
-      `بازه ایمن بر پایه وزن: ${result.minSafeMl.toFixed(1)} تا ${result.maxSafeMl.toFixed(1)} mL`,
+      `بازه محاسبه‌شده بر پایه وزن: ${result.minSafeMl.toFixed(1)} تا ${result.maxSafeMl.toFixed(1)} mL`,
       `فاصله مصرف: ${formulation.intervalFa}`,
       `هشدار: فقط با سرنگ مدرج mL و پس از تطبیق برچسب دارو مصرف شود.`,
     ].join('\n');
@@ -104,10 +104,10 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-[#122823] dark:text-[#EDF4F7]">
-            محاسبه‌گر ایمن تب‌بر و داروهای مایع کودک
+            نمایش آموزشی حجم داروی مایع کودک
           </h1>
           <p className="mt-1 text-xs text-[#546963] dark:text-[#9EB3C4]">
-            تبدیل وزن واقعی کودک به میلی‌لیتر دقیق با نمایش سرنگ مدرج و قفل خودکار سنین پرخطر
+            نمایش حجم بر پایه اطلاعات واردشده؛ این پیش‌نمایش، توصیه مصرف یا جایگزین نسخه نیست.
           </p>
         </div>
         <button

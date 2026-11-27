@@ -72,6 +72,159 @@ async function recordedTime(page) {
   });
 }
 
+async function verifyKeyboardAndTaskNavigation(browser, errors) {
+  const context = await browser.newContext({ viewport: { width: 360, height: 820 }, locale: "fa-IR", reducedMotion: "reduce" });
+  context.setDefaultTimeout(12_000);
+  const page = await context.newPage();
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`${origin}/?autostart=1`, { waitUntil: "networkidle" });
+  await page.getByTestId("home-screen").waitFor();
+  for (const width of [360, 412]) {
+    await page.setViewportSize({ width, height: 820 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const navTop = (await page.getByRole("navigation", { name: "ناوبری موبایل" }).boundingBox()).y;
+    for (const id of ["home-cta-symptoms", "home-cta-fever-dose"]) {
+      const rect = await page.getByTestId(id).boundingBox();
+      assert.ok(rect && rect.y >= 0 && rect.y + rect.height <= navTop, `${id} must be reachable in the first ${width}px viewport`);
+      assert.ok(rect.height >= 44, "Primary touch targets must remain usable on mobile");
+    }
+    await assertNoPageOverflow(page, `Task-first home ${width}px`);
+  }
+
+  const mainHash = new URL(page.url()).hash;
+  await page.reload({ waitUntil: "networkidle" });
+  await page.keyboard.press("Tab");
+  const skip = page.getByTestId("skip-to-main-link");
+  assert.equal(await skip.evaluate(element => element === document.activeElement), true, "The first keyboard stop must offer a visible skip link");
+  await page.keyboard.press("Enter");
+  assert.equal(await page.locator("#mano-main-content").evaluate(element => element === document.activeElement), true);
+  assert.equal(new URL(page.url()).hash, mainHash, "Skipping to main must not overwrite application routing");
+
+  const trigger = page.getByTestId("open-hub-drawer-btn");
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const tools = page.locator("#mano-tools-dialog");
+  await tools.waitFor();
+  assert.ok(await tools.getByRole("button", { name: "بستن منو", exact: true }).evaluate(element => element === document.activeElement), "Drawer must receive useful initial keyboard focus");
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), true, "Background controls must be inert while the drawer is open");
+  assert.equal(await page.evaluate(() => document.body.style.overflow), "hidden");
+  assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+  await tools.evaluate(panel => {
+    const controls = [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length);
+    controls.at(-1).focus();
+  });
+  await page.keyboard.press("Tab");
+  assert.equal(await tools.evaluate(panel => document.activeElement === [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].find(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length)), true, "Tab must wrap inside the modal");
+  await page.keyboard.press("Shift+Tab");
+  assert.equal(await tools.evaluate(panel => document.activeElement === [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length).at(-1)), true, "Shift+Tab must wrap inside the modal");
+  await page.keyboard.press("Escape");
+  await tools.waitFor({ state: "hidden" });
+  assert.equal(await trigger.evaluate(element => element === document.activeElement), true, "Closing the drawer must restore its trigger focus");
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), false);
+  assert.equal(await page.evaluate(() => document.body.style.overflow), "");
+
+  await trigger.click();
+  await page.getByTestId("drawer-search-btn").click();
+  const search = page.locator("#mano-search-dialog");
+  await search.waitFor();
+  const searchInput = search.getByRole("searchbox", { name: "عبارت جست‌وجو", exact: true });
+  assert.equal(await searchInput.evaluate(element => element === document.activeElement), true);
+  assert.equal(await tools.count(), 0, "Moving from tools to search must leave exactly one active modal");
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), true);
+  await searchInput.fill("تب");
+  await page.keyboard.press("Escape");
+  await search.waitFor({ state: "hidden" });
+  assert.equal(await page.evaluate(() => document.activeElement === document.body), false, "Search must restore focus to a connected control or main content");
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), false);
+
+  const destinations = [
+    ["symptoms", "symptom-navigator-screen"], ["fever-dose", "fever-dose-screen"],
+    ["syrup-scanner", "syrup-scanner-screen"], ["medicines", "medicines-screen"],
+    ["supplements-hygiene", "supplements-hygiene-screen"], ["skin", "skin-screen"],
+    ["devices", "devices-screen"], ["growth", "growth-screen"],
+    ["vaccines", "vaccines-screen"], ["treatment-plan", "treatment-plan-screen"],
+    ["care-cards", "care-cards-screen"], ["nutrition", "nutrition-screen"],
+    ["topics", "topics-screen"], ["faq", "faq-screen"],
+    ["ask-pharmacist", "ask-pharmacist-screen"], ["my-child", "my-child-screen"],
+  ];
+  for (const [id, screenId] of destinations) {
+    await trigger.click();
+    await tools.waitFor();
+    assert.equal(await tools.locator("section[aria-labelledby]").count(), 4, "The complete catalog must remain grouped by user task");
+    assert.equal(await tools.locator('[data-testid^="hub-destination-"]').count(), 16);
+    await tools.getByTestId(`hub-destination-${id}`).click();
+    await page.getByTestId(screenId).waitFor();
+    assert.equal(new URL(page.url()).hash, `#/${id}`, `${id} must open its real routed screen`);
+    assert.equal(await tools.count(), 0);
+  }
+
+  await openRoute(page, "fever-dose", "fever-dose-screen");
+  await page.getByTestId("dose-age-input").fill("18");
+  await page.getByTestId("dose-weight-input").fill("11");
+  await page.getByTestId("formulation-btn-acetaminophen_drops_100").click();
+  await page.getByTestId("dose-label-confirm-checkbox").check();
+  await page.getByTestId("dose-calculated-result").waitFor();
+  const syringeText = await page.getByTestId("visual-syringe-canvas").textContent();
+  assert.match(syringeText, /mL/);
+  assert.doesNotMatch(syringeText, /قطره استاندارد|۲۰\s*قطره|20\s*(?:drops|قطره)/, "Generic drops-per-mL conversions must not appear even on the drops formulation");
+
+  await openRoute(page, "home", "home-screen");
+  for (const group of ["care", "tracking", "learn"]) {
+    const details = page.getByTestId(`home-guide-group-${group}`);
+    assert.equal(await details.getAttribute("open"), null, "Secondary guide groups should initially reduce visual load");
+    await details.locator("summary").click();
+    assert.equal(await details.evaluate(element => element.open), true);
+  }
+  assert.ok(await page.getByTestId("home-tool-faq").isVisible());
+  const reduced = await page.getByTestId("home-guide-group-care").locator("summary svg").evaluate(element => ({
+    matches: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    duration: getComputedStyle(element).transitionDuration,
+  }));
+  assert.equal(reduced.matches, true);
+  assert.ok(reduced.duration.split(',').every(value => Number.parseFloat(value) <= 0.001), "Reduced-motion preference must suppress decorative transitions");
+
+  await page.setViewportSize({ width: 360, height: 820 });
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  await assertNoPageOverflow(page, "200% text-size home reflow");
+  for (const control of await page.locator('header button').all()) {
+    const rect = await control.boundingBox();
+    if (rect) assert.ok(rect.x >= 0 && rect.x + rect.width <= 361, "Header controls must not clip at 200% text size");
+  }
+  await page.evaluate(() => { window.scrollTo(0, 0); document.activeElement?.blur(); });
+  await page.keyboard.press("Control+Home");
+  for (let stop = 0; stop < 14; stop++) {
+    await page.keyboard.press("Tab");
+    const focused = await page.evaluate(() => {
+      const element = document.activeElement;
+      const rect = element.getBoundingClientRect();
+      const nav = document.querySelector('nav[aria-label="ناوبری موبایل"]');
+      return { inMain: Boolean(element.closest('main')), top: rect.top, bottom: rect.bottom, headerBottom: document.querySelector('header').getBoundingClientRect().bottom, navTop: nav.getBoundingClientRect().top };
+    });
+    if (focused.inMain) assert.ok(focused.top >= focused.headerBottom - 1 && focused.bottom <= focused.navTop + 1, "Keyboard focus must remain visible between the sticky header and fixed bottom navigation");
+  }
+  await page.screenshot({ path: "web-artifacts/react-home-font-200.png", fullPage: true });
+  await context.close();
+
+  const onboardingContext = await browser.newContext({ viewport: { width: 320, height: 480 }, locale: "fa-IR", reducedMotion: "reduce" });
+  const onboardingPage = await onboardingContext.newPage();
+  onboardingPage.on("pageerror", error => errors.push(error.message));
+  await onboardingPage.goto(origin, { waitUntil: "networkidle" });
+  const onboarding = onboardingPage.locator("#mano-onboarding-dialog");
+  await onboarding.waitFor();
+  assert.equal(await onboarding.getByRole("heading", { name: "آشنایی با مانو کید", exact: true }).evaluate(element => element === document.activeElement), true, "Onboarding must focus its heading");
+  const onboardingRect = await onboarding.boundingBox();
+  assert.ok(onboardingRect.y >= 0 && onboardingRect.y + onboardingRect.height <= 481, "Short-screen onboarding must fit within the viewport");
+  assert.equal(await onboarding.evaluate(element => element.scrollHeight > element.clientHeight), true, "Long onboarding content must scroll rather than clip");
+  assert.equal(await onboardingPage.locator("#root").evaluate(element => element.inert), true);
+  await onboardingPage.keyboard.press("Escape");
+  await onboarding.waitFor({ state: "hidden" });
+  assert.equal(await onboardingPage.locator("#mano-main-content").evaluate(element => element === document.activeElement), true, "Optional onboarding must be dismissible with focus moved to main content");
+  await assertNoPageOverflow(onboardingPage, "320px short-screen home");
+  await onboardingPage.screenshot({ path: "web-artifacts/react-home-short-screen.png", fullPage: true });
+  await onboardingContext.close();
+  console.log("UX browser checks passed: first-viewport tasks, grouped16routes, modal keyboard/inert/focus contracts, reduced motion, 200% text reflow and optional short-screen onboarding.");
+}
+
 async function verifyCarePlanTrust(browser, errors) {
   const context = await browser.newContext({ viewport: { width: 412, height: 915 }, locale: "fa-IR" });
   context.setDefaultTimeout(12_000);
@@ -292,6 +445,12 @@ async function verifyClinicalPrivacyAndDeletion(browser, errors) {
   await page.getByTestId("timeline-temp-save-btn").click();
   const urgent = page.getByRole("alertdialog", { name: "هشدار دمای بالا ثبت شد" });
   await urgent.waitFor();
+  await page.keyboard.press("Escape");
+  assert.ok(await urgent.isVisible(), "Escape must not silently dismiss an urgent medical alert");
+  await page.keyboard.press("Control+k");
+  assert.ok(await urgent.isVisible());
+  assert.equal(await page.locator("#mano-search-dialog").count(), 0, "Global search cannot obscure an urgent alert");
+  assert.equal(await page.locator("#mano-tools-dialog").count(), 0);
   assert.match(await urgent.textContent(), /نوزاد زیر ۳ ماه|معاینه فوری/);
   assert.equal(await urgent.getByRole("button", { name: "محاسبه‌گر ایمن تب‌بر بر پایه وزن", exact: true }).count(), 0, "A stale toddler band cannot expose an infant self-treatment action");
   await urgent.getByRole("button", { name: "بستن هشدار", exact: true }).click();
@@ -483,6 +642,7 @@ try {
 
   await verifyClinicalPrivacyAndDeletion(browser, errors);
   await verifyCarePlanTrust(browser, errors);
+  await verifyKeyboardAndTaskNavigation(browser, errors);
 
   // Keep the previous approved visual demo available, isolated and clearly separate.
   await page.goto(`${origin}/preview/`, { waitUntil: "networkidle" });
