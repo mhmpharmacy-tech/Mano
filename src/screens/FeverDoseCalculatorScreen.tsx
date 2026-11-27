@@ -10,6 +10,7 @@ import {
   type LiquidFormulation,
 } from '../domain/liquidDoseVisualizerEngine.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
+import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { VisualSyringeCanvas } from '../components/VisualSyringeCanvas.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
@@ -26,15 +27,28 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
     LIQUID_FORMULATION_LIST[1];
 
   const [formulation, setFormulation] = useState<LiquidFormulation>(initialFormulation);
-  const [ageMonths, setAgeMonths] = useState<number>(() => {
+  const [ageInput, setAgeInput] = useState<string>(() => {
     const inferred = initialAgeMonthsFromProfile(childProfile, vaccineBirthDateEpochMs);
-    return inferred ?? (childProfile.ageBand === 'NEWBORN' ? 2 : 18);
+    return inferred === null ? '' : String(inferred);
   });
-  const [weightKg, setWeightKg] = useState<number>(() => {
+  const [weightInput, setWeightInput] = useState<string>(() => {
     const inferred = initialWeightKgFromProfile(childProfile);
-    return inferred ?? 11.0;
+    return inferred === null ? '' : String(inferred);
   });
   const [labelConfirmed, setLabelConfirmed] = useState(false);
+  const ageMonths = parseClinicalDecimal(ageInput);
+  const weightKg = parseClinicalDecimal(weightInput);
+  const canAdjustAge = ageMonths !== null && ageMonths >= 0 && ageMonths <= 144;
+  const canAdjustWeight = weightKg !== null && weightKg >= 3 && weightKg <= 40;
+
+  const updateAge = (value: string) => {
+    setAgeInput(value);
+    setLabelConfirmed(false);
+  };
+  const updateWeight = (value: string) => {
+    setWeightInput(value);
+    setLabelConfirmed(false);
+  };
 
   const result = useMemo(
     () => evaluateLiquidDose(formulation, ageMonths, weightKg),
@@ -137,7 +151,7 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-extrabold text-[#122823] dark:text-[#EDF4F7]">۲. سن دقیق کودک (به ماه)</h2>
             <span data-testid="dose-age-display" className="tabular-nums text-sm font-extrabold text-[#105B48] dark:text-[#00D7C7]">
-              {formatAgeFa(ageMonths)} ({toPersianDigits(ageMonths)} ماه)
+              {formatAgeFa(ageMonths)}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -145,60 +159,42 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
               type="button"
               data-testid="dose-age-minus"
               aria-label="کاهش سن به ماه"
+              disabled={!canAdjustAge || ageMonths === 0}
               onClick={() => {
-                setAgeMonths((m) => Math.max(0, m - 1));
-                setLabelConfirmed(false);
+                if (ageMonths !== null) updateAge(String(Math.max(0, ageMonths - 1)));
               }}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#23344D] dark:bg-[#16243B]"
             >
               <Minus className="h-4 w-4" />
             </button>
             <input
-              type="range"
-              min={0}
-              max={144}
-              value={ageMonths}
-              aria-label="اسلایدر سن به ماه"
-              onChange={(e) => {
-                setAgeMonths(Number(e.target.value));
-                setLabelConfirmed(false);
-              }}
-              className="flex-1 accent-[#105B48]"
+              type="text"
+              inputMode="decimal"
+              dir="ltr"
+              data-testid="dose-age-input"
+              value={ageInput}
+              aria-label="سن دقیق کودک به ماه"
+              aria-describedby="dose-age-help"
+              placeholder="سن به ماه"
+              onChange={(e) => updateAge(e.target.value)}
+              className="min-w-0 flex-1 rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] p-3 text-center tabular-nums dark:border-[#23344D] dark:bg-[#16243B]"
             />
             <button
               type="button"
               data-testid="dose-age-plus"
               aria-label="افزایش سن به ماه"
+              disabled={!canAdjustAge || ageMonths === 144}
               onClick={() => {
-                setAgeMonths((m) => Math.min(144, m + 1));
-                setLabelConfirmed(false);
+                if (ageMonths !== null) updateAge(String(Math.min(144, ageMonths + 1)));
               }}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#23344D] dark:bg-[#16243B]"
             >
               <Plus className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: '۲ ماه (نوزاد)', val: 2 },
-              { label: '۴ ماه', val: 4 },
-              { label: '۱۸ ماه', val: 18 },
-              { label: '۴ سال (۴۸ ماه)', val: 48 },
-            ].map((q) => (
-              <button
-                key={q.val}
-                type="button"
-                data-testid={`quick-age-${q.val}`}
-                onClick={() => {
-                  setAgeMonths(q.val);
-                  setLabelConfirmed(false);
-                }}
-                className="min-h-[36px] rounded-xl border border-[#DCE7E1] px-2.5 text-xs font-semibold hover:border-[#105B48] dark:border-[#23344D]"
-              >
-                {q.label}
-              </button>
-            ))}
-          </div>
+          <p id="dose-age-help" className="text-xs text-[#546963] dark:text-[#9EB3C4]">
+            سن واقعی کودک را از ۰ تا ۱۴۴ ماه وارد کنید. تا ثبت سن، محاسبه دوز قفل است.
+          </p>
         </div>
 
         <div className="rounded-3xl border border-[#DCE7E1] bg-white p-5 space-y-3 dark:border-[#23344D] dark:bg-[#111C2E]">
@@ -213,33 +209,41 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
               type="button"
               data-testid="dose-weight-minus"
               aria-label="کاهش وزن"
-              onClick={() => setWeightKg((w) => Math.max(3.0, Math.round((w - 0.5) * 10) / 10))}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
+              disabled={!canAdjustWeight || weightKg === 3}
+              onClick={() => {
+                if (weightKg !== null) updateWeight(String(Math.max(3.0, Math.round((weightKg - 0.5) * 10) / 10)));
+              }}
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#23344D] dark:bg-[#16243B]"
             >
               <Minus className="h-4 w-4" />
             </button>
             <input
-              type="range"
-              min={3}
-              max={40}
-              step={0.5}
-              value={weightKg}
-              aria-label="اسلایدر وزن به کیلوگرم"
-              onChange={(e) => setWeightKg(Number(e.target.value))}
-              className="flex-1 accent-[#105B48]"
+              type="text"
+              inputMode="decimal"
+              dir="ltr"
+              data-testid="dose-weight-input"
+              value={weightInput}
+              aria-label="وزن اندازه‌گیری‌شده کودک به کیلوگرم"
+              aria-describedby="dose-weight-help"
+              placeholder="وزن به کیلوگرم"
+              onChange={(e) => updateWeight(e.target.value)}
+              className="min-w-0 flex-1 rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] p-3 text-center tabular-nums dark:border-[#23344D] dark:bg-[#16243B]"
             />
             <button
               type="button"
               data-testid="dose-weight-plus"
               aria-label="افزایش وزن"
-              onClick={() => setWeightKg((w) => Math.min(40.0, Math.round((w + 0.5) * 10) / 10))}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] dark:border-[#23344D] dark:bg-[#16243B]"
+              disabled={!canAdjustWeight || weightKg === 40}
+              onClick={() => {
+                if (weightKg !== null) updateWeight(String(Math.min(40.0, Math.round((weightKg + 0.5) * 10) / 10)));
+              }}
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#23344D] dark:bg-[#16243B]"
             >
               <Plus className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">
-            در صورت نبود ترازو، بدون حدس زدن وزن دارو ندهید؛ به نزدیک‌ترین داروخانه یا مرکز بهداشت مراجعه کنید.
+          <p id="dose-weight-help" className="text-xs text-[#546963] dark:text-[#9EB3C4]">
+            وزن اندازه‌گیری‌شده از ۳ تا ۴۰ کیلوگرم را وارد کنید. در صورت نبود ترازو، وزن را حدس نزنید و به داروخانه یا مرکز بهداشت مراجعه کنید.
           </p>
         </div>
       </section>

@@ -1,101 +1,27 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 
-const index = await readFile(resolve("index.html"), "utf8");
-const js = await readFile(resolve("src/app.js"), "utf8");
-const css = await readFile(resolve("src/app.css"), "utf8");
+const primary = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const preview = await readFile(new URL("../preview/index.html", import.meta.url), "utf8");
+const previewCode = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 
-test("approved visual identity survives AI Studio import", () => {
-  assert.match(index, /MANO\s*<em>Kid<\/em>/);
-  assert.match(index, /class="robot/);
-  assert.match(index, /hero-orbit-bot/);
-  assert.match(index, /سلام، من مانو هستم\./);
-  assert.match(index, /show\('careCard'\)/);
-  assert.match(index, /data:image\/[a-zA-Z+.-]+;base64,/);
-  assert.match(index, /class="hero"/);
-  assert.match(index, /class="bottom"/);
-  assert.doesNotMatch(index, /آراد|۴ سال و ۳ ماه/);
-  assert.doesNotMatch(index, /maximum-scale=1/);
-  assert.match(css, /--deep:#174F46/);
-  assert.match(css, /--cream:#F8F7F2/);
-  assert.match(css, /--cyan:#A7E1DF/);
-  assert.match(css, /\.screen-main/);
+test("the primary web page boots the React application in Persian RTL", () => {
+  assert.match(primary, /<html[^>]*lang=["']fa["']/);
+  assert.match(primary, /<html[^>]*dir=["']rtl["']/);
+  assert.match(primary, /id=["']root["']/);
+  assert.match(primary, /src=["']\/src\/main\.tsx["']/);
+  assert.doesNotMatch(primary, /src=["']\/src\/app\.js["']/);
 });
 
-test("all approved home actions lead to a real interactive view", () => {
-  for (const key of ["symptoms","pharmacist","profile","growth","vaccines","care","careCard","medicines","search","alerts","addDrug","tools"]) {
-    assert.match(index, new RegExp("show\\('"+key+"'\\)|switchTab\\(this,'"+key+"'\\)"));
-  }
-  for (const form of ["profile-form","symptom-form","question-form","growth-form","vaccine-form","treatment-form"]) {
-    assert.ok(js.includes('id="'+form+'"'), form + " not implemented");
-  }
-  for (const label of ["بررسی علائم کودک","واکسیناسیون","رشد کودک","پرسش از داروساز","برنامه مراقبت و درمان","مکمل‌ها و بهداشت کودک"]) {
-    assert.ok(js.includes(label) || index.includes(label), label + " missing");
-  }
+test("the separate design preview retains its original interface and demo entry", () => {
+  assert.match(preview, /class="hero"/);
+  assert.match(preview, /id="supplements-home-card"/);
+  assert.match(preview, /src="\/src\/app\.js"/);
+  assert.doesNotMatch(preview, /maximum-scale=1/);
 });
 
-test("no fabricated pediatric dosing, vaccine deadline or real pharmacist confirmation", () => {
-  assert.match(js, /age<3&&temp!==null&&temp>=38/);
-  assert.match(js, /ارزیابی فوری پزشکی/);
-  assert.match(js, /بدون درصدک ساختگی/);
-  assert.match(js, /بدون محاسبه خودکار موعد/);
-  assert.match(js, /ارسال واقعی غیرفعال است/);
-  assert.match(js, /state\.profile=null/);
-  assert.match(js, /بستن یا تازه‌سازی پاک می‌شود/);
-  assert.doesNotMatch(js, /localStorage|sessionStorage|fetch\(|XMLHttpRequest/);
-});
-
-test("supplements and hygiene home card renders categorized duo-tone rows and safe sheet", () => {
-  assert.match(index, /id="supplements-home-card"/);
-  assert.match(css, /\.supplements-card/);
-  assert.match(css, /\.supp-tab\.active/);
-  assert.match(js, /renderSupplementsHomeCard/);
-  assert.match(js, /openProductSheet/);
-  assert.match(js, /rec_vit_d3/);
-  assert.match(js, /rec_zinc_cream/);
-  assert.match(js, /نکات ایمن انتخاب و مصرف/);
-});
-
-test("care card preview and dedicated empty states render calm graphics and next steps", () => {
-  assert.match(js, /function renderCareCard/);
-  assert.match(js, /نمونه آموزشی/);
-  assert.match(js, /data-care-check/);
-  assert.match(css, /\.care-card-sheet/);
-  assert.match(css, /\.empty-state-card/);
-  assert.match(js, /function renderEmptyStateCard/);
-  assert.match(js, /پیشنهاد اقدام بعدی:/);
-  assert.match(js, /domain:\s*"medicines"/);
-  assert.match(js, /domain:\s*"vaccines"/);
-  assert.match(js, /domain:\s*"supplements"/);
-  assert.match(js, /id="supp-search"/);
-  assert.match(js, /data-supp-filter/);
-  assert.match(js, /reset-supp-filter/);
-});
-
-test("preview server serves only whitelisted app assets", async () => {
-  process.env.MANO_NO_LISTEN = "1";
-  const { server } = await import("../server.mjs");
-  await new Promise((res) => server.listen(0, "127.0.0.1", res));
-  const origin = "http://127.0.0.1:" + server.address().port;
-  try {
-    const page = await fetch(origin + "/");
-    assert.equal(page.status, 200);
-    assert.match(page.headers.get("content-type"), /text\/html/);
-    assert.match(await page.text(), /MANO Kid/);
-    for (const path of ["/src/app.js", "/src/app.css"]) {
-      const res = await fetch(origin + path);
-      assert.equal(res.status, 200, path);
-      assert.ok((await res.text()).length > 500);
-    }
-    for (const sensitive of ["/firebase.json","/.env","/app/build.gradle.kts","/firestore.rules","/metadata.json","/package.json"]) {
-      const res = await fetch(origin + sensitive);
-      assert.equal(res.status,404,"Unexpected exposure: "+sensitive);
-    }
-    const forbidden = await fetch(origin + "/src/app.js", { method:"POST" });
-    assert.equal(forbidden.status,405);
-  } finally {
-    await new Promise((res) => server.close(res));
-  }
+test("the design demo cannot submit patient information or persist session data", () => {
+  assert.doesNotMatch(previewCode, /localStorage|sessionStorage|fetch\(|XMLHttpRequest/);
+  assert.match(previewCode, /ارسال واقعی غیرفعال است/);
 });

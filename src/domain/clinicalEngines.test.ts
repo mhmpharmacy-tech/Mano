@@ -1,9 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { FeverDoseCalculatorScreen } from '../screens/FeverDoseCalculatorScreen.tsx';
+import { SymptomNavigatorScreen } from '../screens/SymptomNavigatorScreen.tsx';
+import { ManoProvider } from '../state/ManoStore.tsx';
 
 import { parseClinicalDecimal } from './clinicalNumberInput.ts';
 import { normalizePersian, scoreMatch, toAsciiDigits, toPersianDigits } from './persianNormalizer.ts';
-import { evaluateTriage } from './triageEngine.ts';
+import { ageBandFromMonths, evaluateTriage } from './triageEngine.ts';
 import {
   calculateFeverDose,
   evaluatePriorDoseConflict,
@@ -72,6 +77,65 @@ describe('PersianNormalizer & ClinicalNumberInput', () => {
 });
 
 describe('TriageEngine clinical safety gates', () => {
+  it('starts triage with no invented age, temperature, duration, self-care, or AI option', () => {
+    const markup = renderToStaticMarkup(
+      createElement(ManoProvider, { children: createElement(SymptomNavigatorScreen, { initialFlowId: 'fever' }) }),
+    );
+    assert.match(markup, /data-testid="triage-temp-input"[^>]*value=""/);
+    assert.match(markup, /data-testid="triage-duration-input"[^>]*value=""/);
+    assert.match(markup, /data-testid="triage-result-NEEDS_TIMELY_REVIEW"/);
+    assert.doesNotMatch(markup, /aria-pressed="true"/);
+    assert.doesNotMatch(markup, /data-testid="triage-result-GENERAL_EDUCATIONAL"/);
+    assert.doesNotMatch(markup, /data-testid="triage-ai-checklist-btn"/);
+  });
+
+  it('uses exact neonatal age even when a saved broad age band contradicts it', () => {
+    const result = evaluateTriage({
+      flow: SAMPLE_FEVER_FLOW,
+      ageBand: 'TODDLER_1_3Y',
+      ageMonthsExact: 2,
+      temperatureCelsius: 38,
+      durationHours: 2,
+      selectedRedFlagIds: new Set(),
+    });
+    assert.equal(result.outcome, 'URGENT_EMERGENCY');
+    assert.equal(result.canShowSelfCare, false);
+    assert.equal(result.triggeredRule.id, 'rule_infant_under_3m_fever_38');
+    assert.equal(ageBandFromMonths(2), 'NEWBORN');
+    assert.equal(ageBandFromMonths(3), 'INFANT_3_12M');
+    assert.equal(ageBandFromMonths(12), 'TODDLER_1_3Y');
+  });
+
+  it('withholds home care when age or required measurements are missing', () => {
+    for (const input of [
+      { ageBand: null, temperatureCelsius: 38.2, durationHours: 12 },
+      { ageBand: 'TODDLER_1_3Y' as const, temperatureCelsius: null, durationHours: 12 },
+      { ageBand: 'TODDLER_1_3Y' as const, temperatureCelsius: 38.2, durationHours: null },
+    ]) {
+      const result = evaluateTriage({
+        flow: SAMPLE_FEVER_FLOW,
+        selectedRedFlagIds: new Set(),
+        ...input,
+      });
+      assert.equal(result.outcome, 'NEEDS_TIMELY_REVIEW');
+      assert.equal(result.canShowSelfCare, false);
+      assert.equal(result.showPharmacistOption, false);
+      assert.equal(result.triggeredRule.id, 'rule_incomplete_input');
+    }
+  });
+
+  it('keeps urgent flags and extreme temperature ahead of incomplete age information', () => {
+    const input = {
+      flow: SAMPLE_FEVER_FLOW,
+      ageBand: null,
+      temperatureCelsius: null,
+      durationHours: null,
+      selectedRedFlagIds: new Set(['seizure']),
+    };
+    assert.equal(evaluateTriage(input).outcome, 'URGENT_EMERGENCY');
+    assert.equal(evaluateTriage({ ...input, temperatureCelsius: 40.5, selectedRedFlagIds: new Set() }).outcome, 'URGENT_EMERGENCY');
+  });
+
   it('forces urgent emergency and hides self-care for NEWBORN (<3m) with fever >= 38.0°C', () => {
     const res = evaluateTriage({
       flow: SAMPLE_FEVER_FLOW,
@@ -116,6 +180,31 @@ describe('TriageEngine clinical safety gates', () => {
 });
 
 describe('FeverDoseCalculatorEngine & LiquidDoseVisualizerEngine', () => {
+  it('keeps a fresh calculator blank and locked until actual age and weight are supplied', () => {
+    const markup = renderToStaticMarkup(
+      createElement(ManoProvider, { children: createElement(FeverDoseCalculatorScreen) }),
+    );
+    assert.match(markup, /data-testid="dose-age-input"[^>]*value=""/);
+    assert.match(markup, /data-testid="dose-weight-input"[^>]*value=""/);
+    assert.match(markup, /data-testid="dose-blocked-alert"/);
+    assert.doesNotMatch(
+      markup,
+      /data-testid="(?:dose-label-confirm-checkbox|dose-calculated-result|dose-save-timeline-btn)"/,
+    );
+  });
+
+  it('does not calculate with missing or invalid measurements or for a two-month-old infant', () => {
+    const formulation = LIQUID_FORMULATIONS.ACETAMINOPHEN_SYRUP_120_5;
+    for (const [age, weight] of [
+      [null, null], [null, 11], [18, null], [18, Number.NaN],
+      [18, 0], [18, 2.9], [18, 40.1], [-1, 11], [145, 11], [2, 5],
+    ]) {
+      const result = evaluateLiquidDose(formulation, age, weight);
+      assert.equal(result.isBlocked, true, `age=${age}, weight=${weight}`);
+      assert.equal(result.recommendedMl, 0);
+    }
+  });
+
   it('blocks home fever dosing under 3 months', () => {
     const res = calculateFeverDose('UNDER_3_MONTHS', LIQUID_FORMULATIONS.ACETAMINOPHEN_DROPS_100, 5.0);
     assert.equal(res.isBlocked, true);
@@ -171,6 +260,22 @@ describe('WhoGrowthStandardsEngine', () => {
 });
 
 describe('VaccinationScheduleEngine', () => {
+  it('does not announce a vaccine deadline without a birth date or explicit due date', () => {
+    const now = Date.UTC(2026, 10, 27);
+    const unknown = resolveVaccineSchedule([], null, { enabled: true, leadDaysBefore: 3 }, now);
+    assert.equal(unknown.nextUpcoming, null);
+    assert.equal(unknown.dueSoonCount, 0);
+    assert.equal(unknown.overdueCount, 0);
+    assert.deepEqual(unknown.dueForReminder, []);
+
+    const customDue = now + 2 * 86_400_000;
+    const explicit = resolveVaccineSchedule([
+      { vaccineId: unknown.items[0].definition.id, customDueDateEpochMs: customDue, updatedAtMs: now },
+    ], null, { enabled: true, leadDaysBefore: 3 }, now);
+    assert.equal(explicit.nextUpcoming?.definition.id, unknown.items[0].definition.id);
+    assert.equal(explicit.nextUpcoming?.status, 'DUE_SOON');
+  });
+
   it('round-trips Jalali and Gregorian dates and computes overdue/due status', () => {
     const [gy, gm, gd] = jalaliToGregorian(1404, 2, 15);
     const [jy, jm, jd] = gregorianToJalali(gy, gm, gd);

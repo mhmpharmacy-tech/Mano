@@ -745,7 +745,12 @@ test('11. Express HTTP integration tests endpoints, validated SSE visit draft, m
       generateJson: async () => validVisitDraftJson(),
     },
   });
-  const app = await createApp({ gateway: gw, serveStatic: false });
+  const accessToken = Buffer.from('server-only-integration-test-access-token').toString('base64url');
+  const app = await createApp({
+    gateway: gw,
+    serveStatic: false,
+    accessPolicy: { clinicalServiceEnabled: true, accessToken },
+  });
 
   const server = http.createServer(app);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
@@ -756,14 +761,14 @@ test('11. Express HTTP integration tests endpoints, validated SSE visit draft, m
   try {
     const healthRes = await fetch(`${baseUrl}/api/health`);
     assert.equal(healthRes.status, 200);
-    const healthJson = (await healthRes.json()) as { gatewayMode: string; hasGeminiKey: boolean };
-    assert.equal(healthJson.gatewayMode, 'RESTRICTED_AUDITABLE');
-    assert.equal(healthJson.hasGeminiKey, true);
+    const healthJson = (await healthRes.json()) as { aiServiceAvailable: boolean; clinicalServiceEnabled: boolean };
+    assert.equal(healthJson.clinicalServiceEnabled, true);
+    assert.equal(healthJson.aiServiceAvailable, true);
 
     // Validated SSE response for visit draft
     const sseRes = await fetch(`${baseUrl}/api/gemini/visit-draft`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({
         promptText: 'کودک ۱۸ ماهه با تب ۳۸.۲ درجه از دیشب',
         chiefComplaintFa: 'تب از دیشب',
@@ -779,7 +784,7 @@ test('11. Express HTTP integration tests endpoints, validated SSE visit draft, m
     // Malformed HTTP JSON body returns structured 400 JSON
     const badJsonRes = await fetch(`${baseUrl}/api/gemini/visit-draft`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: '{"broken": ',
     });
     assert.equal(badJsonRes.status, 400);
@@ -787,7 +792,9 @@ test('11. Express HTTP integration tests endpoints, validated SSE visit draft, m
     assert.equal(badJsonBody.code, 'MALFORMED_REQUEST_JSON');
 
     // Audit endpoint returns redacted entries without secrets or raw IPs
-    const auditRes = await fetch(`${baseUrl}/api/ai-gateway/audit?limit=5`);
+    const auditRes = await fetch(`${baseUrl}/api/ai-gateway/audit?limit=5`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     assert.equal(auditRes.status, 200);
     const auditText = await auditRes.text();
     assert.equal(auditText.includes('test-server-secret-key'), false);

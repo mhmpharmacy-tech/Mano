@@ -1,5 +1,4 @@
 import type {
-  GatewayHealthStatus,
   GatewayResponseMeta,
   RestrictedDocumentedQaPayload,
   RestrictedNutritionPayload,
@@ -9,7 +8,12 @@ import type {
 } from '../domain/aiGatewayContracts.ts';
 import type { FaqItem, NutritionPlan } from '../domain/models.ts';
 
-export type HealthStatus = GatewayHealthStatus;
+export interface HealthStatus {
+  ok: boolean;
+  clinicalServiceEnabled: boolean;
+  aiServiceAvailable: boolean;
+  offlineEnginesIndependent: boolean;
+}
 
 export interface GatewayClientResult<T> {
   data: T;
