@@ -96,7 +96,6 @@ export const HighFeverUrgentAlertDialog: React.FC = () => {
         <button
           type="button"
           onClick={dismissHighFeverAlert}
-          aria-label="بستن هشدار"
           className="mt-3 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] px-4 text-sm font-bold text-[#546963] hover:bg-[#F5F9F6] dark:border-[#23344D] dark:text-[#9EB3C4] dark:hover:bg-[#16243B]"
         >
           متوجه شدم

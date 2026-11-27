@@ -134,7 +134,7 @@ async function verifyShortScreenCareDialogs(browser, errors) {
   assert.ok(await urgent.isVisible(), "Backdrop clicks cannot acknowledge an emergency");
   assert.equal(await page.locator("#root").evaluate(element => element.inert), true);
   await page.screenshot({ path: "web-artifacts/urgent-fever-dialog-short.png" });
-  await urgent.getByRole("button", { name: "بستن هشدار", exact: true }).focus();
+  await urgent.getByRole("button", { name: "متوجه شدم", exact: true }).focus();
   await page.keyboard.press("Enter");
   await urgent.waitFor({ state: "hidden" });
   assert.equal(await page.locator("#mano-main-content").evaluate(element => element === document.activeElement), true, "Explicit acknowledgement must restore a connected main-content focus target");
@@ -530,7 +530,7 @@ async function verifyClinicalPrivacyAndDeletion(browser, errors) {
   assert.equal(await page.locator("#mano-tools-dialog").count(), 0);
   assert.match(await urgent.textContent(), /نوزاد زیر ۳ ماه|معاینه فوری/);
   assert.equal(await urgent.getByRole("button", { name: "محاسبه‌گر ایمن تب‌بر بر پایه وزن", exact: true }).count(), 0, "A stale toddler band cannot expose an infant self-treatment action");
-  await urgent.getByRole("button", { name: "بستن هشدار", exact: true }).click();
+  await urgent.getByRole("button", { name: "متوجه شدم", exact: true }).click();
   await page.getByTestId("timeline-add-temp-btn").click();
   assert.equal(await page.getByTestId("timeline-temp-input").inputValue(), "", "A new record must not reuse a previous measured value");
   await tempDialog.getByRole("button", { name: "بستن", exact: true }).click();
