@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مانو کید</string>
+    <string name="welcome_badge">همراه علمی سلامت کودک</string>
+    <string name="welcome_title">مراقبت مطمئن، آرام و همراه با داروساز</string>
+    <string name="welcome_body">غربالگری نشانه‌های هشدار، محاسبه آموزشی دوز با سرنگ مدرج، پیگیری واکسیناسیون و گفت‌وگوی مستند با داروساز</string>
+    <string name="domain_links_title">اتصال دامنه رسمی مانو کید</string>
+    <string name="domain_links_subtitle">باز شدن مستقیم کارت دارو، واکسن و دعوت‌نامه داروخانه روی manokid.ir و manokid.com</string>
+    <string name="mano_squad_section_badge">تیم همراه مانو</string>
+    <string name="mano_squad_section_title">همکاران تخصصی سلامت کودک</string>
+    <string name="mano_squad_section_subtitle">هر بخش از مراقبت کودک یک دستیار متمرکز، شفاف و قابل اتکا دارد</string>
+</resources>
