@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Baby,
   ChevronLeft,
@@ -7,13 +7,13 @@ import {
   Sparkles,
   Stethoscope,
   Sun,
-  Verified,
   X,
 } from 'lucide-react';
 import {
   RECOMMENDED_SUPPLEMENTS_HYGIENE_PRODUCTS,
   type RecommendedChildCareProduct,
 } from '../data/supplementsHygiene.ts';
+import { AccessibleDialog } from './AccessibleDialog.tsx';
 
 interface SupplementsHygieneRecommendedCardProps {
   onAskPharmacist: (categoryId: string) => void;
@@ -42,6 +42,7 @@ export const SupplementsHygieneRecommendedCard: React.FC<SupplementsHygieneRecom
   onOpenAllGuides,
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<RecommendedChildCareProduct | null>(null);
+  const productTitleRef = useRef<HTMLHeadingElement>(null);
 
   return (
     <section
@@ -56,12 +57,11 @@ export const SupplementsHygieneRecommendedCard: React.FC<SupplementsHygieneRecom
           <div>
             <div className="flex items-center gap-1.5">
               <h3 className="text-sm font-extrabold text-[#122823] dark:text-[#EDF4F7]">
-                مکمل‌ها و بهداشت کودک (استاندارد داروخانه‌ای)
+                آشنایی با دسته‌های مکمل و بهداشت کودک
               </h3>
-              <Verified className="h-4 w-4 text-[#C6862E] dark:text-[#F0B85C]" />
             </div>
             <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">
-              نکات انتخاب علمی محصول · بدون معرفی برند تجاری · لمس هر مورد برای راهنما
+              راهنمای آموزشی بدون معرفی برند تجاری؛ تأیید بالینی این نسخه کامل نشده است
             </p>
           </div>
         </div>
@@ -83,6 +83,8 @@ export const SupplementsHygieneRecommendedCard: React.FC<SupplementsHygieneRecom
             key={product.id}
             type="button"
             onClick={() => setSelectedProduct(product)}
+            data-testid={`supplement-product-${product.id}`}
+            aria-haspopup="dialog"
             className="flex min-h-[60px] w-full items-center justify-between gap-3 py-3 text-right transition-colors hover:bg-[#F5F9F6] dark:hover:bg-[#16243B] px-2 rounded-xl"
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -90,10 +92,10 @@ export const SupplementsHygieneRecommendedCard: React.FC<SupplementsHygieneRecom
                 <ProductIcon kind={product.iconKind} />
               </span>
               <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-[#122823] dark:text-[#EDF4F7]">
+                <div className="break-words text-sm font-bold text-[#122823] dark:text-[#EDF4F7]">
                   {product.titleFa}
                 </div>
-                <div className="truncate text-xs text-[#546963] dark:text-[#9EB3C4]">
+                <div className="break-words text-xs leading-5 text-[#546963] dark:text-[#9EB3C4]">
                   {product.subtitleFa} · {product.ageHintFa}
                 </div>
               </div>
@@ -110,28 +112,28 @@ export const SupplementsHygieneRecommendedCard: React.FC<SupplementsHygieneRecom
           className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#105B48] px-4 text-sm font-bold text-white hover:bg-[#0C493A] dark:bg-[#00D7C7] dark:text-[#0B1220]"
         >
           <Stethoscope className="h-4 w-4" />
-          <span>پرسش از داروساز درباره مکمل و بهداشت</span>
+          <span>نوشتن پرسش درباره مکمل و بهداشت</span>
         </button>
       </div>
 
       {selectedProduct ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={selectedProduct.titleFa}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedProduct(null)}
+        <AccessibleDialog
+          id="mano-supplement-product-dialog"
+          label={selectedProduct.titleFa}
+          describedBy="mano-supplement-product-description"
+          initialFocusRef={productTitleRef}
+          fallbackFocusId="mano-main-content"
+          onClose={() => setSelectedProduct(null)}
+          closeOnBackdrop
+          backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+          panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-md space-y-4 overflow-y-auto overscroll-contain rounded-3xl border border-[#DCE7E1] bg-white p-5 outline-none dark:border-[#23344D] dark:bg-[#111C2E] sm:p-6"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
-          >
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0 flex-1 break-words">
                 <div className="text-xs font-semibold text-[#105B48] dark:text-[#00D7C7]">
                   {selectedProduct.categoryTagFa} · {selectedProduct.ageHintFa}
                 </div>
-                <h4 className="mt-1 text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">
+                <h4 ref={productTitleRef} tabIndex={-1} className="mt-1 text-base font-extrabold text-[#122823] outline-none dark:text-[#EDF4F7]">
                   {selectedProduct.titleFa}
                 </h4>
               </div>
@@ -139,13 +141,13 @@ export const SupplementsHygieneRecommendedCard: React.FC<SupplementsHygieneRecom
                 type="button"
                 onClick={() => setSelectedProduct(null)}
                 aria-label="بستن"
-                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl text-[#546963]"
+                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-[#546963]"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-xs leading-5 text-[#546963] dark:text-[#9EB3C4]">{selectedProduct.subtitleFa}</p>
+            <p id="mano-supplement-product-description" className="text-xs leading-5 text-[#546963] dark:text-[#9EB3C4]">{selectedProduct.subtitleFa}</p>
 
             <ul className="list-disc space-y-2 pr-5 text-sm leading-6 text-[#122823] dark:text-[#EDF4F7]">
               {selectedProduct.selectionTipsFa.map((tip, idx) => (
@@ -164,8 +166,7 @@ export const SupplementsHygieneRecommendedCard: React.FC<SupplementsHygieneRecom
             >
               <span>پرسش درباره این محصول</span>
             </button>
-          </div>
-        </div>
+        </AccessibleDialog>
       ) : null}
     </section>
   );

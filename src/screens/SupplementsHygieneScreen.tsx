@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   CheckCircle2,
@@ -19,6 +19,7 @@ import { useMano } from '../state/ManoStore.tsx';
 import { SourceBadge } from '../components/SourceBadge.tsx';
 import { SupplementsHygieneRecommendedCard } from '../components/SupplementsHygieneRecommendedCard.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
+import { AccessibleDialog } from '../components/AccessibleDialog.tsx';
 
 type AgeFilter = 'ALL' | '0_6m' | '6_24m' | '2_6y';
 
@@ -31,6 +32,8 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
   const [query, setQuery] = useState('');
   const [selectedGuide, setSelectedGuide] = useState<SupplementOrHygieneGuide | null>(null);
   const [checklistModalOpen, setChecklistModalOpen] = useState(false);
+  const guideTitleRef = useRef<HTMLHeadingElement>(null);
+  const checklistTitleRef = useRef<HTMLHeadingElement>(null);
 
   const filteredGuides = useMemo(() => {
     return SUPPLEMENTS_AND_HYGIENE_GUIDES.filter((g) => {
@@ -48,10 +51,10 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-[#122823] dark:text-[#EDF4F7]">
-            مکمل‌های استاندارد و بهداشت روزانه کودک
+            راهنمای آموزشی مکمل و بهداشت کودک
           </h1>
           <p className="mt-1 text-xs text-[#546963] dark:text-[#9EB3C4]">
-            راهنمای ویتامین A+D، قطره آهن، پروبیوتیک، بهداشت دهان، حمام و پوشک بر پایه اصول داروخانه‌ای
+            مرور موضوعات ویتامین، آهن، بهداشت دهان، حمام و پوشک؛ محتوای نیازمند تأیید بالینی
           </p>
         </div>
         <button
@@ -83,6 +86,8 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
         <button
           type="button"
           onClick={() => setChecklistModalOpen(true)}
+          data-testid="supplements-open-checklist-btn"
+          aria-haspopup="dialog"
           className="min-h-[44px] rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white hover:bg-[#0C493A] dark:bg-[#00D7C7] dark:text-[#0B1220]"
         >
           تیک زدن برنامه امروز
@@ -165,6 +170,8 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
             key={guide.id}
             type="button"
             onClick={() => setSelectedGuide(guide)}
+            data-testid={`supplement-guide-${guide.id}`}
+            aria-haspopup="dialog"
             className="flex items-start justify-between gap-3 rounded-3xl border border-[#DCE7E1] bg-white p-5 text-right transition-colors hover:border-[#105B48] dark:border-[#23344D] dark:bg-[#111C2E] dark:hover:border-[#00D7C7]"
           >
             <div className="space-y-1.5">
@@ -186,23 +193,22 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
 
       {/* Guide Detail Modal */}
       {selectedGuide ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={selectedGuide.titleFa}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedGuide(null)}
+        <AccessibleDialog
+          id="mano-supplement-guide-dialog"
+          label={selectedGuide.titleFa}
+          initialFocusRef={guideTitleRef}
+          fallbackFocusId="mano-main-content"
+          onClose={() => setSelectedGuide(null)}
+          closeOnBackdrop
+          backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+          panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-3xl border border-[#DCE7E1] bg-white p-5 outline-none dark:border-[#23344D] dark:bg-[#111C2E] sm:p-6"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[90vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
-          >
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0 flex-1 break-words">
                 <span className="text-xs font-bold text-[#105B48] dark:text-[#00D7C7]">
                   {selectedGuide.categoryFa} · {selectedGuide.ageGroupFa}
                 </span>
-                <h2 className="mt-1 text-lg font-extrabold text-[#122823] dark:text-[#EDF4F7]">
+                <h2 ref={guideTitleRef} tabIndex={-1} className="mt-1 text-lg font-extrabold text-[#122823] outline-none dark:text-[#EDF4F7]">
                   {selectedGuide.titleFa}
                 </h2>
               </div>
@@ -210,7 +216,7 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
                 type="button"
                 onClick={() => setSelectedGuide(null)}
                 aria-label="بستن"
-                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl text-[#546963]"
+                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-[#546963]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -236,12 +242,12 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
             <div className="flex items-start gap-2 rounded-2xl border border-[#DCE7E1] bg-[#FAF7F0] p-3.5 text-xs leading-6 dark:border-[#23344D] dark:bg-[#16243B]">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#C6862E]" />
               <div>
-                <strong className="font-bold">نکته داروساز: </strong>
+                <strong className="font-bold">یادداشت آموزشی: </strong>
                 {selectedGuide.pharmacistNoteFa}
               </div>
             </div>
 
-            <SourceBadge sourceIds={selectedGuide.sourceIds} reviewStatus="VERIFIED" compact />
+            <SourceBadge sourceIds={selectedGuide.sourceIds} reviewStatus="NEEDS_CLINICAL_REVIEW" compact />
 
             <button
               type="button"
@@ -255,34 +261,32 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
               className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white dark:bg-[#00D7C7] dark:text-[#0B1220]"
             >
               <Stethoscope className="h-4 w-4" />
-              <span>پرسش از داروساز درباره این موضوع</span>
+              <span>نوشتن پرسش درباره این موضوع</span>
             </button>
-          </div>
-        </div>
+        </AccessibleDialog>
       ) : null}
 
       {/* Daily Checklist Modal */}
       {checklistModalOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="چک‌لیست روزانه بهداشت و مکمل"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
-          onClick={() => setChecklistModalOpen(false)}
+        <AccessibleDialog
+          id="mano-hygiene-checklist-dialog"
+          label="چک‌لیست روزانه بهداشت و مکمل"
+          initialFocusRef={checklistTitleRef}
+          fallbackFocusId="mano-main-content"
+          onClose={() => setChecklistModalOpen(false)}
+          closeOnBackdrop
+          backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+          panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-md space-y-4 overflow-y-auto overscroll-contain rounded-3xl border border-[#DCE7E1] bg-white p-5 outline-none dark:border-[#23344D] dark:bg-[#111C2E] sm:p-6"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">
+            <div className="flex items-center justify-between gap-2">
+              <h3 ref={checklistTitleRef} tabIndex={-1} className="min-w-0 break-words text-base font-extrabold text-[#122823] outline-none dark:text-[#EDF4F7]">
                 روتین روزانه مکمل و بهداشت
               </h3>
               <button
                 type="button"
                 onClick={() => setChecklistModalOpen(false)}
                 aria-label="بستن"
-                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl text-[#546963]"
+                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-[#546963]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -320,8 +324,7 @@ export const SupplementsHygieneScreen: React.FC<{ initialTab?: 'supplements' | '
             >
               تایید و بستن
             </button>
-          </div>
-        </div>
+        </AccessibleDialog>
       ) : null}
     </div>
   );

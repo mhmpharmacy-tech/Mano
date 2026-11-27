@@ -3,8 +3,12 @@ import { once } from "node:events";
 import { mkdir, readFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright";
+import { chromium, firefox, webkit } from "playwright";
 import assert from "node:assert/strict";
+
+const browserName = process.env.MANO_BROWSER || "chromium";
+const browserType = new Map([["chromium", chromium], ["firefox", firefox], ["webkit", webkit]]).get(browserName);
+assert.ok(browserType, "MANO_BROWSER must be chromium, firefox or webkit");
 
 const projectDir = fileURLToPath(new URL("../", import.meta.url));
 const portReservation = createServer();
@@ -72,11 +76,11 @@ async function recordedTime(page) {
   });
 }
 
-async function assertShortScreenModal(page, dialog) {
+async function assertShortScreenModal(page, dialog, { requireScroll = true } = {}) {
   const rect = await dialog.boundingBox();
   const viewport = page.viewportSize();
   assert.ok(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= viewport.width + 1 && rect.y + rect.height <= viewport.height + 1, "The modal panel must fit the short viewport");
-  assert.equal(await dialog.evaluate(element => element.scrollHeight > element.clientHeight), true, "Long modal content must remain scrollable");
+  if (requireScroll) assert.equal(await dialog.evaluate(element => element.scrollHeight > element.clientHeight), true, "Long modal content must remain scrollable");
   assert.equal(await page.locator("#root").evaluate(element => element.inert), true);
   assert.equal(await page.evaluate(() => document.body.style.overflow), "hidden");
   await dialog.evaluate(panel => {
@@ -87,6 +91,119 @@ async function assertShortScreenModal(page, dialog) {
   assert.equal(await dialog.evaluate(panel => document.activeElement === [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].find(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length)), true);
   await page.keyboard.press("Shift+Tab");
   assert.equal(await dialog.evaluate(panel => document.activeElement === [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length).at(-1)), true);
+}
+
+async function verifyRemainingFormDialogs(browser, errors) {
+  const context = await browser.newContext({ viewport: { width: 320, height: 480 }, locale: "fa-IR", reducedMotion: "reduce" });
+  context.setDefaultTimeout(12_000);
+  const page = await context.newPage();
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`${origin}/?autostart=1`, { waitUntil: "networkidle" });
+
+  const tempTrigger = page.getByTestId("timeline-add-temp-btn");
+  await tempTrigger.click();
+  const temperature = page.locator("#mano-temperature-entry-dialog");
+  await temperature.waitFor();
+  assert.equal(await temperature.locator("h3").evaluate(element => element === document.activeElement), true, "A new temperature form must initially announce its heading");
+  await page.getByTestId("timeline-temp-input").fill("37.3");
+  await page.getByLabel("ثبت‌کننده دما (اختیاری)", { exact: true }).fill("qa-caregiver-draft");
+  await page.getByLabel("یادداشت دما (اختیاری)", { exact: true }).fill("qa-temperature-draft");
+  await page.mouse.click(2, 2);
+  assert.ok(await temperature.isVisible(), "A backdrop click must not discard unsaved temperature input");
+  assert.equal(await page.getByTestId("timeline-temp-input").inputValue(), "37.3");
+  await page.keyboard.press("Control+k");
+  assert.equal(await page.locator("#mano-search-dialog").count(), 0, "Global search must not obscure an entry form");
+  await assertShortScreenModal(page, temperature);
+  await page.screenshot({ path: "web-artifacts/temperature-entry-dialog-short.png" });
+  await page.keyboard.press("Escape");
+  await temperature.waitFor({ state: "hidden" });
+  assert.equal(await tempTrigger.evaluate(element => element === document.activeElement), true);
+  assert.equal((await savedSnapshot(page)).feverLogs.length, 0, "Cancelling a draft must not create a temperature record");
+  await tempTrigger.click();
+  assert.equal(await page.getByTestId("timeline-temp-input").inputValue(), "", "Reopening an explicitly cancelled form must not reuse its measurement");
+  await page.keyboard.press("Escape");
+
+  const doseTrigger = page.getByTestId("timeline-add-dose-btn");
+  await doseTrigger.click();
+  const dose = page.locator("#mano-dose-entry-dialog");
+  await dose.waitFor();
+  assert.equal(await dose.locator("h3").evaluate(element => element === document.activeElement), true);
+  await page.getByTestId("timeline-dose-form-input").fill("qa-unsaved-formulation");
+  await page.mouse.click(2, 2);
+  assert.ok(await dose.isVisible(), "A backdrop click must not discard unsaved medication input");
+  assert.equal(await page.getByTestId("timeline-dose-form-input").inputValue(), "qa-unsaved-formulation");
+  assert.ok(await page.getByTestId("timeline-dose-save-btn").isDisabled(), "Partial input must still respect administration validation");
+  await assertShortScreenModal(page, dose);
+  await page.screenshot({ path: "web-artifacts/dose-entry-dialog-short.png" });
+  await page.keyboard.press("Escape");
+  await dose.waitFor({ state: "hidden" });
+  assert.equal(await doseTrigger.evaluate(element => element === document.activeElement), true);
+  assert.equal((await savedSnapshot(page)).doseLogs.length, 0);
+
+  await openRoute(page, "treatment-plan", "treatment-plan-screen");
+  const treatmentTrigger = page.getByTestId("treatment-add-med-btn");
+  await treatmentTrigger.click();
+  const treatment = page.locator("#mano-treatment-editor-dialog");
+  await treatment.waitFor();
+  assert.equal(await treatment.locator("h3").evaluate(element => element === document.activeElement), true);
+  await page.getByLabel("نام دارو و غلظت دقیق", { exact: true }).fill("qa-unsaved-care-entry");
+  await page.mouse.click(2, 2);
+  assert.ok(await treatment.isVisible(), "A backdrop click must not discard the care-plan editor");
+  await assertShortScreenModal(page, treatment);
+  await page.getByLabel("تعداد نوبت قابل ثبت در روز (۱ تا ۶)", { exact: true }).fill("2");
+  await page.getByLabel("مقدار هر نوبت طبق دستور", { exact: true }).fill("qa-copied-label-amount");
+  await treatment.getByRole("button", { name: "ذخیره در برنامه درمانی", exact: true }).click();
+  assert.ok(await treatment.isVisible());
+  assert.equal(await page.getByLabel("دستور زمان‌بندی مصرف", { exact: true }).evaluate(element => element === document.activeElement), true, "Invalid submission must move focus to the missing schedule");
+  assert.equal((await savedSnapshot(page)).treatmentPlan.medications.length, 0);
+  await page.screenshot({ path: "web-artifacts/treatment-editor-dialog-short.png" });
+  await page.keyboard.press("Escape");
+  await treatment.waitFor({ state: "hidden" });
+  assert.equal(await treatmentTrigger.evaluate(element => element === document.activeElement), true);
+
+  await openRoute(page, "supplements-hygiene", "supplements-hygiene-screen");
+  const guideTrigger = page.locator('[data-testid^="supplement-guide-"]').first();
+  await guideTrigger.click();
+  const guide = page.locator("#mano-supplement-guide-dialog");
+  await guide.waitFor();
+  assert.equal(await guide.locator("h2").evaluate(element => element === document.activeElement), true);
+  await assertShortScreenModal(page, guide, { requireScroll: false });
+  await page.screenshot({ path: "web-artifacts/supplement-guide-dialog-short.png" });
+  await page.keyboard.press("Escape");
+  await guide.waitFor({ state: "hidden" });
+  assert.equal(await guideTrigger.evaluate(element => element === document.activeElement), true);
+
+  const checklistTrigger = page.getByTestId("supplements-open-checklist-btn");
+  await checklistTrigger.click();
+  const checklist = page.locator("#mano-hygiene-checklist-dialog");
+  await checklist.waitFor();
+  assert.equal(await checklist.locator("h3").evaluate(element => element === document.activeElement), true);
+  await assertShortScreenModal(page, checklist, { requireScroll: false });
+  const checklistItem = checklist.getByRole("checkbox").first();
+  await checklistItem.check();
+  await page.keyboard.press("Escape");
+  await checklist.waitFor({ state: "hidden" });
+  assert.equal(await checklistTrigger.evaluate(element => element === document.activeElement), true);
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.checkedHygieneIds.length === 1);
+  await checklistTrigger.click();
+  assert.equal(await checklist.getByRole("checkbox").first().isChecked(), true, "An explicitly checked routine must survive reopening its dialog");
+  await page.keyboard.press("Escape");
+
+  const productTrigger = page.locator('[data-testid^="supplement-product-"]').first();
+  await productTrigger.click();
+  const product = page.locator("#mano-supplement-product-dialog");
+  await product.waitFor();
+  assert.equal(await product.locator("h4").evaluate(element => element === document.activeElement), true);
+  await assertShortScreenModal(page, product, { requireScroll: false });
+  await page.screenshot({ path: "web-artifacts/supplement-product-dialog-short.png" });
+  await page.keyboard.press("Escape");
+  await product.waitFor({ state: "hidden" });
+  assert.equal(await productTrigger.evaluate(element => element === document.activeElement), true);
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), false);
+  assert.equal(await page.evaluate(() => document.body.style.overflow), "");
+  await assertNoPageOverflow(page, "320px supplement dialogs and restored page");
+  await context.close();
+  console.log("Remaining form dialog browser checks passed: six short-screen modal contracts, dirty-input backdrop protection, native validation focus, explicit cancellation and retained routine records.");
 }
 
 async function verifyShortScreenCareDialogs(browser, errors) {
@@ -137,7 +254,12 @@ async function verifyShortScreenCareDialogs(browser, errors) {
   await urgent.getByRole("button", { name: "متوجه شدم", exact: true }).focus();
   await page.keyboard.press("Enter");
   await urgent.waitFor({ state: "hidden" });
-  assert.equal(await page.locator("#mano-main-content").evaluate(element => element === document.activeElement), true, "Explicit acknowledgement must restore a connected main-content focus target");
+  assert.equal(await page.evaluate(() => {
+    const focused = document.activeElement;
+    return focused instanceof HTMLElement && focused.isConnected && !focused.closest('[inert]') &&
+      Boolean(focused.closest('main')) &&
+      (focused.id === 'mano-main-content' || focused.dataset.testid === 'timeline-add-temp-btn');
+  }), true, "Explicit acknowledgement must restore the actual temperature opener or its connected main-content fallback");
   assert.equal(await page.locator("#root").evaluate(element => element.inert), false);
   assert.equal(await page.evaluate(() => document.body.style.overflow), "");
   await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.feverLogs.length === 1);
@@ -619,7 +741,7 @@ try {
   assert.ok([401, 403, 503].includes(auditResponse.status), "Anonymous users must not read gateway audit events");
   assert.ok(!(await (await fetch(`${origin}/api/health`)).text()).includes(serverOnlyToken), "Health response must not disclose server credentials");
 
-  browser = await chromium.launch({ headless: true });
+  browser = await browserType.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1, locale: "fa-IR" });
   const page = await context.newPage();
   const errors = [];
@@ -721,6 +843,7 @@ try {
   await verifyCarePlanTrust(browser, errors);
   await verifyKeyboardAndTaskNavigation(browser, errors);
   await verifyShortScreenCareDialogs(browser, errors);
+  await verifyRemainingFormDialogs(browser, errors);
 
   // Keep the previous approved visual demo available, isolated and clearly separate.
   await page.goto(`${origin}/preview/`, { waitUntil: "networkidle" });
@@ -744,7 +867,7 @@ try {
 
   assert.deepEqual(errors, [], "Both entrypoints must run without uncaught browser errors");
   await context.close();
-  console.log("Browser checks passed: production React entry, missing-input and infant dose locks, reconfirmation, urgent fever, protected AI/audit APIs, separate design preview, responsive 360/412px.");
+  console.log(`Browser checks passed (${browserName}): production React entry, missing-input and infant dose locks, reconfirmation, urgent fever, protected AI/audit APIs, separate design preview, responsive 360/412px.`);
 } finally {
   await browser?.close();
   if (server.exitCode === null) {

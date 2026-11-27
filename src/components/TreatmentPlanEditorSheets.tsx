@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { AccessibleDialog } from './AccessibleDialog.tsx';
 import {
   TREATMENT_DOSAGE_FORMS,
   treatmentMedicationEntryError,
@@ -35,6 +36,8 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
     initialItem?.isWarningHighlight ?? false,
   );
   const [errorFa, setErrorFa] = useState<string | null>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +45,10 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
     const error = treatmentMedicationEntryError({ nameWithStrengthFa, doseAmountFa, scheduleLabelFa, dailyDoseSlots: slotCount });
     if (error) {
       setErrorFa(error);
+      const fieldId = !nameWithStrengthFa.trim() ? 'treatment-med-name'
+        : !doseAmountFa.trim() ? 'treatment-med-dose'
+          : !scheduleLabelFa.trim() ? 'treatment-med-schedule' : 'treatment-med-slots';
+      formRef.current?.querySelector<HTMLElement>(`#${fieldId}`)?.focus();
       return;
     }
 
@@ -62,33 +69,36 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={initialItem ? 'ویرایش داروی نسخه' : 'افزودن داروی جدید به برنامه درمانی'}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
-      onClick={onClose}
+    <AccessibleDialog
+      id="mano-treatment-editor-dialog"
+      label={initialItem ? 'ویرایش داروی نسخه' : 'افزودن داروی جدید به برنامه درمانی'}
+      describedBy="mano-treatment-editor-description"
+      initialFocusRef={titleRef}
+      fallbackFocusId="mano-main-content"
+      onClose={onClose}
+      backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+      panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-3xl border border-[#DCE7E1] bg-white p-5 outline-none dark:border-[#23344D] dark:bg-[#111C2E] sm:p-6"
     >
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
+        className="space-y-4"
       >
-        <div className="flex items-center justify-between border-b border-[#DCE7E1] pb-3 dark:border-[#23344D]">
-          <h3 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">
+        <div className="flex items-center justify-between gap-2 border-b border-[#DCE7E1] pb-3 dark:border-[#23344D]">
+          <h3 ref={titleRef} tabIndex={-1} className="min-w-0 break-words text-base font-extrabold text-[#122823] outline-none dark:text-[#EDF4F7]">
             {initialItem ? 'ویرایش داروی نسخه' : 'افزودن داروی جدید به برنامه درمانی'}
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="بستن"
-            className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl text-[#546963]"
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-[#546963]"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <p className="text-xs leading-6 text-[#546963] dark:text-[#9EB3C4]">
+        <p id="mano-treatment-editor-description" className="text-xs leading-6 text-[#546963] dark:text-[#9EB3C4]">
           فقط دستور مکتوب پزشک یا برچسب داروخانه را ثبت کنید. این فرم مقدار یا فاصله مصرف پیشنهاد نمی‌دهد و تأیید درمان نیست.
         </p>
 
@@ -222,6 +232,6 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
           </button>
         </div>
       </form>
-    </div>
+    </AccessibleDialog>
   );
 };

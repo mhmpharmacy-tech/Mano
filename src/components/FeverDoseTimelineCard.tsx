@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Clock, Copy, Pill, Plus, Thermometer, Trash2, X } from 'lucide-react';
 import { useMano } from '../state/ManoStore.tsx';
 import {
@@ -14,6 +14,7 @@ import {
   validateTimelineTemperature,
 } from '../domain/timelineEntryInput.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
+import { AccessibleDialog } from './AccessibleDialog.tsx';
 
 interface FeverDoseTimelineCardProps {
   compact?: boolean;
@@ -32,6 +33,10 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
 
   const [tempModalOpen, setTempModalOpen] = useState(false);
   const [doseModalOpen, setDoseModalOpen] = useState(false);
+  const tempTitleRef = useRef<HTMLHeadingElement>(null);
+  const doseTitleRef = useRef<HTMLHeadingElement>(null);
+  const [tempError, setTempError] = useState<string | null>(null);
+  const [doseError, setDoseError] = useState<string | null>(null);
 
   const [tempInput, setTempInput] = useState('');
   const [tempSite, setTempSite] = useState('');
@@ -55,11 +60,13 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
   const openTemperatureForm = () => {
     setEntryNowMs(Date.now());
     setTempInput(''); setTempSite(''); setTempTime(''); setTempCaregiver(''); setTempNote('');
+    setTempError(null);
     setTempModalOpen(true);
   };
   const openDoseForm = () => {
     setEntryNowMs(Date.now());
     setDoseMedSlug(''); setDoseForm(''); setDoseMl(''); setDoseUnit(''); setDoseTime(''); setDoseNote('');
+    setDoseError(null);
     setDoseModalOpen(true);
   };
 
@@ -67,7 +74,8 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
     e.preventDefault();
     const validated = validateTimelineTemperature(tempInput, tempSite, tempTime);
     if (!validated) {
-      notify('دمای اندازه‌گیری‌شده، روش اندازه‌گیری و زمان واقعی معتبر و غیرآینده را وارد کنید.', 'danger');
+      setTempError('دمای اندازه‌گیری‌شده، روش اندازه‌گیری و زمان واقعی معتبر و غیرآینده را وارد کنید.');
+      tempTitleRef.current?.focus();
       return;
     }
     addTempLog({
@@ -85,7 +93,8 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
     e.preventDefault();
     const validated = validateTimelineDose({ medication: doseMedSlug, formulation: doseForm, amount: doseMl, unit: doseUnit, dateTime: doseTime });
     if (!validated) {
-      notify('داروی مصرف‌شده، شکل و غلظت، مقدار مثبت با واحد و زمان واقعی غیرآینده را کامل کنید.', 'danger');
+      setDoseError('داروی مصرف‌شده، شکل و غلظت، مقدار مثبت با واحد و زمان واقعی غیرآینده را کامل کنید.');
+      doseTitleRef.current?.focus();
       return;
     }
     addDoseLog({
@@ -262,29 +271,31 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
 
       {/* Add Temp Modal */}
       {tempModalOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="ثبت دمای جدید کودک"
-          className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1220]/70 p-4 backdrop-blur-sm"
-          onClick={() => setTempModalOpen(false)}
+        <AccessibleDialog
+          id="mano-temperature-entry-dialog"
+          label="ثبت دمای جدید کودک"
+          initialFocusRef={tempTitleRef}
+          fallbackFocusId="mano-main-content"
+          onClose={() => setTempModalOpen(false)}
+          backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+          panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl border border-[#DCE7E1] bg-white p-5 outline-none dark:border-[#23344D] dark:bg-[#111C2E] sm:p-6"
         >
           <form
             onSubmit={handleSaveTemp}
-            onClick={(e) => e.stopPropagation()}
-            className="mx-auto my-4 w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
+            className="space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">ثبت دمای جدید</h3>
+              <h3 ref={tempTitleRef} tabIndex={-1} className="min-w-0 break-words text-base font-extrabold text-[#122823] outline-none dark:text-[#EDF4F7]">ثبت دمای جدید</h3>
               <button
                 type="button"
                 onClick={() => setTempModalOpen(false)}
                 aria-label="بستن"
-                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl text-[#546963]"
+                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-[#546963]"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {tempError ? <p role="alert" className="rounded-xl bg-[#FDF0F1] p-3 text-xs leading-6 text-[#B32334]">{tempError}</p> : null}
 
             <div>
               <label htmlFor="timeline-temp-input" className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
@@ -332,12 +343,13 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
+              <p className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
                 ثبت‌کننده و یادداشت (اختیاری)
-              </label>
-              <div className="mt-1.5 grid grid-cols-2 gap-2">
+              </p>
+              <div className="mt-1.5 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                 <input
                   type="text"
+                  aria-label="ثبت‌کننده دما (اختیاری)"
                   value={tempCaregiver}
                   onChange={(e) => setTempCaregiver(e.target.value)}
                   placeholder="مادر / پدر"
@@ -345,6 +357,7 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
                 />
                 <input
                   type="text"
+                  aria-label="یادداشت دما (اختیاری)"
                   value={tempNote}
                   onChange={(e) => setTempNote(e.target.value)}
                   placeholder="حال عمومی..."
@@ -362,38 +375,41 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
               ذخیره دما در جدول ۲۴ ساعته
             </button>
           </form>
-        </div>
+        </AccessibleDialog>
       ) : null}
 
       {/* Add Dose Modal */}
       {doseModalOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="ثبت نوبت داروی تب‌بر"
-          className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1220]/70 p-4 backdrop-blur-sm"
-          onClick={() => setDoseModalOpen(false)}
+        <AccessibleDialog
+          id="mano-dose-entry-dialog"
+          label="ثبت نوبت داروی تب‌بر"
+          describedBy="mano-dose-entry-description"
+          initialFocusRef={doseTitleRef}
+          fallbackFocusId="mano-main-content"
+          onClose={() => setDoseModalOpen(false)}
+          backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+          panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl border border-[#DCE7E1] bg-white p-5 outline-none dark:border-[#23344D] dark:bg-[#111C2E] sm:p-6"
         >
           <form
             onSubmit={handleSaveDose}
-            onClick={(e) => e.stopPropagation()}
-            className="mx-auto my-4 w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
+            className="space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">ثبت مصرف واقعی دارو</h3>
+              <h3 ref={doseTitleRef} tabIndex={-1} className="min-w-0 break-words text-base font-extrabold text-[#122823] outline-none dark:text-[#EDF4F7]">ثبت مصرف واقعی دارو</h3>
               <button
                 type="button"
                 onClick={() => setDoseModalOpen(false)}
                 aria-label="بستن"
-                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl text-[#546963]"
+                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-[#546963]"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-xs leading-6 text-[#546963] dark:text-[#9EB3C4]">
+            <p id="mano-dose-entry-description" className="text-xs leading-6 text-[#546963] dark:text-[#9EB3C4]">
               فقط مقداری را ثبت کنید که واقعاً مصرف شده است. این فرم پیشنهاد یا تأیید دوز نیست؛ مقدار، غلظت و زمان را از مصرف واقعی ثبت کنید.
             </p>
+            {doseError ? <p role="alert" className="rounded-xl bg-[#FDF0F1] p-3 text-xs leading-6 text-[#B32334]">{doseError}</p> : null}
 
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -487,8 +503,9 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">یادداشت (اختیاری)</label>
+              <label htmlFor="timeline-dose-note-input" className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">یادداشت (اختیاری)</label>
               <input
+                id="timeline-dose-note-input"
                 type="text"
                 value={doseNote}
                 onChange={(e) => setDoseNote(e.target.value)}
@@ -506,7 +523,7 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
               ثبت نوبت در جدول ایمنی
             </button>
           </form>
-        </div>
+        </AccessibleDialog>
       ) : null}
     </section>
   );

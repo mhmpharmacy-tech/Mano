@@ -119,7 +119,7 @@ export const AccessibleDialog: React.FC<AccessibleDialogProps> = ({
     };
   }, [initialFocusRef, fallbackFocusId]);
 
-  return createPortal(
+  const dialog = (
     <div
       ref={backdropRef}
       className={backdropClassName}
@@ -139,7 +139,7 @@ export const AccessibleDialog: React.FC<AccessibleDialogProps> = ({
       >
         {children}
       </div>
-    </div>,
-    document.body,
+    </div>
   );
+  return typeof document === 'undefined' ? dialog : createPortal(dialog, document.body);
 };
