@@ -72,6 +72,83 @@ async function recordedTime(page) {
   });
 }
 
+async function assertShortScreenModal(page, dialog) {
+  const rect = await dialog.boundingBox();
+  const viewport = page.viewportSize();
+  assert.ok(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= viewport.width + 1 && rect.y + rect.height <= viewport.height + 1, "The modal panel must fit the short viewport");
+  assert.equal(await dialog.evaluate(element => element.scrollHeight > element.clientHeight), true, "Long modal content must remain scrollable");
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), true);
+  assert.equal(await page.evaluate(() => document.body.style.overflow), "hidden");
+  await dialog.evaluate(panel => {
+    const controls = [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length);
+    controls.at(-1).focus();
+  });
+  await page.keyboard.press("Tab");
+  assert.equal(await dialog.evaluate(panel => document.activeElement === [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].find(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length)), true);
+  await page.keyboard.press("Shift+Tab");
+  assert.equal(await dialog.evaluate(panel => document.activeElement === [...panel.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length).at(-1)), true);
+}
+
+async function verifyShortScreenCareDialogs(browser, errors) {
+  const context = await browser.newContext({ viewport: { width: 320, height: 480 }, locale: "fa-IR", reducedMotion: "reduce" });
+  context.setDefaultTimeout(12_000);
+  const page = await context.newPage();
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`${origin}/?autostart=1`, { waitUntil: "networkidle" });
+  const comfortTrigger = page.getByTestId("home-fever-comfort-btn");
+  await comfortTrigger.click();
+  const comfort = page.locator("#mano-non-drug-fever-dialog");
+  await comfort.waitFor();
+  assert.equal(await comfort.getAttribute("role"), "dialog");
+  assert.equal(await comfort.locator("h2").evaluate(element => element === document.activeElement), true, "Care guidance must focus its heading before keyboard traversal");
+  await assertShortScreenModal(page, comfort);
+  await page.screenshot({ path: "web-artifacts/non-drug-fever-dialog-short.png" });
+  await page.keyboard.press("Escape");
+  await comfort.waitFor({ state: "hidden" });
+  assert.equal(await comfortTrigger.evaluate(element => element === document.activeElement), true);
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), false);
+  assert.equal(await page.evaluate(() => document.body.style.overflow), "");
+  await comfortTrigger.click();
+  await comfort.getByRole("button", { name: "متوجه شدم", exact: true }).click();
+  await comfort.waitFor({ state: "hidden" });
+  assert.equal(await comfortTrigger.evaluate(element => element === document.activeElement), true, "The bottom acknowledgement must remain reachable and restore focus");
+
+  await page.getByTestId("timeline-add-temp-btn").click();
+  await page.getByTestId("timeline-temp-input").fill("38.1");
+  await page.getByTestId("timeline-temp-site-select").selectOption("زیر بغل (دیجیتال)");
+  await page.getByTestId("timeline-temp-time-input").fill(await recordedTime(page));
+  await page.getByTestId("timeline-temp-save-btn").click();
+  const urgent = page.getByRole("alertdialog", { name: "هشدار دمای بالا ثبت شد", exact: true });
+  await urgent.waitFor();
+  assert.equal(await urgent.locator("h2").evaluate(element => element === document.activeElement), true);
+  assert.match(await urgent.textContent(), /سن کودک تأیید نشده/);
+  assert.equal(await urgent.getByRole("link", { name: "تماس با اورژانس ۱۱۵", exact: true }).getAttribute("href"), "tel:115");
+  assert.equal(await urgent.getByRole("button", { name: /حجم دارو|محاسبه‌گر.*تب‌بر/ }).count(), 0, "Unknown infant age must not expose a self-treatment action");
+  await assertShortScreenModal(page, urgent);
+  await page.keyboard.press("Escape");
+  assert.ok(await urgent.isVisible(), "Escape cannot acknowledge an emergency");
+  await page.keyboard.press("Control+k");
+  assert.equal(await page.locator("#mano-search-dialog").count(), 0);
+  assert.equal(await page.locator("#mano-tools-dialog").count(), 0);
+  await page.mouse.click(2, 2);
+  assert.ok(await urgent.isVisible(), "Backdrop clicks cannot acknowledge an emergency");
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), true);
+  await page.screenshot({ path: "web-artifacts/urgent-fever-dialog-short.png" });
+  await urgent.getByRole("button", { name: "بستن هشدار", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await urgent.waitFor({ state: "hidden" });
+  assert.equal(await page.locator("#mano-main-content").evaluate(element => element === document.activeElement), true, "Explicit acknowledgement must restore a connected main-content focus target");
+  assert.equal(await page.locator("#root").evaluate(element => element.inert), false);
+  assert.equal(await page.evaluate(() => document.body.style.overflow), "");
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.feverLogs.length === 1);
+  assert.equal((await savedSnapshot(page)).feverLogs[0].tempCelsius, 38.1, "Acknowledging the warning must preserve the actual temperature record");
+  await page.keyboard.press("Control+k");
+  await page.locator("#mano-search-dialog").waitFor();
+  await page.keyboard.press("Escape");
+  await context.close();
+  console.log("Short-screen care dialog browser checks passed: heading focus, both keyboard traps, inert background, scrolling, explicit emergency acknowledgement and preserved measurements.");
+}
+
 async function verifyKeyboardAndTaskNavigation(browser, errors) {
   const context = await browser.newContext({ viewport: { width: 360, height: 820 }, locale: "fa-IR", reducedMotion: "reduce" });
   context.setDefaultTimeout(12_000);
@@ -643,6 +720,7 @@ try {
   await verifyClinicalPrivacyAndDeletion(browser, errors);
   await verifyCarePlanTrust(browser, errors);
   await verifyKeyboardAndTaskNavigation(browser, errors);
+  await verifyShortScreenCareDialogs(browser, errors);
 
   // Keep the previous approved visual demo available, isolated and clearly separate.
   await page.goto(`${origin}/preview/`, { waitUntil: "networkidle" });

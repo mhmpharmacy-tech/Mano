@@ -1,11 +1,13 @@
-import React from 'react';
-import { PhoneCall, ShieldAlert, Stethoscope, Calculator, X } from 'lucide-react';
+import React, { useRef } from 'react';
+import { PhoneCall, ShieldAlert, Stethoscope, Calculator } from 'lucide-react';
 import { useMano } from '../state/ManoStore.tsx';
 import { formatTempC } from '../domain/feverDoseTimelineEngine.ts';
 import { resolveClinicalAge } from '../domain/clinicalAge.ts';
+import { AccessibleDialog } from './AccessibleDialog.tsx';
 
 export const HighFeverUrgentAlertDialog: React.FC = () => {
   const { activeHighFeverAlert, dismissHighFeverAlert, childProfile, vaccineBirthDateEpochMs, navigate } = useMano();
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   if (!activeHighFeverAlert) return null;
 
@@ -14,20 +16,25 @@ export const HighFeverUrgentAlertDialog: React.FC = () => {
   const isYoungInfant = age.status === 'known' && age.ageMonths! < 3;
 
   return (
-    <div
+    <AccessibleDialog
+      id="mano-urgent-fever-dialog"
       role="alertdialog"
-      aria-modal="true"
-      aria-label="هشدار دمای بالا ثبت شد"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/75 p-4 backdrop-blur-sm"
+      label="هشدار دمای بالا ثبت شد"
+      describedBy="mano-urgent-fever-description"
+      initialFocusRef={titleRef}
+      fallbackFocusId="mano-main-content"
+      onClose={dismissHighFeverAlert}
+      closeOnEscape={false}
+      backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/75 p-4 backdrop-blur-sm"
+      panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-3xl border border-[#E7B5BC] bg-[#FFFFFF] p-5 shadow-2xl outline-none dark:border-[#6A2C3B] dark:bg-[#111C2E] sm:p-6"
     >
-      <div className="w-full max-w-lg rounded-3xl border border-[#E7B5BC] bg-[#FFFFFF] p-6 shadow-2xl dark:border-[#6A2C3B] dark:bg-[#111C2E]">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FDF0F1] text-[#B32334] dark:bg-[#3A1A23] dark:text-[#FF8594]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FDF0F1] text-[#B32334] dark:bg-[#3A1A23] dark:text-[#FF8594]">
               <ShieldAlert className="h-6 w-6" />
             </span>
             <div>
-              <h2 className="text-base font-extrabold text-[#B32334] dark:text-[#FF8594]">
+              <h2 ref={titleRef} tabIndex={-1} className="text-base font-extrabold text-[#B32334] outline-none dark:text-[#FF8594]">
                 ثبت دمای بالا ({formatTempC(activeHighFeverAlert.tempCelsius)})
               </h2>
               <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">
@@ -35,17 +42,9 @@ export const HighFeverUrgentAlertDialog: React.FC = () => {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={dismissHighFeverAlert}
-            aria-label="بستن هشدار"
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-[#546963] hover:bg-[#F5F9F6] dark:text-[#9EB3C4] dark:hover:bg-[#16243B]"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
-        <div className="mt-4 space-y-3 rounded-2xl bg-[#FDF0F1] p-4 text-sm leading-6 text-[#4C1119] dark:bg-[#2F161E] dark:text-[#FFDDE2]">
+        <div id="mano-urgent-fever-description" className="mt-4 space-y-3 rounded-2xl bg-[#FDF0F1] p-4 text-sm leading-6 text-[#4C1119] dark:bg-[#2F161E] dark:text-[#FFDDE2]">
           {isYoungInfant ? (
             <p className="font-bold">
               هشدار اورژانس نوزاد زیر ۳ ماه: هر تب ۳۸٫۰ درجه یا بالاتر در نوزاد زیر ۳ ماه نیازمند معاینه فوری حضوری در اورژانس است. بدون نظر پزشک هیچ دارویی ندهید.
@@ -90,11 +89,18 @@ export const HighFeverUrgentAlertDialog: React.FC = () => {
               className="sm:col-span-2 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#105B48] px-4 text-sm font-bold text-white hover:bg-[#0C493A] dark:bg-[#00D7C7] dark:text-[#0B1220]"
             >
               <Calculator className="h-4 w-4" />
-              <span>محاسبه‌گر ایمن تب‌بر بر پایه وزن</span>
+              <span>نمایش آموزشی حجم دارو</span>
             </button>
           ) : null}
         </div>
-      </div>
-    </div>
+        <button
+          type="button"
+          onClick={dismissHighFeverAlert}
+          aria-label="بستن هشدار"
+          className="mt-3 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] px-4 text-sm font-bold text-[#546963] hover:bg-[#F5F9F6] dark:border-[#23344D] dark:text-[#9EB3C4] dark:hover:bg-[#16243B]"
+        >
+          متوجه شدم
+        </button>
+    </AccessibleDialog>
   );
 };

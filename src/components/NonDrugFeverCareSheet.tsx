@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Droplets, ThermometerSun, X } from 'lucide-react';
 import { SeverityAlert } from './SeverityAlert.tsx';
+import { AccessibleDialog } from './AccessibleDialog.tsx';
 
 interface NonDrugFeverCareSheetProps {
   open: boolean;
@@ -8,25 +9,26 @@ interface NonDrugFeverCareSheetProps {
 }
 
 export const NonDrugFeverCareSheet: React.FC<NonDrugFeverCareSheetProps> = ({ open, onClose }) => {
+  const titleRef = useRef<HTMLHeadingElement>(null);
   if (!open) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="مراقبت‌های غیردارویی تب کودک"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
-      onClick={onClose}
+    <AccessibleDialog
+      id="mano-non-drug-fever-dialog"
+      label="مراقبت‌های غیردارویی تب کودک"
+      describedBy="mano-non-drug-fever-description"
+      initialFocusRef={titleRef}
+      onClose={onClose}
+      closeOnBackdrop
+      backdropClassName="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+      panelClassName="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-3xl border border-[#DCE7E1] bg-[#FFFFFF] p-5 shadow-2xl outline-none dark:border-[#23344D] dark:bg-[#111C2E] sm:p-6"
     >
-      <div
-        className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-[#DCE7E1] bg-[#FFFFFF] p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
-        onClick={(e) => e.stopPropagation()}
-      >
+        <p id="mano-non-drug-fever-description" className="sr-only">مرور روش‌های مراقبت و هشدارها. برای بستن، کلید Escape را بزنید.</p>
         <div className="flex items-center justify-between border-b border-[#DCE7E1] pb-3 dark:border-[#23344D]">
           <div className="flex items-center gap-2.5">
             <ThermometerSun className="h-5 w-5 text-[#105B48] dark:text-[#00D7C7]" />
-            <h2 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">
-              مراقبت‌های غیردارویی تب در منزل (بر پایه AAP و NICE)
+            <h2 ref={titleRef} tabIndex={-1} className="text-base font-extrabold text-[#122823] outline-none dark:text-[#EDF4F7]">
+              مراقبت‌های غیردارویی تب کودک
             </h2>
           </div>
           <button
@@ -71,7 +73,6 @@ export const NonDrugFeverCareSheet: React.FC<NonDrugFeverCareSheetProps> = ({ op
             متوجه شدم
           </button>
         </div>
-      </div>
-    </div>
+    </AccessibleDialog>
   );
 };
