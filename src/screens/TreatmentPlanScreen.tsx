@@ -29,7 +29,6 @@ export const TreatmentPlanScreen: React.FC = () => {
     toggleTreatmentSlot,
     upsertTreatmentMedication,
     deleteTreatmentMedication,
-    toggleTreatmentReminders,
     resetTreatmentToday,
     navigate,
     notify,
@@ -40,6 +39,7 @@ export const TreatmentPlanScreen: React.FC = () => {
 
   const counts = getTreatmentSlotCounts(treatmentPlan);
   const childSummary = resolvePlanChildSummary(treatmentPlan, childProfile);
+  const legacyRows = treatmentPlan.legacyUnreviewedMedications ?? [];
 
   const handleCopy = async () => {
     const text = buildTreatmentCaregiverShareText(treatmentPlan, childProfile);
@@ -56,7 +56,7 @@ export const TreatmentPlanScreen: React.FC = () => {
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-[#122823] dark:text-[#EDF4F7]">
-            کارت برنامه درمانی روزانه و پیگیری نسخه
+            یادداشت دارویی و ثبت نوبت‌های امروز
           </h1>
           <p className="mt-1 text-xs text-[#546963] dark:text-[#9EB3C4]">
             ثبت نوبت‌های دارویی امروز برای پیشگیری از فراموشی یا دوباره‌کاری بین والدین
@@ -103,12 +103,32 @@ export const TreatmentPlanScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Ivory/Emerald/Gold Official Rx Paper Card */}
+      {legacyRows.length > 0 ? (
+        <aside data-testid="treatment-legacy-notice" className="rounded-2xl border border-[#D6C9A5] bg-[#FDF9F1] p-4 text-xs leading-6 text-[#4B3410] dark:border-[#5B4729] dark:bg-[#2B2112] dark:text-[#FCE7C0]">
+          <p className="font-bold">نمونه‌های دارویی قدیمی از برنامه فعال کنار گذاشته شدند.</p>
+          <p>این موارد دستور مصرف شما یا نسخه تأییدشده نیستند. اطلاعات قبلی برای بازبینی نگهداری شده و در نوبت‌های امروز محاسبه نمی‌شود.</p>
+          <details className="mt-2">
+            <summary className="cursor-pointer font-bold">مشاهده اطلاعات قدیمی ({toPersianDigits(legacyRows.length)} مورد)</summary>
+            <ul className="mt-2 space-y-2">
+              {legacyRows.map((med, index) => (
+                <li key={`${med.id}-${index}`} className="rounded-xl border border-current/20 p-3">
+                  <p className="font-bold">{med.nameWithStrengthFa}</p>
+                  <p>متن قبلی مقدار: {med.doseAmountFa}</p>
+                  <p>متن قبلی زمان‌بندی: {med.scheduleLabelFa}</p>
+                  {med.foodRelationFa ? <p>متن قبلی درباره غذا: {med.foodRelationFa}</p> : null}
+                  {med.counselingNoteFa ? <p>یادداشت قبلی: {med.counselingNoteFa}</p> : null}
+                </li>
+              ))}
+            </ul>
+          </details>
+        </aside>
+      ) : null}
+
       <section className="rx-paper rounded-3xl border p-6 shadow-sm space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-xs font-bold opacity-80">
-              {treatmentPlan.pharmacyNameFa} · {treatmentPlan.pharmacistBadgeFa}
+              ثبت شخصی مراقب · بدون تأیید پزشک یا داروساز
             </div>
             <h2 className="mt-1 text-lg font-extrabold">{childSummary}</h2>
             <p className="text-xs opacity-80">{treatmentPlan.prescriptionDateFa}</p>
@@ -129,12 +149,12 @@ export const TreatmentPlanScreen: React.FC = () => {
           <label className="flex items-center gap-2 font-bold">
             <input
               type="checkbox"
-              checked={treatmentPlan.smartRemindersEnabled}
-              onChange={toggleTreatmentReminders}
+              checked={false}
+              disabled
               className="h-4 w-4 accent-[#105B48]"
             />
             <Bell className="h-4 w-4" />
-            <span>اعلان یادآور زمان‌بندی در مرورگر فعال باشد</span>
+            <span>یادآور خودکار در دسترس نیست؛ ثبت نوبت‌ها دستی است.</span>
           </label>
           <button
             type="button"
@@ -148,6 +168,13 @@ export const TreatmentPlanScreen: React.FC = () => {
 
         {/* Medications List */}
         <div className="space-y-4">
+          {treatmentPlan.medications.length === 0 ? (
+            <div data-testid="treatment-empty-state" className="rounded-2xl border border-dashed border-[#D6C9A5] bg-white/70 p-6 text-center dark:border-[#2F4B56] dark:bg-[#16243B]">
+              <h3 className="text-base font-extrabold">هنوز دارویی ثبت نکرده‌اید</h3>
+              <p className="mt-2 text-sm leading-7 opacity-80">پس از دریافت دستور مکتوب پزشک یا برچسب داروخانه، اطلاعات دارو را خودتان وارد کنید.</p>
+              <p className="mt-1 text-xs leading-6 opacity-80">این یادداشت محلی، نسخه یا پیشنهاد درمان نیست.</p>
+            </div>
+          ) : null}
           {treatmentPlan.medications.map((med) => {
             const formLabel = TREATMENT_DOSAGE_FORMS.find((f) => f.id === med.form)?.labelFa ?? med.form;
             const slots = Array.from({ length: Math.min(6, Math.max(1, med.dailyDoseSlots)) }, (_, i) => i + 1);
@@ -165,7 +192,7 @@ export const TreatmentPlanScreen: React.FC = () => {
                     <div className="mt-1 text-sm font-bold text-[#105B48] dark:text-[#00D7C7]">
                       مقدار مصرف: {med.doseAmountFa}
                     </div>
-                    <div className="text-xs opacity-80">نحوه مصرف با غذا: {med.foodRelationFa}</div>
+                    {med.foodRelationFa ? <div className="text-xs opacity-80">دستور ثبت‌شده درباره غذا: {med.foodRelationFa}</div> : null}
                   </div>
 
                   <div className="no-print flex items-center gap-1.5">
@@ -228,10 +255,12 @@ export const TreatmentPlanScreen: React.FC = () => {
           })}
         </div>
 
-        <div className="rounded-2xl border border-[#D6C9A5]/70 bg-white/60 p-4 text-xs leading-6 dark:border-[#2F4B56] dark:bg-[#111C2E]/70">
-          <span className="font-bold">شرایط نگهداری نسخه: </span>
-          {treatmentPlan.storageInstructionFa}
-        </div>
+        {treatmentPlan.storageInstructionFa ? (
+          <div className="rounded-2xl border border-[#D6C9A5]/70 bg-white/60 p-4 text-xs leading-6 dark:border-[#2F4B56] dark:bg-[#111C2E]/70">
+            <span className="font-bold">شرایط نگهداری ثبت‌شده: </span>
+            {treatmentPlan.storageInstructionFa}
+          </div>
+        ) : null}
       </section>
 
       <SeverityAlert

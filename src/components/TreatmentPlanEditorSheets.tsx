@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import {
   TREATMENT_DOSAGE_FORMS,
+  treatmentMedicationEntryError,
   type TreatmentDosageFormId,
   type TreatmentMedicationItem,
 } from '../domain/treatmentPlan.ts';
@@ -23,13 +24,13 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
   const [form, setForm] = useState<TreatmentDosageFormId>(initialItem?.form ?? 'SYRUP_SUSPENSION');
   const [doseAmountFa, setDoseAmountFa] = useState(initialItem?.doseAmountFa ?? '');
   const [scheduleLabelFa, setScheduleLabelFa] = useState(
-    initialItem?.scheduleLabelFa ?? 'هر ۸ ساعت',
+    initialItem?.scheduleLabelFa ?? '',
   );
   const [foodRelationFa, setFoodRelationFa] = useState(
-    initialItem?.foodRelationFa ?? 'همراه غذا یا بعد از غذا',
+    initialItem?.foodRelationFa ?? '',
   );
   const [counselingNoteFa, setCounselingNoteFa] = useState(initialItem?.counselingNoteFa ?? '');
-  const [dailyDoseSlots, setDailyDoseSlots] = useState(initialItem?.dailyDoseSlots ?? 3);
+  const [dailyDoseSlots, setDailyDoseSlots] = useState(initialItem ? String(initialItem.dailyDoseSlots) : '');
   const [isWarningHighlight, setIsWarningHighlight] = useState(
     initialItem?.isWarningHighlight ?? false,
   );
@@ -37,8 +38,10 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameWithStrengthFa.trim() || !doseAmountFa.trim()) {
-      setErrorFa('نام دارو (همراه غلظت) و مقدار هر نوبت باید وارد شوند.');
+    const slotCount = Number(dailyDoseSlots);
+    const error = treatmentMedicationEntryError({ nameWithStrengthFa, doseAmountFa, scheduleLabelFa, dailyDoseSlots: slotCount });
+    if (error) {
+      setErrorFa(error);
       return;
     }
 
@@ -47,12 +50,12 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
       nameWithStrengthFa: nameWithStrengthFa.trim(),
       form,
       doseAmountFa: doseAmountFa.trim(),
-      intervalHours: Math.max(4, Math.round(24 / Math.max(1, dailyDoseSlots))),
-      scheduleLabelFa: scheduleLabelFa.trim() || 'طبق دستور نسخه',
-      foodRelationFa: foodRelationFa.trim() || 'طبق برچسب دارو',
+      intervalHours: null,
+      scheduleLabelFa: scheduleLabelFa.trim(),
+      foodRelationFa: foodRelationFa.trim(),
       counselingNoteFa: counselingNoteFa.trim(),
       isWarningHighlight,
-      dailyDoseSlots: Math.min(6, Math.max(1, dailyDoseSlots)),
+      dailyDoseSlots: slotCount,
       completedSlotTimesFa: initialItem?.completedSlotTimesFa ?? {},
     });
     onClose();
@@ -85,27 +88,34 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
           </button>
         </div>
 
+        <p className="text-xs leading-6 text-[#546963] dark:text-[#9EB3C4]">
+          فقط دستور مکتوب پزشک یا برچسب داروخانه را ثبت کنید. این فرم مقدار یا فاصله مصرف پیشنهاد نمی‌دهد و تأیید درمان نیست.
+        </p>
+
         {errorFa ? (
-          <div className="rounded-xl bg-[#FDF0F1] p-3 text-xs font-bold text-[#B32334]">
+          <div role="alert" className="rounded-xl bg-[#FDF0F1] p-3 text-xs font-bold text-[#B32334]">
             {errorFa}
           </div>
         ) : null}
 
         <div>
-          <label className="block text-xs font-bold">نام دارو و غلظت دقیق</label>
+          <label htmlFor="treatment-med-name" className="block text-xs font-bold">نام دارو و غلظت دقیق</label>
           <input
+            id="treatment-med-name"
             type="text"
+            required
             value={nameWithStrengthFa}
             onChange={(e) => setNameWithStrengthFa(e.target.value)}
-            placeholder="مثلاً شربت آموکسی‌سیلین ۲۵۰ میلی‌گرم / ۵ سی‌سی"
+            placeholder="از روی برچسب دارو وارد کنید"
             className="mt-1 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-bold">شکل دارویی</label>
+            <label htmlFor="treatment-med-form" className="block text-xs font-bold">شکل دارویی</label>
             <select
+              id="treatment-med-form"
               value={form}
               onChange={(e) => setForm(e.target.value as TreatmentDosageFormId)}
               className="mt-1 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
@@ -118,42 +128,54 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold">تعداد نوبت در روز (۱ تا ۶)</label>
+            <label htmlFor="treatment-med-slots" className="block text-xs font-bold">تعداد نوبت قابل ثبت در روز (۱ تا ۶)</label>
             <input
+              id="treatment-med-slots"
               type="number"
+              required
               min={1}
               max={6}
+              step={1}
               value={dailyDoseSlots}
-              onChange={(e) => setDailyDoseSlots(Number(e.target.value) || 1)}
+              onChange={(e) => setDailyDoseSlots(e.target.value)}
+              aria-describedby="treatment-med-slots-help"
               className="mt-1 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm tabular-nums dark:border-[#23344D] dark:bg-[#16243B]"
             />
+            <p id="treatment-med-slots-help" className="mt-1 text-xs leading-5 text-[#546963] dark:text-[#9EB3C4]">
+              فقط برای ثبت دستی؛ از این تعداد، فاصله زمانی مصرف محاسبه نمی‌شود.
+            </p>
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold">مقدار هر نوبت (مثلاً ۵ سی‌سی با سرنگ)</label>
+          <label htmlFor="treatment-med-dose" className="block text-xs font-bold">مقدار هر نوبت طبق دستور</label>
           <input
+            id="treatment-med-dose"
             type="text"
+            required
             value={doseAmountFa}
             onChange={(e) => setDoseAmountFa(e.target.value)}
-            placeholder="مثلاً ۵ سی‌سی با سرنگ مدرج"
+            placeholder="مقدار و واحد را عیناً از دستور وارد کنید"
             className="mt-1 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-bold">فاصله زمانی</label>
+            <label htmlFor="treatment-med-schedule" className="block text-xs font-bold">دستور زمان‌بندی مصرف</label>
             <input
+              id="treatment-med-schedule"
               type="text"
+              required
               value={scheduleLabelFa}
               onChange={(e) => setScheduleLabelFa(e.target.value)}
               className="mt-1 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold">ارتباط با غذا</label>
+            <label htmlFor="treatment-med-food" className="block text-xs font-bold">دستور درباره غذا (اختیاری)</label>
             <input
+              id="treatment-med-food"
               type="text"
               value={foodRelationFa}
               onChange={(e) => setFoodRelationFa(e.target.value)}
@@ -163,12 +185,13 @@ export const TreatmentPlanEditorModal: React.FC<TreatmentPlanEditorModalProps> =
         </div>
 
         <div>
-          <label className="block text-xs font-bold">توصیه داروساز / نگهداری</label>
+          <label htmlFor="treatment-med-notes" className="block text-xs font-bold">یادداشت دستور مصرف / نگهداری (اختیاری)</label>
           <textarea
+            id="treatment-med-notes"
             rows={2}
             value={counselingNoteFa}
             onChange={(e) => setCounselingNoteFa(e.target.value)}
-            placeholder="مثلاً تکان دادن بطری، تکمیل دوره یا شرایط نگهداری..."
+            placeholder="فقط نکته درج‌شده در نسخه یا برچسب دارو"
             className="mt-1 w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] p-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
           />
         </div>

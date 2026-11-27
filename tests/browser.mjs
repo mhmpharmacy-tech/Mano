@@ -72,6 +72,124 @@ async function recordedTime(page) {
   });
 }
 
+async function verifyCarePlanTrust(browser, errors) {
+  const context = await browser.newContext({ viewport: { width: 412, height: 915 }, locale: "fa-IR" });
+  context.setDefaultTimeout(12_000);
+  const page = await context.newPage();
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`${origin}/?autostart=1#/treatment-plan`, { waitUntil: "networkidle" });
+  const screen = page.getByTestId("treatment-plan-screen");
+  await screen.waitFor();
+  await page.getByTestId("treatment-empty-state").waitFor();
+  assert.match(await page.getByTestId("treatment-progress-counter").textContent(), /۰\s*\/\s*۰/);
+  assert.equal(await page.locator('article[data-testid^="treatment-med-"]').count(), 0, "A fresh care plan must not contain demo medicines");
+  assert.doesNotMatch(await screen.textContent(), /داروخانه شبانه‌روزی دکتر رضایی|۱۲۳۴۵|آزیترومایسین|آراد/);
+  const reminder = screen.getByRole("checkbox", { name: /یادآور خودکار/ });
+  assert.ok(await reminder.isDisabled(), "An unimplemented reminder service cannot be enabled");
+  assert.equal(await reminder.isChecked(), false);
+  await page.screenshot({ path: "web-artifacts/care-plan-empty.png", fullPage: true });
+
+  await page.getByTestId("treatment-add-med-btn").click();
+  const editor = page.getByRole("dialog", { name: "افزودن داروی جدید به برنامه درمانی", exact: true });
+  await editor.waitFor();
+  const slots = page.getByLabel("تعداد نوبت قابل ثبت در روز (۱ تا ۶)", { exact: true });
+  const schedule = page.getByLabel("دستور زمان‌بندی مصرف", { exact: true });
+  const food = page.getByLabel("دستور درباره غذا (اختیاری)", { exact: true });
+  const dose = page.getByLabel("مقدار هر نوبت طبق دستور", { exact: true });
+  for (const input of [slots, schedule, food, dose]) {
+    assert.equal(await input.inputValue(), "", "A new entry must not invent a dose, schedule, food instruction or count");
+  }
+  const save = editor.getByRole("button", { name: "ذخیره در برنامه درمانی", exact: true });
+  const customName = "داروی ثبت‌شده مراقب — نمونه آزمایشی";
+  await page.getByLabel("نام دارو و غلظت دقیق", { exact: true }).fill(customName);
+  await dose.fill("مقدار رونویسی‌شده از برچسب آزمایشی");
+  await slots.fill("2");
+  await save.click();
+  assert.ok(await editor.isVisible(), "A medication cannot be saved without entered timing instructions");
+  assert.equal(await schedule.evaluate(input => input.validity.valueMissing), true);
+  await schedule.fill("زمان‌بندی واردشده از دستور مکتوب مراقب");
+  for (const invalidCount of ["", "0", "7", "1.5"]) {
+    await slots.fill(invalidCount);
+    await save.click();
+    assert.ok(await editor.isVisible(), `Slot count ${JSON.stringify(invalidCount)} must not be silently defaulted or clamped`);
+    assert.equal(await slots.evaluate(input => input.validity.valid), false);
+    assert.equal((await savedSnapshot(page)).treatmentPlan.medications.length, 0);
+  }
+  await slots.fill("2");
+  await save.click();
+  await editor.waitFor({ state: "hidden" });
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.treatmentPlan.medications.length === 1);
+  const created = (await savedSnapshot(page)).treatmentPlan.medications[0];
+  assert.equal(created.nameWithStrengthFa, customName);
+  assert.equal(created.dailyDoseSlots, 2);
+  assert.equal(created.foodRelationFa, "", "Optional food advice must remain absent unless entered");
+  assert.equal(created.intervalHours, null, "A slot count must not become an inferred administration interval");
+  await page.getByTestId(`treatment-slot-${created.id}-1`).click();
+  assert.match(await page.getByTestId("treatment-progress-counter").textContent(), /۱\s*\/\s*۲/);
+  await page.waitForFunction(id => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.treatmentPlan.medications.find(med => med.id === id)?.completedSlotTimesFa[1], created.id);
+
+  // Simulate an older saved installation: preserve edited examples in an archive,
+  // while keeping genuine caregiver entries and their existing checkoffs active.
+  const legacyIds = ["rx_azithromycin_200", "rx_acetaminophen_160", "rx_saline_spray_09"];
+  await page.evaluate(ids => {
+    const state = JSON.parse(localStorage.getItem("mano_kid_v2_store"));
+    const legacyRows = ids.map((id, index) => ({
+      id, nameWithStrengthFa: `متن ویرایش‌شده نمونه قدیمی ${index + 1}`,
+      form: "SYRUP_SUSPENSION", doseAmountFa: `مقدار قدیمی حفظ‌شده ${index + 1}`,
+      intervalHours: null, scheduleLabelFa: `زمان‌بندی قدیمی حفظ‌شده ${index + 1}`,
+      foodRelationFa: "دستور قدیمی درباره غذا", counselingNoteFa: "یادداشت تاریخی مراقب",
+      isWarningHighlight: false, dailyDoseSlots: 2, completedSlotTimesFa: { 1: "۱۰:۳۰" },
+    }));
+    state.treatmentPlan = {
+      ...state.treatmentPlan,
+      pharmacyNameFa: "داروخانه شبانه‌روزی دکتر رضایی",
+      pharmacistBadgeFa: "تأیید دکتر داروساز (نظام: ۱۲۳۴۵)",
+      fallbackChildSummaryFa: "آراد عزیز • ۴ ساله (۱۶ کیلوگرم)",
+      prescriptionDateFa: "نسخه فعال • قابل ویرایش بر اساس دستور پزشک",
+      smartRemindersEnabled: true,
+      legacyUnreviewedMedications: [],
+      medications: [...legacyRows, ...state.treatmentPlan.medications],
+    };
+    localStorage.setItem("mano_kid_v2_store", JSON.stringify(state));
+  }, legacyIds);
+  await page.reload({ waitUntil: "networkidle" });
+  const archive = page.getByTestId("treatment-legacy-notice");
+  await archive.waitFor();
+  assert.equal(await page.locator('article[data-testid^="treatment-med-"]').count(), 1);
+  await page.getByTestId(`treatment-med-${created.id}`).waitFor();
+  for (const id of legacyIds) {
+    assert.equal(await page.getByTestId(`treatment-med-${id}`).count(), 0, "Old examples must never remain active medications");
+    assert.equal(await page.getByTestId(`treatment-slot-${id}-1`).count(), 0, "Archived records must not expose daily checkoff controls");
+  }
+  assert.match(await page.getByTestId("treatment-progress-counter").textContent(), /۱\s*\/\s*۲/);
+  await archive.locator("summary").click();
+  for (let index = 1; index <= legacyIds.length; index++) {
+    assert.match(await archive.textContent(), new RegExp(`متن ویرایش‌شده نمونه قدیمی ${index}`));
+    assert.match(await archive.textContent(), new RegExp(`مقدار قدیمی حفظ‌شده ${index}`));
+  }
+  assert.doesNotMatch(await screen.textContent(), /داروخانه شبانه‌روزی دکتر رضایی|۱۲۳۴۵|آراد/);
+  assert.ok(await reminder.isDisabled());
+  assert.equal(await reminder.isChecked(), false);
+  await page.getByTestId(`treatment-slot-${created.id}-2`).click();
+  assert.match(await page.getByTestId("treatment-progress-counter").textContent(), /۲\s*\/\s*۲/);
+  await page.waitForFunction(id => {
+    const plan = JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.treatmentPlan;
+    return plan?.medications.find(med => med.id === id)?.completedSlotTimesFa[2] && plan.legacyUnreviewedMedications?.length === 3;
+  }, created.id);
+  const migrated = (await savedSnapshot(page)).treatmentPlan;
+  assert.equal(migrated.pharmacyNameFa, "");
+  assert.equal(migrated.pharmacistBadgeFa, "");
+  assert.equal(migrated.smartRemindersEnabled, false);
+  assert.equal(migrated.legacyUnreviewedMedications[0].doseAmountFa, "مقدار قدیمی حفظ‌شده 1");
+  await page.screenshot({ path: "web-artifacts/care-plan-legacy-archive.png", fullPage: true });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByTestId(`treatment-med-${created.id}`).waitFor();
+  assert.equal((await savedSnapshot(page)).treatmentPlan.legacyUnreviewedMedications.length, 3, "Repeated migration must not duplicate or erase archived entries");
+  assert.match(await page.getByTestId("treatment-progress-counter").textContent(), /۲\s*\/\s*۲/);
+  await context.close();
+  console.log("Care-plan trust browser checks passed: empty draft, honest reminders, explicit instructions/counts, preserved legacy archive, active custom checkoffs.");
+}
+
 async function verifyClinicalPrivacyAndDeletion(browser, errors) {
   const context = await browser.newContext({ viewport: { width: 412, height: 915 }, locale: "fa-IR" });
   context.setDefaultTimeout(12_000);
@@ -364,6 +482,7 @@ try {
   await page.screenshot({ path: "web-artifacts/react-infant-fever-triage.png", fullPage: true });
 
   await verifyClinicalPrivacyAndDeletion(browser, errors);
+  await verifyCarePlanTrust(browser, errors);
 
   // Keep the previous approved visual demo available, isolated and clearly separate.
   await page.goto(`${origin}/preview/`, { waitUntil: "networkidle" });

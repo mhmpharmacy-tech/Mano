@@ -25,7 +25,7 @@ export interface TreatmentMedicationItem {
   nameWithStrengthFa: string;
   form: TreatmentDosageFormId;
   doseAmountFa: string;
-  intervalHours: number;
+  intervalHours: number | null;
   scheduleLabelFa: string;
   foodRelationFa: string;
   counselingNoteFa: string;
@@ -43,68 +43,42 @@ export interface PediatricTreatmentPlan {
   smartRemindersEnabled: boolean;
   lastCheckoffDayKey: string;
   medications: TreatmentMedicationItem[];
+  /** Old bundled examples are retained for inspection, never as active instructions. */
+  legacyUnreviewedMedications?: TreatmentMedicationItem[];
 }
 
 export function defaultPediatricTreatmentMedications(): TreatmentMedicationItem[] {
-  return [
-    {
-      id: 'rx_azithromycin_200',
-      nameWithStrengthFa: 'سوسپانسیون آزیترومایسین ۲۰۰ میلی‌گرم/۵ سی‌سی',
-      form: 'SYRUP_SUSPENSION',
-      doseAmountFa: 'روز اول ۴ سی‌سی، روز ۲ تا ۵ مقدار ۲ سی‌سی (با سرنگ)',
-      intervalHours: 24,
-      scheduleLabelFa: 'هر ۲۴ ساعت (ساعت ۱۲ ظهر)',
-      foodRelationFa: 'همراه غذا یا پس از غذا',
-      counselingNoteFa:
-        'پودر را با آب جوشیده سردشده تا خط نشانه مخلوط کنید؛ پیش از هر مصرف خوب تکان دهید و دوره ۵ روزه را کامل نمایید (پایداری پس از آماده‌سازی: تا ۱۰ روز در دمای محیط).',
-      isWarningHighlight: true,
-      dailyDoseSlots: 1,
-      completedSlotTimesFa: {},
-    },
-    {
-      id: 'rx_acetaminophen_160',
-      nameWithStrengthFa: 'شربت استامینوفن کودکان ۱۶۰ میلی‌گرم/۵ سی‌سی',
-      form: 'SYRUP_SUSPENSION',
-      doseAmountFa: '۷٫۵ سی‌سی (۲۴۰ میلی‌گرم با سرنگ مدرج)',
-      intervalHours: 6,
-      scheduleLabelFa: 'هر ۶ ساعت در صورت تب',
-      foodRelationFa: 'فرقی ندارد (ناشتا یا با غذا)',
-      counselingNoteFa:
-        'برای وزن ۱۶ کیلوگرم شربت به‌جای ۵۰ قطره دقیق‌تر و ایمن‌تر است • حداکثر ۴ نوبت در شبانه‌روز و فاصله کمتر از ۴ تا ۶ ساعت نباشد.',
-      isWarningHighlight: true,
-      dailyDoseSlots: 4,
-      completedSlotTimesFa: {},
-    },
-    {
-      id: 'rx_saline_spray_09',
-      nameWithStrengthFa: 'اسپری بینی سدیم کلراید ۰٫۹٪ (سرم شست‌وشو)',
-      form: 'NASAL_SPRAY',
-      doseAmountFa: '۱ پاف در هر سوراخ بینی',
-      intervalHours: 8,
-      scheduleLabelFa: 'هر ۸ ساعت',
-      foodRelationFa: 'قبل از خواب و هنگام گرفتگی بینی',
-      counselingNoteFa:
-        'پس از هر بار استفاده، سری اسپری را با دستمال تمیز خشک کنید و به‌صورت اختصاصی برای یک کودک استفاده نمایید.',
-      isWarningHighlight: false,
-      dailyDoseSlots: 3,
-      completedSlotTimesFa: {},
-    },
-  ];
+  return [];
 }
 
 export function createDefaultTreatmentPlan(): PediatricTreatmentPlan {
   return {
-    pharmacyNameFa: 'داروخانه شبانه‌روزی دکتر رضایی',
-    pharmacistBadgeFa: 'تأیید دکتر داروساز (نظام: ۱۲۳۴۵)',
-    fallbackChildSummaryFa: 'آراد عزیز • ۴ ساله (۱۶ کیلوگرم)',
-    prescriptionDateFa: 'نسخه فعال • قابل ویرایش بر اساس دستور پزشک',
-    storageInstructionFa:
-      'تمام داروهای این نسخه در دمای محیط (زیر ۲۵ درجه سانتی‌گراد)، دور از نور مستقیم و دسترس کودکان نگهداری شوند (نیازی به یخچال نیست؛ سوسپانسیون آماده‌شده حداکثر تا ۱۰ روز قابل مصرف است).',
+    pharmacyNameFa: '',
+    pharmacistBadgeFa: '',
+    fallbackChildSummaryFa: 'پروفایل کودک ثبت نشده است',
+    prescriptionDateFa: 'پیش‌نویس محلی مراقب • بدون تأیید بالینی',
+    storageInstructionFa: '',
     smartRemindersEnabled: false,
     lastCheckoffDayKey: currentDayKey(),
     medications: defaultPediatricTreatmentMedications(),
+    legacyUnreviewedMedications: [],
   };
 }
+
+const LEGACY_DEMO_MEDICATION_IDS = new Set([
+  'rx_azithromycin_200',
+  'rx_acetaminophen_160',
+  'rx_saline_spray_09',
+]);
+
+const LEGACY_DEMO_METADATA = {
+  pharmacyNameFa: 'داروخانه شبانه‌روزی دکتر رضایی',
+  pharmacistBadgeFa: 'تأیید دکتر داروساز (نظام: ۱۲۳۴۵)',
+  fallbackChildSummaryFa: 'آراد عزیز • ۴ ساله (۱۶ کیلوگرم)',
+  prescriptionDateFa: 'نسخه فعال • قابل ویرایش بر اساس دستور پزشک',
+  storageInstructionFa:
+    'تمام داروهای این نسخه در دمای محیط (زیر ۲۵ درجه سانتی‌گراد)، دور از نور مستقیم و دسترس کودکان نگهداری شوند (نیازی به یخچال نیست؛ سوسپانسیون آماده‌شده حداکثر تا ۱۰ روز قابل مصرف است).',
+} as const;
 
 export function currentDayKey(nowMs = Date.now()): string {
   const d = new Date(nowMs);
@@ -125,12 +99,36 @@ export function normalizePlanForToday(
   plan: PediatricTreatmentPlan,
   todayKey = currentDayKey(),
 ): PediatricTreatmentPlan {
-  if (plan.lastCheckoffDayKey === todayKey) return plan;
-  return {
+  const legacyRows = plan.medications.filter((med) => LEGACY_DEMO_MEDICATION_IDS.has(med.id));
+  const metadataUpdates: Partial<PediatricTreatmentPlan> = {};
+  const defaults = createDefaultTreatmentPlan();
+  for (const field of Object.keys(LEGACY_DEMO_METADATA) as (keyof typeof LEGACY_DEMO_METADATA)[]) {
+    if (plan[field] === LEGACY_DEMO_METADATA[field]) metadataUpdates[field] = defaults[field];
+  }
+  const dayChanged = plan.lastCheckoffDayKey !== todayKey;
+  if (!dayChanged && !legacyRows.length && !Object.keys(metadataUpdates).length && !plan.smartRemindersEnabled) {
+    return plan;
+  }
+  const activeRows = legacyRows.length
+    ? plan.medications.filter((med) => !LEGACY_DEMO_MEDICATION_IDS.has(med.id))
+    : plan.medications;
+  const normalized = {
     ...plan,
+    ...metadataUpdates,
+    // Automatic reminders have never been implemented; an old preference cannot enable them.
+    smartRemindersEnabled: false,
     lastCheckoffDayKey: todayKey,
-    medications: plan.medications.map((m) => ({ ...m, completedSlotTimesFa: {} })),
+    medications: dayChanged
+      ? activeRows.map((med) => ({ ...med, completedSlotTimesFa: {} }))
+      : activeRows,
   };
+  if (legacyRows.length) {
+    normalized.legacyUnreviewedMedications = [
+      ...(plan.legacyUnreviewedMedications ?? []),
+      ...legacyRows,
+    ];
+  }
+  return normalized;
 }
 
 export function getTreatmentSlotCounts(plan: PediatricTreatmentPlan) {
@@ -147,6 +145,18 @@ export function getTreatmentSlotCounts(plan: PediatricTreatmentPlan) {
     }
   }
   return { totalDailySlots, completedTodaySlots };
+}
+
+export function treatmentMedicationEntryError(
+  entry: Pick<TreatmentMedicationItem, 'nameWithStrengthFa' | 'doseAmountFa' | 'scheduleLabelFa' | 'dailyDoseSlots'>,
+): string | null {
+  if (!entry.nameWithStrengthFa.trim() || !entry.doseAmountFa.trim() || !entry.scheduleLabelFa.trim()) {
+    return 'نام و غلظت دارو، مقدار هر نوبت و دستور زمان‌بندی را از روی نسخه یا برچسب دارو وارد کنید.';
+  }
+  if (!Number.isInteger(entry.dailyDoseSlots) || entry.dailyDoseSlots < 1 || entry.dailyDoseSlots > 6) {
+    return 'تعداد نوبت قابل ثبت را خودتان به‌صورت عدد صحیح بین ۱ تا ۶ وارد کنید.';
+  }
+  return null;
 }
 
 export function resolvePlanChildSummary(
@@ -172,14 +182,14 @@ export function buildTreatmentCaregiverShareText(
   profile: ChildProfile | null | undefined,
 ): string {
   const lines: string[] = [
-    'برنامه درمانی اختصاصی کودک (مانو کید)',
-    `${plan.pharmacyNameFa} | ${plan.pharmacistBadgeFa}`,
+    'یادداشت دارویی مراقب (مانو کید)',
+    'پیش‌نویس محلی • بدون تأیید پزشک یا داروساز',
     `کودک: ${resolvePlanChildSummary(plan, profile)}`,
     profile?.allergiesFa.trim()
       ? `حساسیت ثبت‌شده: ${profile.allergiesFa.trim()}`
       : 'حساسیت دارویی ثبت‌نشده — پیش از مصرف بررسی شود',
     '────────────────────',
-    'نکته ایمنی پیمانه: همیشه از سرنگ یا پیمانه مدرج استاندارد استفاده کنید و از قاشق خانگی بپرهیزید (۱ سی‌سی = ۲۰ قطره استاندارد).',
+    'اطلاعات واردشده را پیش از مصرف با دستور مکتوب پزشک یا برچسب داروخانه تطبیق دهید.',
     '',
   ];
 
@@ -189,9 +199,10 @@ export function buildTreatmentCaregiverShareText(
     const doneCount = Object.keys(med.completedSlotTimesFa || {}).length;
     lines.push(`${toPersianDigits(idx + 1)}) ${med.nameWithStrengthFa} (${formLabel})`);
     lines.push(`   • دوز: ${med.doseAmountFa}`);
-    lines.push(`   • زمان‌بندی: ${med.scheduleLabelFa} | ${med.foodRelationFa}`);
+    lines.push(`   • زمان‌بندی ثبت‌شده: ${med.scheduleLabelFa}`);
+    if (med.foodRelationFa.trim()) lines.push(`   • دستور ثبت‌شده درباره غذا: ${med.foodRelationFa}`);
     if (med.counselingNoteFa.trim()) {
-      lines.push(`   • نکته داروساز: ${med.counselingNoteFa}`);
+      lines.push(`   • یادداشت ثبت‌شده: ${med.counselingNoteFa}`);
     }
     lines.push(
       `   • نوبت‌های ثبت‌شده امروز: ${toPersianDigits(doneCount)} از ${toPersianDigits(med.dailyDoseSlots)}`,
@@ -199,7 +210,9 @@ export function buildTreatmentCaregiverShareText(
     lines.push('');
   });
 
-  lines.push(`شرایط نگهداری: ${plan.storageInstructionFa}`);
+  if (plan.storageInstructionFa.trim()) {
+    lines.push(`شرایط نگهداری ثبت‌شده: ${plan.storageInstructionFa}`);
+  }
   lines.push(
     'هشدار فوری: در صورت بروز کهیر، تورم لب/پلک یا تنگی نفس، دارو را فوراً قطع کرده و با اورژانس ۱۱۵ یا پزشک تماس بگیرید.',
   );
