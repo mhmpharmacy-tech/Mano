@@ -6,7 +6,13 @@ import {
   formatTempC,
   mergedChronologicalEvents,
 } from '../domain/feverDoseTimelineEngine.ts';
-import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
+import {
+  TIMELINE_DOSE_UNITS,
+  TIMELINE_TEMPERATURE_SITES,
+  formatTimelineDateTimeInput,
+  validateTimelineDose,
+  validateTimelineTemperature,
+} from '../domain/timelineEntryInput.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
 
 interface FeverDoseTimelineCardProps {
@@ -27,30 +33,48 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
   const [tempModalOpen, setTempModalOpen] = useState(false);
   const [doseModalOpen, setDoseModalOpen] = useState(false);
 
-  const [tempInput, setTempInput] = useState('38.2');
-  const [tempSite, setTempSite] = useState('زیر بغل (دیجیتال)');
-  const [tempCaregiver, setTempCaregiver] = useState('مادر / پدر');
+  const [tempInput, setTempInput] = useState('');
+  const [tempSite, setTempSite] = useState('');
+  const [tempTime, setTempTime] = useState('');
+  const [tempCaregiver, setTempCaregiver] = useState('');
   const [tempNote, setTempNote] = useState('');
 
-  const [doseMedSlug, setDoseMedSlug] = useState<'acetaminophen' | 'ibuprofen'>('acetaminophen');
-  const [doseForm, setDoseForm] = useState('شربت ۱۲۰mg/5mL');
-  const [doseMl, setDoseMl] = useState('5.0 mL');
+  const [doseMedSlug, setDoseMedSlug] = useState<'' | 'acetaminophen' | 'ibuprofen'>('');
+  const [doseForm, setDoseForm] = useState('');
+  const [doseMl, setDoseMl] = useState('');
+  const [doseUnit, setDoseUnit] = useState('');
+  const [doseTime, setDoseTime] = useState('');
   const [doseNote, setDoseNote] = useState('');
+  const [entryNowMs, setEntryNowMs] = useState(() => Date.now());
 
   const events = mergedChronologicalEvents(timelineSnapshot);
   const displayEvents = compact ? events.slice(0, 4) : events;
+  const validTemperature = validateTimelineTemperature(tempInput, tempSite, tempTime, entryNowMs);
+  const validDose = validateTimelineDose({ medication: doseMedSlug, formulation: doseForm, amount: doseMl, unit: doseUnit, dateTime: doseTime }, entryNowMs);
+
+  const openTemperatureForm = () => {
+    setEntryNowMs(Date.now());
+    setTempInput(''); setTempSite(''); setTempTime(''); setTempCaregiver(''); setTempNote('');
+    setTempModalOpen(true);
+  };
+  const openDoseForm = () => {
+    setEntryNowMs(Date.now());
+    setDoseMedSlug(''); setDoseForm(''); setDoseMl(''); setDoseUnit(''); setDoseTime(''); setDoseNote('');
+    setDoseModalOpen(true);
+  };
 
   const handleSaveTemp = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseClinicalDecimal(tempInput);
-    if (parsed === null || parsed < 34 || parsed > 43) {
-      notify('لطفاً عدد دمای معتبر بین ۳۴ تا ۴۳ درجه سانتی‌گراد وارد کنید.', 'danger');
+    const validated = validateTimelineTemperature(tempInput, tempSite, tempTime);
+    if (!validated) {
+      notify('دمای اندازه‌گیری‌شده، روش اندازه‌گیری و زمان واقعی معتبر و غیرآینده را وارد کنید.', 'danger');
       return;
     }
     addTempLog({
-      tempCelsius: parsed,
+      tempCelsius: validated.temperatureCelsius,
+      measuredAtMs: validated.measuredAtMs,
       siteFa: tempSite,
-      caregiverFa: tempCaregiver,
+      caregiverFa: tempCaregiver.trim() || 'ثبت‌کننده مشخص نشده',
       noteFa: tempNote,
     });
     setTempModalOpen(false);
@@ -59,15 +83,17 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
 
   const handleSaveDose = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!doseMl.trim()) {
-      notify('مقدار مصرف‌شده (مثلاً ۵ mL) را وارد کنید.', 'danger');
+    const validated = validateTimelineDose({ medication: doseMedSlug, formulation: doseForm, amount: doseMl, unit: doseUnit, dateTime: doseTime });
+    if (!validated) {
+      notify('داروی مصرف‌شده، شکل و غلظت، مقدار مثبت با واحد و زمان واقعی غیرآینده را کامل کنید.', 'danger');
       return;
     }
     addDoseLog({
       medicationSlug: doseMedSlug,
+      administeredAtMs: validated.administeredAtMs,
       medicationNameFa: doseMedSlug === 'acetaminophen' ? 'استامینوفن کودکان' : 'ایبوپروفن کودکان',
-      dosageFormFa: doseForm,
-      volumeMlText: doseMl.trim(),
+      dosageFormFa: doseForm.trim(),
+      volumeMlText: validated.amountText,
       noteFa: doseNote,
     });
     setDoseModalOpen(false);
@@ -105,7 +131,7 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => setTempModalOpen(true)}
+            onClick={openTemperatureForm}
             data-testid="timeline-add-temp-btn"
             className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#105B48] px-3.5 text-xs font-bold text-white hover:bg-[#0C493A] dark:bg-[#00D7C7] dark:text-[#0B1220]"
           >
@@ -115,7 +141,7 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
 
           <button
             type="button"
-            onClick={() => setDoseModalOpen(true)}
+            onClick={openDoseForm}
             data-testid="timeline-add-dose-btn"
             className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3.5 text-xs font-bold text-[#122823] hover:border-[#105B48] dark:border-[#23344D] dark:bg-[#16243B] dark:text-[#EDF4F7]"
           >
@@ -240,13 +266,13 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
           role="dialog"
           aria-modal="true"
           aria-label="ثبت دمای جدید کودک"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1220]/70 p-4 backdrop-blur-sm"
           onClick={() => setTempModalOpen(false)}
         >
           <form
             onSubmit={handleSaveTemp}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
+            className="mx-auto my-4 w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">ثبت دمای جدید</h3>
@@ -261,10 +287,12 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
+              <label htmlFor="timeline-temp-input" className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
                 عدد دماسنج (°C)
               </label>
               <input
+                id="timeline-temp-input"
+                data-testid="timeline-temp-input"
                 type="text"
                 inputMode="decimal"
                 value={tempInput}
@@ -275,19 +303,32 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
+              <label htmlFor="timeline-temp-site-select" className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
                 روش و محل اندازه‌گیری
               </label>
               <select
+                id="timeline-temp-site-select"
+                data-testid="timeline-temp-site-select"
                 value={tempSite}
                 onChange={(e) => setTempSite(e.target.value)}
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
               >
-                <option value="زیر بغل (دیجیتال)">زیر بغل (دیجیتال)</option>
-                <option value="پیشانی (غیرتماسی)">پیشانی (غیرتماسی)</option>
-                <option value="گوشی (تیمپانیک)">گوشی (تیمپانیک)</option>
-                <option value="مقعدی (نوزاد)">مقعدی (نوزاد)</option>
+                <option value="" disabled>روش واقعی اندازه‌گیری را انتخاب کنید</option>
+                {TIMELINE_TEMPERATURE_SITES.map((site) => <option key={site} value={site}>{site}</option>)}
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="timeline-temp-time-input" className="block text-xs font-bold">زمان واقعی اندازه‌گیری</label>
+              <input
+                id="timeline-temp-time-input"
+                data-testid="timeline-temp-time-input"
+                type="datetime-local"
+                value={tempTime}
+                max={formatTimelineDateTimeInput(entryNowMs)}
+                onChange={(e) => { setEntryNowMs(Date.now()); setTempTime(e.target.value); }}
+                className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
+              />
             </div>
 
             <div>
@@ -314,7 +355,9 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
 
             <button
               type="submit"
-              className="min-h-[44px] w-full rounded-xl bg-[#105B48] px-4 text-sm font-bold text-white hover:bg-[#0C493A] dark:bg-[#00D7C7] dark:text-[#0B1220]"
+              data-testid="timeline-temp-save-btn"
+              disabled={!validTemperature}
+              className="min-h-[44px] w-full rounded-xl bg-[#105B48] px-4 text-sm font-bold text-white hover:bg-[#0C493A] disabled:opacity-50 dark:bg-[#00D7C7] dark:text-[#0B1220]"
             >
               ذخیره دما در جدول ۲۴ ساعته
             </button>
@@ -328,16 +371,16 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
           role="dialog"
           aria-modal="true"
           aria-label="ثبت نوبت داروی تب‌بر"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1220]/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 overflow-y-auto bg-[#0B1220]/70 p-4 backdrop-blur-sm"
           onClick={() => setDoseModalOpen(false)}
         >
           <form
             onSubmit={handleSaveDose}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
+            className="mx-auto my-4 w-full max-w-md space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-6 shadow-2xl dark:border-[#23344D] dark:bg-[#111C2E]"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">ثبت نوبت دارو</h3>
+              <h3 className="text-base font-extrabold text-[#122823] dark:text-[#EDF4F7]">ثبت مصرف واقعی دارو</h3>
               <button
                 type="button"
                 onClick={() => setDoseModalOpen(false)}
@@ -348,12 +391,18 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
               </button>
             </div>
 
+            <p className="text-xs leading-6 text-[#546963] dark:text-[#9EB3C4]">
+              فقط مقداری را ثبت کنید که واقعاً مصرف شده است. این فرم پیشنهاد یا تأیید دوز نیست؛ مقدار، غلظت و زمان را از مصرف واقعی ثبت کنید.
+            </p>
+
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
+                data-testid="timeline-dose-acetaminophen-btn"
+                aria-pressed={doseMedSlug === 'acetaminophen'}
                 onClick={() => {
                   setDoseMedSlug('acetaminophen');
-                  setDoseForm('شربت ۱۲۰mg/5mL');
+                  setDoseForm('');
                 }}
                 className={`min-h-[44px] rounded-xl border text-xs font-bold ${
                   doseMedSlug === 'acetaminophen'
@@ -365,9 +414,11 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
               </button>
               <button
                 type="button"
+                data-testid="timeline-dose-ibuprofen-btn"
+                aria-pressed={doseMedSlug === 'ibuprofen'}
                 onClick={() => {
                   setDoseMedSlug('ibuprofen');
-                  setDoseForm('سوسپانسیون ۱۰۰mg/5mL');
+                  setDoseForm('');
                 }}
                 className={`min-h-[44px] rounded-xl border text-xs font-bold ${
                   doseMedSlug === 'ibuprofen'
@@ -380,14 +431,57 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
+              <label htmlFor="timeline-dose-form-input" className="block text-xs font-bold">شکل و غلظت واقعی روی برچسب دارو</label>
+              <input
+                id="timeline-dose-form-input"
+                data-testid="timeline-dose-form-input"
+                type="text"
+                value={doseForm}
+                onChange={(e) => setDoseForm(e.target.value)}
+                placeholder="عیناً مطابق برچسب داروی مصرف‌شده"
+                className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="timeline-dose-amount-input" className="block text-xs font-bold text-[#122823] dark:text-[#EDF4F7]">
                 حجم یا مقدار مصرف‌شده
               </label>
               <input
+                id="timeline-dose-amount-input"
+                data-testid="timeline-dose-amount-input"
                 type="text"
+                inputMode="decimal"
                 value={doseMl}
                 onChange={(e) => setDoseMl(e.target.value)}
-                placeholder="مثلاً 5.0 mL یا ۱۶ قطره"
+                placeholder="عدد مقدار واقعاً مصرف‌شده"
+                className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="timeline-dose-unit-select" className="block text-xs font-bold">واحد مقدار مصرف‌شده</label>
+              <select
+                id="timeline-dose-unit-select"
+                data-testid="timeline-dose-unit-select"
+                value={doseUnit}
+                onChange={(e) => setDoseUnit(e.target.value)}
+                className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
+              >
+                <option value="" disabled>واحد واقعی را انتخاب کنید</option>
+                {TIMELINE_DOSE_UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="timeline-dose-time-input" className="block text-xs font-bold">زمان واقعی مصرف دارو</label>
+              <input
+                id="timeline-dose-time-input"
+                data-testid="timeline-dose-time-input"
+                type="datetime-local"
+                value={doseTime}
+                max={formatTimelineDateTimeInput(entryNowMs)}
+                onChange={(e) => { setEntryNowMs(Date.now()); setDoseTime(e.target.value); }}
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-[#DCE7E1] bg-[#F5F9F6] px-3 text-sm dark:border-[#23344D] dark:bg-[#16243B]"
               />
             </div>
@@ -405,7 +499,9 @@ export const FeverDoseTimelineCard: React.FC<FeverDoseTimelineCardProps> = ({ co
 
             <button
               type="submit"
-              className="min-h-[44px] w-full rounded-xl bg-[#105B48] px-4 text-sm font-bold text-white hover:bg-[#0C493A] dark:bg-[#00D7C7] dark:text-[#0B1220]"
+              data-testid="timeline-dose-save-btn"
+              disabled={!validDose}
+              className="min-h-[44px] w-full rounded-xl bg-[#105B48] px-4 text-sm font-bold text-white hover:bg-[#0C493A] disabled:opacity-50 dark:bg-[#00D7C7] dark:text-[#0B1220]"
             >
               ثبت نوبت در جدول ایمنی
             </button>

@@ -48,6 +48,209 @@ async function assertNoPageOverflow(page, name) {
   assert.ok(overflow < 3, `${name}: unexpected horizontal overflow (${overflow}px)`);
 }
 
+async function openRoute(page, routeName, testId) {
+  await page.evaluate(route => { window.location.hash = `/${route}`; }, routeName);
+  if (testId) await page.getByTestId(testId).waitFor({ state: "visible" });
+}
+
+async function savedSnapshot(page) {
+  return page.evaluate(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null"));
+}
+
+async function waitForSavedAge(page, age) {
+  await page.waitForFunction(expected => {
+    const state = JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null");
+    return state?.childProfile?.ageMonthsExact === expected;
+  }, age);
+}
+
+async function recordedTime(page) {
+  return page.evaluate(() => {
+    const now = new Date(Date.now() - 60_000);
+    const pad = number => String(number).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  });
+}
+
+async function verifyClinicalPrivacyAndDeletion(browser, errors) {
+  const context = await browser.newContext({ viewport: { width: 412, height: 915 }, locale: "fa-IR" });
+  context.setDefaultTimeout(12_000);
+  context.on("page", tab => tab.on("pageerror", error => errors.push(error.message)));
+  const browserAiRequests = [];
+  await context.route("**/api/gemini/**", async route => {
+    browserAiRequests.push({ url: route.request().url(), method: route.request().method(), body: route.request().postData() });
+    await route.abort("blockedbyclient");
+  });
+  const page = await context.newPage();
+  const originalAlias = "qa-only-child-alias-A";
+  const originalAllergy = "qa-only-allergy-A";
+  await page.goto(`${origin}/?autostart=1#/my-child`, { waitUntil: "networkidle" });
+  await page.getByTestId("my-child-screen").waitFor();
+  await page.locator("#child-alias").fill(originalAlias);
+  await page.locator("#child-age-months").fill("2.7");
+  await page.locator("#child-weight").fill("5");
+  await page.locator("#child-allergies").fill(originalAllergy);
+  await page.getByRole("button", { name: "ذخیره مشخصات کودک", exact: true }).click();
+  await waitForSavedAge(page, 2.7);
+  assert.equal((await savedSnapshot(page)).childProfile.ageBand, "NEWBORN", "Fractional infant age must determine the newborn age band");
+  await openRoute(page, "fever-dose", "fever-dose-screen");
+  assert.equal(await page.getByTestId("dose-age-input").inputValue(), "2.7", "Profile age must never round 2.7 months up to three");
+  assert.ok(await page.getByTestId("dose-age-input").getAttribute("readonly") !== null, "Profile age must be corrected through the profile rather than silently overridden");
+  assert.equal(await page.getByTestId("dose-calculated-result").count(), 0);
+  await page.getByTestId("dose-blocked-alert").waitFor();
+
+  // Enter a real competing source, then verify that an inconsistent edit is rejected.
+  await openRoute(page, "vaccines", "vaccines-screen");
+  await page.getByTestId("vaccine-birthdate-input").fill("2025-05-01");
+  await page.getByTestId("vaccine-birthdate-apply-btn").click();
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.vaccineBirthDateEpochMs != null);
+  await openRoute(page, "my-child", "my-child-screen");
+  await page.locator("#child-age-months").fill("2");
+  await page.getByRole("button", { name: "ذخیره مشخصات کودک", exact: true }).click();
+  await page.getByTestId("child-age-error").waitFor();
+  assert.notEqual((await savedSnapshot(page)).childProfile.ageMonthsExact, 2, "A conflicting profile edit must not be silently accepted");
+
+  // Represent a legacy record that already contains contradictory age sources.
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("mano_kid_v2_store"));
+    state.childProfile.ageMonthsExact = 2;
+    state.childProfile.ageBand = "TODDLER_1_3Y";
+    state.childProfile.birthDateEpochMs = Date.UTC(2025, 4, 1);
+    state.vaccineBirthDateEpochMs = state.childProfile.birthDateEpochMs;
+    localStorage.setItem("mano_kid_v2_store", JSON.stringify(state));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await openRoute(page, "fever-dose", "fever-dose-screen");
+  await page.getByTestId("age-profile-conflict").waitFor();
+  assert.equal(await page.getByTestId("dose-calculated-result").count(), 0, "Contradictory legacy data must not unlock a home-treatment dose");
+  assert.equal(await page.getByTestId("dose-label-confirm-checkbox").count(), 0);
+  await openRoute(page, "my-child", "my-child-screen");
+  await page.getByTestId("child-clear-birthdate").check();
+  await page.getByRole("button", { name: "ذخیره مشخصات کودک", exact: true }).click();
+  await page.waitForFunction(() => {
+    const state = JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null");
+    return state?.childProfile?.ageMonthsExact === 2 && state.vaccineBirthDateEpochMs == null && state.childProfile.birthDateEpochMs == null;
+  });
+
+  // Older snapshots may retain an outdated age band; numerical age must still win.
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("mano_kid_v2_store"));
+    state.childProfile.ageBand = "TODDLER_1_3Y";
+    localStorage.setItem("mano_kid_v2_store", JSON.stringify(state));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await openRoute(page, "home", "home-screen");
+  await page.getByTestId("home-screen").waitFor();
+  await page.getByTestId("timeline-add-temp-btn").click();
+  const tempDialog = page.getByRole("dialog", { name: "ثبت دمای جدید کودک" });
+  assert.equal(await page.getByTestId("timeline-temp-input").inputValue(), "", "Temperature must not be fabricated");
+  assert.equal(await page.getByTestId("timeline-temp-site-select").inputValue(), "");
+  assert.equal(await page.getByTestId("timeline-temp-time-input").inputValue(), "");
+  assert.ok(await page.getByTestId("timeline-temp-save-btn").isDisabled(), "An empty temperature form cannot save a measurement");
+  assert.equal((await savedSnapshot(page)).feverLogs.length, 0);
+  await tempDialog.getByRole("button", { name: "بستن", exact: true }).click();
+
+  await page.getByTestId("timeline-add-dose-btn").click();
+  const doseDialog = page.getByRole("dialog", { name: "ثبت نوبت داروی تب‌بر" });
+  assert.equal(await page.getByTestId("timeline-dose-form-input").inputValue(), "", "A drug formulation must not be fabricated");
+  assert.equal(await page.getByTestId("timeline-dose-amount-input").inputValue(), "", "An administered amount must not be fabricated");
+  assert.equal(await page.getByTestId("timeline-dose-unit-select").inputValue(), "");
+  assert.equal(await page.getByTestId("timeline-dose-time-input").inputValue(), "");
+  assert.ok(await page.getByTestId("timeline-dose-save-btn").isDisabled(), "An empty dose form cannot save an administration");
+  assert.equal((await savedSnapshot(page)).doseLogs.length, 0);
+  await page.getByTestId("timeline-dose-acetaminophen-btn").click();
+  await page.getByTestId("timeline-dose-form-input").fill("شربت آزمایشی ۱۲۰mg/5mL");
+  await page.getByTestId("timeline-dose-amount-input").fill("1");
+  await page.getByTestId("timeline-dose-unit-select").selectOption("mL");
+  await page.getByTestId("timeline-dose-time-input").fill(await recordedTime(page));
+  await page.getByTestId("timeline-dose-save-btn").click();
+  await doseDialog.waitFor({ state: "hidden" });
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.doseLogs.length === 1);
+
+  await page.getByTestId("timeline-add-temp-btn").click();
+  await page.getByTestId("timeline-temp-input").fill("38.1");
+  await page.getByTestId("timeline-temp-site-select").selectOption("زیر بغل (دیجیتال)");
+  await page.getByTestId("timeline-temp-time-input").fill(await recordedTime(page));
+  await page.getByTestId("timeline-temp-save-btn").click();
+  const urgent = page.getByRole("alertdialog", { name: "هشدار دمای بالا ثبت شد" });
+  await urgent.waitFor();
+  assert.match(await urgent.textContent(), /نوزاد زیر ۳ ماه|معاینه فوری/);
+  assert.equal(await urgent.getByRole("button", { name: "محاسبه‌گر ایمن تب‌بر بر پایه وزن", exact: true }).count(), 0, "A stale toddler band cannot expose an infant self-treatment action");
+  await urgent.getByRole("button", { name: "بستن هشدار", exact: true }).click();
+  await page.getByTestId("timeline-add-temp-btn").click();
+  assert.equal(await page.getByTestId("timeline-temp-input").inputValue(), "", "A new record must not reuse a previous measured value");
+  await tempDialog.getByRole("button", { name: "بستن", exact: true }).click();
+  console.log("Extended clinical browser checks passed: fractional age, DOB reconciliation, empty timeline forms, exact-age neonatal fever.");
+
+  // Same-origin tabs must both forget saved records and dirty form drafts.
+  await openRoute(page, "my-child", "my-child-screen");
+  const tabB = await context.newPage();
+  await tabB.goto(`${origin}/?autostart=1#/my-child`, { waitUntil: "networkidle" });
+  assert.equal(await tabB.locator("#child-alias").inputValue(), originalAlias);
+  await tabB.locator("#child-alias").fill("qa-unsaved-child-alias-B");
+  await tabB.locator("#child-allergies").fill("qa-unsaved-allergy-B");
+  await page.getByRole("button", { name: "پاک‌سازی کامل داده‌های محلی", exact: true }).click();
+  await page.getByRole("button", { name: "تایید حذف همه‌چیز", exact: true }).click();
+  for (const tab of [page, tabB]) {
+    await tab.waitForFunction(() => {
+      const alias = document.querySelector("#child-alias");
+      const allergy = document.querySelector("#child-allergies");
+      return alias && allergy && !alias.value.startsWith("qa-") && allergy.value === "";
+    });
+    assert.equal(await tab.locator("#child-age-months").inputValue(), "", "Deletion must reset visible age drafts in every tab");
+  }
+  await tabB.getByTestId("open-hub-drawer-btn").click();
+  await tabB.getByTestId("theme-toggle-btn").click();
+  await tabB.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.theme === "dark");
+  const afterTheme = await savedSnapshot(tabB);
+  assert.ok(!JSON.stringify(afterTheme).includes("qa-"), "Editing an old tab must not resurrect deleted names, allergies or drafts");
+  for (const key of ["feverLogs", "doseLogs", "growthMeasurements", "savedVisitDrafts", "savedSyrupScans", "nutritionPlans", "pharmacistConsultations", "careCards"]) {
+    assert.equal(afterTheme[key].length, 0, `Deleted ${key} must stay empty after another tab writes`);
+  }
+  await tabB.getByRole("button", { name: "بستن منو", exact: true }).click();
+  await tabB.close();
+  console.log("Cross-tab deletion browser checks passed: saved history and visible drafts cleared, old-tab theme edit cannot restore them.");
+
+  await openRoute(page, "nutrition", "nutrition-screen");
+  assert.equal(await page.getByTestId("nutrition-age-input").inputValue(), "", "Nutrition must not infer a fictional age after deletion");
+  await page.getByTestId("nutrition-age-required-lock").waitFor();
+  assert.equal(await page.getByTestId("nutrition-generate-btn").count(), 0);
+  await openRoute(page, "my-child", "my-child-screen");
+  await page.locator("#child-alias").fill("qa-only-ai-private-alias");
+  await page.locator("#child-age-months").fill("18");
+  await page.locator("#child-weight").fill("11");
+  await page.locator("#child-allergies").fill("ندارد");
+  await page.getByRole("button", { name: "ذخیره مشخصات کودک", exact: true }).click();
+  await waitForSavedAge(page, 18);
+
+  const localAiError = /هیچ اطلاعاتی ارسال نشد/;
+  await openRoute(page, "nutrition", "nutrition-screen");
+  await page.getByTestId("nutrition-generate-btn").click();
+  await page.getByText(localAiError).first().waitFor();
+  await openRoute(page, "symptoms", "symptom-navigator-screen");
+  await page.getByTestId("triage-temp-input").fill("38.1");
+  await page.getByTestId("triage-duration-input").fill("12");
+  await page.getByTestId("triage-ai-checklist-btn").click();
+  await page.getByText(localAiError).first().waitFor();
+  await page.getByTestId("visit-draft-generate-btn").click();
+  assert.equal(await page.getByText(localAiError).count(), 2, "Both safety checklist and visit draft must report local rejection");
+
+  await openRoute(page, "faq", "faq-screen");
+  const canonicalQuestion = await page.locator("article button[aria-expanded]").first().innerText();
+  await page.locator("#documented-qa-input").fill(canonicalQuestion);
+  await page.getByRole("button", { name: "دریافت پاسخ مستند", exact: true }).click();
+  await page.getByText(localAiError).first().waitFor();
+  await openRoute(page, "syrup-scanner", "syrup-scanner-screen");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "synthetic-pixel.png", mimeType: "image/png",
+    buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=", "base64"),
+  });
+  await page.getByText(localAiError).first().waitFor();
+  assert.deepEqual(browserAiRequests, [], "Every browser AI action must reject locally without even attempting a POST or sending child context");
+  console.log("Browser AI privacy checks passed: five real UI actions, zero AI network requests or sensitive bodies.");
+  await context.close();
+}
+
 let browser;
 await mkdir(new URL("../web-artifacts/", import.meta.url), { recursive: true });
 try {
@@ -113,12 +316,17 @@ try {
   await checkbox.check();
   await result.waitFor({ state: "visible" });
   assert.ok(await save.isVisible());
+  assert.ok(await save.isDisabled(), "A calculated dose is not an administered dose until explicitly confirmed");
+  await page.getByTestId("dose-administered-confirm").check();
+  assert.equal(await save.isDisabled(), false);
 
   await weight.fill("12");
   await result.waitFor({ state: "hidden" });
   assert.equal(await checkbox.isChecked(), false, "Changing measured weight must invalidate previous confirmation");
   await checkbox.check();
   await result.waitFor({ state: "visible" });
+  assert.equal(await page.getByTestId("dose-administered-confirm").isChecked(), false, "Changing the proposed dose must also invalidate administration confirmation");
+  assert.ok(await save.isDisabled());
   await age.fill("19");
   await result.waitFor({ state: "hidden" });
   assert.equal(await checkbox.isChecked(), false, "Changing age must invalidate previous confirmation");
@@ -154,6 +362,8 @@ try {
   await page.getByTestId("triage-result-URGENT_EMERGENCY").waitFor({ state: "visible" });
   assert.match(await page.getByTestId("triage-outcome-panel").textContent(), /فوری|اورژانس/);
   await page.screenshot({ path: "web-artifacts/react-infant-fever-triage.png", fullPage: true });
+
+  await verifyClinicalPrivacyAndDeletion(browser, errors);
 
   // Keep the previous approved visual demo available, isolated and clearly separate.
   await page.goto(`${origin}/preview/`, { waitUntil: "networkidle" });

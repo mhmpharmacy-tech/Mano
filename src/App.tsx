@@ -81,14 +81,21 @@ const RouteView: React.FC = () => {
   }
 };
 
+const AppContent: React.FC = () => {
+  const { dataGeneration } = useMano();
+  return (
+    <AppShell key={dataGeneration}>
+      <React.Suspense fallback={<p role="status" className="py-8 text-center text-sm">در حال بازکردن بخش…</p>}>
+        <RouteView />
+      </React.Suspense>
+    </AppShell>
+  );
+};
+
 export const App: React.FC = () => {
   return (
     <ManoProvider>
-      <AppShell>
-        <React.Suspense fallback={<p role="status" className="py-8 text-center text-sm">در حال بازکردن بخش…</p>}>
-          <RouteView />
-        </React.Suspense>
-      </AppShell>
+      <AppContent />
     </ManoProvider>
   );
 };

@@ -54,7 +54,7 @@ const ALL_HUB_DESTINATIONS: HubDestination[] = [
 ];
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { route, navigate, theme, toggleTheme, setSearchOpen, toasts } = useMano();
+  const { route, navigate, theme, toggleTheme, setSearchOpen, toasts, persistenceIssue } = useMano();
   const [hubOpen, setHubOpen] = useState(false);
 
   const isNavActive = (name: AppRoute['name']) => route.name === name;
@@ -116,7 +116,13 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
       <div className="border-b border-[#DCE7E1] bg-[#FDF4E4] px-4 py-2 text-center text-xs leading-6 text-[#122823] dark:border-[#23344D] dark:bg-[#312617] dark:text-[#EDF4F7]" role="note">
         پیش‌نمایش داخلی و آموزشی — برای تصمیم درمانی یا ثبت اطلاعات واقعی بیمار استفاده نشود.
+        <p>امکانات هوش مصنوعی آنلاین در این پیش‌نمایش فعال نیستند؛ ابزارهای محلی قابل استفاده‌اند.</p>
       </div>
+      {persistenceIssue ? (
+        <div role="alert" className="border-b border-[#E7B5BC] bg-[#FDF0F1] px-4 py-3 text-center text-xs leading-6 text-[#B32334]">
+          {persistenceIssue}
+        </div>
+      ) : null}
 
       {/* Main Content Container */}
       <main className="mx-auto max-w-6xl px-4 pb-24 pt-5 sm:px-6 md:pb-12">{children}</main>

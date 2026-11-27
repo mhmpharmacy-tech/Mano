@@ -1,4 +1,6 @@
 import type { AgeBandId, SymptomFlow, TriageEvaluationResult } from './models.ts';
+import { ageBandFromMonths } from './clinicalAge.ts';
+export { ageBandFromMonths } from './clinicalAge.ts';
 
 export function isExtremeTemperature(celsius: number | null | undefined): boolean {
   return (
@@ -18,17 +20,6 @@ export interface EvaluateTriageInput {
   durationHours: number | null;
   selectedRedFlagIds: Set<string>;
   ageMonthsExact?: number | null;
-}
-
-export function ageBandFromMonths(ageMonths: number | null | undefined): AgeBandId | null {
-  if (ageMonths === null || ageMonths === undefined || !Number.isFinite(ageMonths) || ageMonths < 0 || ageMonths > 144) {
-    return null;
-  }
-  if (ageMonths < 3) return 'NEWBORN';
-  if (ageMonths < 12) return 'INFANT_3_12M';
-  if (ageMonths < 36) return 'TODDLER_1_3Y';
-  if (ageMonths < 72) return 'PRESCHOOL_3_6Y';
-  return 'SCHOOL_6_12Y';
 }
 
 export function evaluateTriage({

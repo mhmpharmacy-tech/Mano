@@ -11,6 +11,7 @@ import {
 } from '../domain/liquidDoseVisualizerEngine.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
 import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
+import { resolveClinicalAge } from '../domain/clinicalAge.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { VisualSyringeCanvas } from '../components/VisualSyringeCanvas.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
@@ -21,6 +22,8 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
   prefillFormulationId,
 }) => {
   const { childProfile, vaccineBirthDateEpochMs, addDoseLog, navigate, notify } = useMano();
+  const profileAge = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const profileAgeBlocked = profileAge.status === 'conflict' || profileAge.status === 'invalid';
 
   const initialFormulation =
     LIQUID_FORMULATION_LIST.find((f) => f.id === prefillFormulationId) ??
@@ -36,29 +39,32 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
     return inferred === null ? '' : String(inferred);
   });
   const [labelConfirmed, setLabelConfirmed] = useState(false);
-  const ageMonths = parseClinicalDecimal(ageInput);
+  const [administeredConfirmed, setAdministeredConfirmed] = useState(false);
+  const ageMonths = profileAge.status === 'known' ? profileAge.ageMonths : parseClinicalDecimal(ageInput);
   const weightKg = parseClinicalDecimal(weightInput);
-  const canAdjustAge = ageMonths !== null && ageMonths >= 0 && ageMonths <= 144;
+  const canAdjustAge = profileAge.status === 'unknown' && ageMonths !== null && ageMonths >= 0 && ageMonths <= 144;
   const canAdjustWeight = weightKg !== null && weightKg >= 3 && weightKg <= 40;
 
   const updateAge = (value: string) => {
     setAgeInput(value);
     setLabelConfirmed(false);
+    setAdministeredConfirmed(false);
   };
   const updateWeight = (value: string) => {
     setWeightInput(value);
     setLabelConfirmed(false);
+    setAdministeredConfirmed(false);
   };
 
   const result = useMemo(
-    () => evaluateLiquidDose(formulation, ageMonths, weightKg),
-    [formulation, ageMonths, weightKg],
+    () => evaluateLiquidDose(formulation, profileAgeBlocked ? null : ageMonths, weightKg),
+    [formulation, ageMonths, weightKg, profileAgeBlocked],
   );
 
   const canRevealDose = labelConfirmed && !result.isBlocked;
 
   const handleSaveToTimeline = () => {
-    if (!canRevealDose) return;
+    if (!canRevealDose || !administeredConfirmed) return;
     addDoseLog({
       medicationSlug: formulation.key.startsWith('IBUPROFEN')
         ? 'ibuprofen'
@@ -69,7 +75,9 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
       dosageFormFa: formulation.concentrationLabelFa,
       volumeMlText: `${result.recommendedMl.toFixed(1)} mL (${Math.round(result.recommendedMg)} mg)`,
       noteFa: 'ثبت از محاسبه‌گر وزن مانو کید با سرنگ مدرج',
+      administeredAtMs: Date.now(),
     });
+    setAdministeredConfirmed(false);
   };
 
   const handleCopyCaregiverShare = async () => {
@@ -128,6 +136,7 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
                 onClick={() => {
                   setFormulation(item);
                   setLabelConfirmed(false);
+                  setAdministeredConfirmed(false);
                 }}
                 className={`rounded-2xl border p-3.5 text-right transition-colors ${
                   active
@@ -146,6 +155,11 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
       </section>
 
       {/* Step 2: Age & Weight Inputs */}
+      {profileAgeBlocked ? (
+        <SeverityAlert severity="caution" title="سن پرونده نیاز به اصلاح دارد" body={profileAge.messageFa ?? ''} testId="age-profile-conflict">
+          <button type="button" onClick={() => navigate({ name: 'my-child' })} className="min-h-[40px] font-bold underline">اصلاح سن در پرونده کودک</button>
+        </SeverityAlert>
+      ) : null}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-3xl border border-[#DCE7E1] bg-white p-5 space-y-3 dark:border-[#23344D] dark:bg-[#111C2E]">
           <div className="flex items-center justify-between">
@@ -172,7 +186,8 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
               inputMode="decimal"
               dir="ltr"
               data-testid="dose-age-input"
-              value={ageInput}
+              value={profileAge.status === 'known' ? String(profileAge.ageMonths) : ageInput}
+              readOnly={profileAge.status !== 'unknown'}
               aria-label="سن دقیق کودک به ماه"
               aria-describedby="dose-age-help"
               placeholder="سن به ماه"
@@ -193,8 +208,9 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
             </button>
           </div>
           <p id="dose-age-help" className="text-xs text-[#546963] dark:text-[#9EB3C4]">
-            سن واقعی کودک را از ۰ تا ۱۴۴ ماه وارد کنید. تا ثبت سن، محاسبه دوز قفل است.
+            {profileAge.status === 'known' ? 'سن از پرونده کودک خوانده می‌شود؛ برای تغییر سن، ابتدا پرونده را اصلاح کنید.' : 'سن واقعی کودک را از ۰ تا ۱۴۴ ماه وارد کنید. تا ثبت سن، محاسبه دوز قفل است.'}
           </p>
+          {profileAge.status === 'known' ? <button type="button" onClick={() => navigate({ name: 'my-child' })} className="min-h-[40px] text-xs font-bold underline">اصلاح سن در پرونده کودک</button> : null}
         </div>
 
         <div className="rounded-3xl border border-[#DCE7E1] bg-white p-5 space-y-3 dark:border-[#23344D] dark:bg-[#111C2E]">
@@ -263,7 +279,10 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
               type="checkbox"
               data-testid="dose-label-confirm-checkbox"
               checked={labelConfirmed}
-              onChange={(e) => setLabelConfirmed(e.target.checked)}
+              onChange={(e) => {
+                setLabelConfirmed(e.target.checked);
+                setAdministeredConfirmed(false);
+              }}
               className="mt-1 h-5 w-5 shrink-0 accent-[#105B48]"
             />
             <span>
@@ -307,8 +326,9 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
               <button
                 type="button"
                 data-testid="dose-save-timeline-btn"
+                disabled={!administeredConfirmed}
                 onClick={handleSaveToTimeline}
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white dark:bg-[#00D7C7] dark:text-[#0B1220]"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#105B48] px-4 text-xs font-bold text-white disabled:opacity-40 dark:bg-[#00D7C7] dark:text-[#0B1220]"
               >
                 <Save className="h-4 w-4" />
                 <span>ثبت این نوبت در خط زمانی ۲۴س</span>
@@ -323,6 +343,11 @@ export const FeverDoseCalculatorScreen: React.FC<{ prefillFormulationId?: string
               </button>
             </div>
           </div>
+
+          <label className="flex items-start gap-2 text-xs font-bold leading-6">
+            <input type="checkbox" data-testid="dose-administered-confirm" checked={administeredConfirmed} onChange={(e) => setAdministeredConfirmed(e.target.checked)} className="mt-1 h-5 w-5 accent-[#105B48]" />
+            <span>این مقدار همین اکنون به کودک داده شده است؛ فقط مصرف انجام‌شده در خط زمانی ثبت شود.</span>
+          </label>
 
           <p className="text-xs leading-5 text-[#113C27] dark:text-[#CBEFD9]">
             <CheckSquare className="ml-1 inline h-3.5 w-3.5" />

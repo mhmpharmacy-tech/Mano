@@ -8,6 +8,7 @@ import {
   type GrowthMetricId,
 } from '../domain/whoGrowthStandardsEngine.ts';
 import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
+import { resolveClinicalAge } from '../domain/clinicalAge.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { WhoGrowthChartCard } from '../components/WhoGrowthChartCard.tsx';
@@ -19,6 +20,7 @@ export const GrowthScreen: React.FC<{ initialTab?: 'chart' | 'milestones' }> = (
 }) => {
   const {
     childProfile,
+    vaccineBirthDateEpochMs,
     growthMeasurements,
     addGrowthMeasurement,
     deleteGrowthMeasurement,
@@ -29,12 +31,14 @@ export const GrowthScreen: React.FC<{ initialTab?: 'chart' | 'milestones' }> = (
   } = useMano();
 
   const [activeTab, setActiveTab] = useState<'chart' | 'milestones'>(initialTab);
+  const profileAge = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const ageConflict = profileAge.status === 'conflict' || profileAge.status === 'invalid';
   // Zero fabricated sex or initial measurement! Explicitly starts null unless profile already has sex.
   const [selectedSex, setSelectedSex] = useState<ChildSexId | null>(childProfile.sex ?? null);
   const [metricId, setMetricId] = useState<GrowthMetricId>('weight_for_age');
   const [ageMonthsText, setAgeMonthsText] = useState(() =>
-    childProfile.ageMonthsExact !== null && childProfile.ageMonthsExact !== undefined
-      ? String(childProfile.ageMonthsExact)
+    profileAge.ageMonths !== null
+      ? String(profileAge.ageMonths)
       : '',
   );
   const [measuredValueText, setMeasuredValueText] = useState('');
@@ -44,13 +48,17 @@ export const GrowthScreen: React.FC<{ initialTab?: 'chart' | 'milestones' }> = (
   const parsedVal = parseClinicalDecimal(measuredValueText);
 
   const currentAssessment = useMemo(() => {
-    if (!selectedSex || parsedAge === null || parsedVal === null) return null;
+    if (ageConflict || !selectedSex || parsedAge === null || parsedVal === null) return null;
     if (metricId === 'height_for_age' && !heightMethodConfirmed) return null;
     return evaluateWhoGrowth(metricId, selectedSex, parsedAge, parsedVal);
-  }, [selectedSex, metricId, parsedAge, parsedVal, heightMethodConfirmed]);
+  }, [ageConflict, selectedSex, metricId, parsedAge, parsedVal, heightMethodConfirmed]);
 
   const handleRecordMeasurement = (e: React.FormEvent) => {
     e.preventDefault();
+    if (ageConflict) {
+      notify(profileAge.messageFa || 'ابتدا اختلاف سن پرونده کودک را اصلاح کنید.', 'danger');
+      return;
+    }
     if (!selectedSex) {
       notify('لطفاً ابتدا جنسیت کودک را برای انتخاب جدول استاندارد WHO انتخاب کنید.', 'danger');
       return;
@@ -86,6 +94,14 @@ export const GrowthScreen: React.FC<{ initialTab?: 'chart' | 'milestones' }> = (
 
   return (
     <div className="space-y-6" data-testid="growth-screen">
+      {ageConflict ? (
+        <SeverityAlert
+          severity="caution"
+          title="سن پرونده نیاز به اصلاح دارد"
+          body={profileAge.messageFa || 'پیش از ثبت اندازه‌گیری، سن پرونده کودک را اصلاح کنید.'}
+          testId="growth-age-conflict"
+        />
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-[#122823] dark:text-[#EDF4F7]">

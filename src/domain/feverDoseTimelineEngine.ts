@@ -4,7 +4,7 @@ import type {
   TimelineDosePoint,
   TimelineTempPoint,
 } from './models.ts';
-import { initialAgeMonthsFromProfile } from './liquidDoseVisualizerEngine.ts';
+import { resolveClinicalAge, shouldShowFeverAlert } from './clinicalAge.ts';
 import { toAsciiDigits } from './persianNormalizer.ts';
 
 const HOUR_MS = 3_600_000;
@@ -231,17 +231,14 @@ export function mergedChronologicalEvents(snapshot: FeverDoseTimelineSnapshot): 
 export function evaluateHighFeverAlert(
   snapshot: FeverDoseTimelineSnapshot,
   childProfile: ChildProfile | null | undefined,
+  birthDateEpochMs?: number | null,
 ): HighFeverClinicalAlert | null {
-  const ageMonths =
-    childProfile?.ageMonthsExact ?? initialAgeMonthsFromProfile(childProfile);
-  const underThreeMonths =
-    (ageMonths !== null && ageMonths !== undefined && ageMonths < 3) ||
-    ((ageMonths === null || ageMonths === undefined) && childProfile?.ageBand === 'NEWBORN');
+  const age = resolveClinicalAge(childProfile, birthDateEpochMs);
+  const underThreeMonths = age.status === 'known' && age.ageMonths! < 3;
 
   const matching = snapshot.tempPoints.filter(
     (t) =>
-      t.tempCelsius > HIGH_FEVER_ALERT_THRESHOLD_C ||
-      (underThreeMonths && t.tempCelsius >= 38.0),
+      shouldShowFeverAlert(t.tempCelsius, age),
   );
   if (matching.length === 0) return null;
   const latestHigh = matching[matching.length - 1];
@@ -256,9 +253,13 @@ export function evaluateHighFeverAlert(
     isHighFeverOver39: latestHigh.tempCelsius > HIGH_FEVER_ALERT_THRESHOLD_C,
     titleFa: newbornUrgency
       ? `هشدار فوری: تب ۳۸ درجه یا بیشتر در شیرخوار زیر ۳ ماه (${tempStr})`
+      : age.status !== 'known'
+        ? `هشدار تب با سن تأییدنشده (${tempStr})`
       : `هشدار فوری تب بالای ۳۹ درجه (${tempStr}) — مراجعه به پزشک`,
     bodyFa: newbornUrgency
       ? `دمای ثبت‌شده ${childLabel}به ${tempStr} رسیده است. تب ۳۸ درجه یا بیشتر در شیرخوار زیر سه ماه نیازمند ارزیابی فوری حضوری توسط پزشک یا اورژانس است. داروی خودسرانه ندهید.`
+      : age.status !== 'known'
+        ? 'سن واقعی کودک مشخص نیست یا منابع سن با هم ناسازگارند؛ تب ۳۸ درجه یا بیشتر را برای ارزیابی فوری حضوری با پزشک مطرح کنید و خودسرانه دارو ندهید.'
       : `دمای ثبت‌شده ${childLabel}در ساعت ${latestHigh.timeLabelFa} (توسط ${latestHigh.caregiverFa}) به ${tempStr} رسیده و از آستانه ۳۹.۰°C فراتر رفته است. لطفاً وضعیت کودک را فوری بررسی کرده و برای ویزیت به پزشک یا مرکز درمانی مراجعه کنید.`,
     checklistFa: [
       'در صورت بی‌حالی شدید، خواب‌آلودگی غیرعادی، تنفس تند یا تشنج فوراً با اورژانس ۱۱۵ تماس بگیرید.',

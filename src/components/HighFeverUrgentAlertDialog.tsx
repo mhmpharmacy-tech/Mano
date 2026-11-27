@@ -2,13 +2,16 @@ import React from 'react';
 import { PhoneCall, ShieldAlert, Stethoscope, Calculator, X } from 'lucide-react';
 import { useMano } from '../state/ManoStore.tsx';
 import { formatTempC } from '../domain/feverDoseTimelineEngine.ts';
+import { resolveClinicalAge } from '../domain/clinicalAge.ts';
 
 export const HighFeverUrgentAlertDialog: React.FC = () => {
-  const { activeHighFeverAlert, dismissHighFeverAlert, childProfile, navigate } = useMano();
+  const { activeHighFeverAlert, dismissHighFeverAlert, childProfile, vaccineBirthDateEpochMs, navigate } = useMano();
 
   if (!activeHighFeverAlert) return null;
 
-  const isYoungInfant = childProfile.ageBand === 'NEWBORN';
+  const age = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const ageUnconfirmed = age.status !== 'known';
+  const isYoungInfant = age.status === 'known' && age.ageMonths! < 3;
 
   return (
     <div
@@ -47,6 +50,8 @@ export const HighFeverUrgentAlertDialog: React.FC = () => {
             <p className="font-bold">
               هشدار اورژانس نوزاد زیر ۳ ماه: هر تب ۳۸٫۰ درجه یا بالاتر در نوزاد زیر ۳ ماه نیازمند معاینه فوری حضوری در اورژانس است. بدون نظر پزشک هیچ دارویی ندهید.
             </p>
+          ) : ageUnconfirmed ? (
+            <p className="font-bold">سن کودک تأیید نشده یا با تاریخ تولد ناسازگار است. تب ۳۸ درجه یا بیشتر می‌تواند در شیرخوار زیر ۳ ماه نیازمند ارزیابی فوری باشد؛ برای معاینه حضوری با پزشک یا اورژانس تماس بگیرید و خودسرانه دارو ندهید.</p>
           ) : (
             <p>
               این عدد تب همراه با حال عمومی کودک مهم است. اگر کودک دچار تنگی نفس، کبودی لب‌ها، تشنج، بی‌حالی شدید یا راش محونشونده است، فوراً با اورژانس ۱۱۵ تماس بگیرید یا مراجعه حضوری داشته باشید.
@@ -75,7 +80,7 @@ export const HighFeverUrgentAlertDialog: React.FC = () => {
             <span>بررسی علائم خطر تب</span>
           </button>
 
-          {!isYoungInfant ? (
+          {!isYoungInfant && !ageUnconfirmed ? (
             <button
               type="button"
               onClick={() => {

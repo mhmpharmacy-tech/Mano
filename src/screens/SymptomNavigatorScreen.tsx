@@ -13,7 +13,7 @@ import { SYMPTOM_FLOWS } from '../data/contentRepository.ts';
 import { AGE_BANDS, type AgeBandId, type SafetyChecklistReport } from '../domain/models.ts';
 import type { GatewayResponseMeta } from '../domain/aiGatewayContracts.ts';
 import { ageBandFromMonths, evaluateTriage } from '../domain/triageEngine.ts';
-import { initialAgeMonthsFromProfile } from '../domain/liquidDoseVisualizerEngine.ts';
+import { resolveClinicalAge } from '../domain/clinicalAge.ts';
 import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
 import { buildChildContextSummaryFa } from '../domain/promptBuilders.ts';
 import {
@@ -29,7 +29,9 @@ import { GatewayMetaBanner } from '../components/GatewayMetaBanner.tsx';
 
 export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ initialFlowId }) => {
   const { childProfile, vaccineBirthDateEpochMs, navigate } = useMano();
-  const profileAgeMonths = initialAgeMonthsFromProfile(childProfile, vaccineBirthDateEpochMs);
+  const profileAge = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const profileAgeMonths = profileAge.ageMonths;
+  const profileAgeBlocked = profileAge.status === 'conflict' || profileAge.status === 'invalid';
   const [selectedFlowId, setSelectedFlowId] = useState<string>(initialFlowId || SYMPTOM_FLOWS[0].id);
   const [ageBand, setAgeBand] = useState<AgeBandId | null>(() => ageBandFromMonths(profileAgeMonths));
   const [tempText, setTempText] = useState('');
@@ -69,17 +71,17 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
     () =>
       evaluateTriage({
         flow,
-        ageBand,
+        ageBand: profileAgeBlocked ? null : ageBand,
         temperatureCelsius: parsedTemp,
         durationHours: parsedDuration,
         selectedRedFlagIds: checkedFlags,
         ageMonthsExact: profileAgeMonths,
       }),
-    [flow, ageBand, parsedTemp, parsedDuration, checkedFlags, profileAgeMonths],
+    [flow, ageBand, parsedTemp, parsedDuration, checkedFlags, profileAgeMonths, profileAgeBlocked],
   );
 
   const canUseAi =
-    ageBand !== null &&
+    !profileAgeBlocked && ageBand !== null &&
     evaluation.outcome !== 'URGENT_EMERGENCY' &&
     evaluation.triggeredRule.id !== 'rule_incomplete_input' &&
     evaluation.triggeredRule.id !== 'rule_invalid_input';
@@ -186,6 +188,11 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
       </div>
 
       {/* Step 1: Choose Symptom Flow */}
+      {profileAgeBlocked ? (
+        <SeverityAlert severity="caution" title="سن پرونده نیاز به اصلاح دارد" body={profileAge.messageFa ?? ''} testId="age-profile-conflict">
+          <button type="button" onClick={() => navigate({ name: 'my-child' })} className="min-h-[40px] font-bold underline">اصلاح سن در پرونده کودک</button>
+        </SeverityAlert>
+      ) : null}
       <section className="rounded-3xl border border-[#DCE7E1] bg-white p-5 dark:border-[#23344D] dark:bg-[#111C2E]">
         <h2 className="mb-3 text-sm font-extrabold text-[#105B48] dark:text-[#00D7C7]">
           ۱. علامت اصلی کودک را انتخاب کنید
@@ -238,7 +245,7 @@ export const SymptomNavigatorScreen: React.FC<{ initialFlowId?: string }> = ({ i
                   type="button"
                   data-testid={`triage-age-${b.id}`}
                   aria-pressed={ageBand === b.id}
-                  disabled={profileAgeMonths !== null}
+                  disabled={profileAgeMonths !== null || profileAgeBlocked}
                   onClick={() => {
                     resetChecklist();
                     setAgeBand(b.id);

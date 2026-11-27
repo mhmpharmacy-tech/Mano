@@ -10,7 +10,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/domain/*.test.ts server/*.test.ts server/aiGateway/*.test.ts",
+    "test": "tsx --test src/domain/*.test.ts src/state/*.test.ts src/api/*.test.ts server/*.test.ts server/aiGateway/*.test.ts",
     "test:web": "node --test tests/web.test.mjs",
     "test:browser": "node tests/browser.mjs",
     "check": "npm run typecheck && npm run lint && npm test && npm run test:web"
