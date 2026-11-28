@@ -6,6 +6,8 @@ import pg from 'pg';
 import {createStageServer} from './server.mjs';
 import {digest,databaseOptions} from './policy.mjs';
 import {demoAuth} from './demo-auth.mjs';
+import {createIntegrationHost} from './integration-host.mjs';
+import {once} from 'node:events';
 const token=()=>randomBytes(32).toString('base64url');
 test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and revocation',async t=>{
   const adminUrl=new URL(process.env.MANO_TEST_ADMIN_URL||'invalid:');
@@ -87,6 +89,17 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   assert.equal((await call('POST',path,p,consent)).status,403);
   assert.equal((await call('POST',path,a,consent)).status,200);
   assert.deepEqual(await list(p),[id]);assert.deepEqual(await list(q),[]);
+  const operatorToken=token();
+  const host=createIntegrationHost(pool,{...env,MANO_INTEGRATION_ENABLED:'true',MANO_INTEGRATION_OPERATOR_TOKEN:operatorToken});
+  host.listen(0,'127.0.0.1');await once(host,'listening');
+  try{
+    const url='http://127.0.0.1:'+host.address().port+'/internal/mano/v1/profiles';
+    const get=async who=>{
+      const r=await fetch(url,{headers:{'x-mano-operator-token':operatorToken,authorization:'Bearer '+who.secret}});
+      assert.equal(r.status,200);return (await r.json()).profiles.map(p=>p.id);
+    };
+    assert.deepEqual(await get(a),[id]);assert.deepEqual(await get(b),[]);assert.deepEqual(await get(p),[id]);assert.deepEqual(await get(q),[]);
+  }finally{await new Promise(resolve=>host.close(resolve));}
   await admin.query('UPDATE mano_stage.memberships SET active=false WHERE account_id=$1',[p.id]);
   assert.deepEqual(await list(p),[]);
   await admin.query('UPDATE mano_stage.memberships SET active=true WHERE account_id=$1',[p.id]);
