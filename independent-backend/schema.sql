@@ -104,7 +104,7 @@ BEGIN
  expires_at=now()+interval '5 minutes',attempts=0,consumed=false
  WHERE mano_stage.demo_challenge.issued_at < now()-interval '60 seconds';
  RETURN FOUND;
-END $mano$;
+END; $mano$;
 CREATE FUNCTION mano_stage.verify_demo_challenge(c uuid,proof text,new_session text) RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $mano$
 DECLARE d mano_stage.demo_challenge%ROWTYPE; aid uuid;
@@ -118,7 +118,7 @@ BEGIN
  UPDATE mano_stage.demo_challenge SET consumed=true WHERE challenge_id=c;
  INSERT INTO mano_stage.sessions(token_hash,account_id,expires_at) VALUES(new_session,aid,now()+interval '30 minutes');
  RETURN true;
-END $mano$;
+END; $mano$;
 CREATE FUNCTION mano_stage.revoke_session() RETURNS void
 LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $mano$
  UPDATE mano_stage.sessions SET revoked_at=now()
