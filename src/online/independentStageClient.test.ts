@@ -29,3 +29,22 @@ test('unauthorized clears session and bad response fails closed',async()=>{
  const malformed=new IndependentStageClient(true,async()=>({status:200,data:{profiles:[{id,alias:'real child',age_months:12}]}}));
  malformed.setSession(token);await assert.rejects(malformed.list(),/INVALID_RESPONSE/);
 });
+
+test('care-card client validates template, state, confirmation and request scope',async()=>{
+ const calls: Parameters<StageTransport>[0][]=[];
+ const c=new IndependentStageClient(true,async r=>{
+   calls.push(r);
+   if(r.method==='GET')return {status:200,data:{cards:[{id,pharmacy_id:id,template:'demo-care-v1',state:'issued'}]}};
+   return r.path.endsWith('/state')?{status:200,data:{ok:true}}:{status:201,data:{id}};
+ });
+ c.setSession(token);
+ assert.deepEqual(await c.listCare(id),[{id,pharmacyId:id,template:'demo-care-v1',state:'issued'}]);
+ await assert.rejects(c.issueCare(id,id,false));assert.equal(calls.length,1);
+ assert.equal(await c.issueCare(id,id,true),id);
+ await c.transitionCare(id,id,'acknowledged');
+ assert.deepEqual(calls[1].body,{pharmacyId:id,template:'demo-care-v1'});
+ assert.deepEqual(calls[2].body,{state:'acknowledged'});
+ assert.equal(calls[2].path,'/internal/mano/v1/profiles/'+id+'/care-cards/'+id+'/state');
+ const bad=new IndependentStageClient(true,async()=>({status:200,data:{cards:[{id,pharmacy_id:id,template:'live',state:'issued'}]}}));
+ bad.setSession(token);await assert.rejects(bad.listCare(id),/INVALID_RESPONSE/);
+});
