@@ -1,5 +1,7 @@
 import { OnlineBoundaryError, type DeletionPolicy, type DeletionSummary, type ParentCase, type PharmacyOption } from './contracts.ts';
 
+import { parseCaseCareCard } from './caseCareCard.ts';
+
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new OnlineBoundaryError('INVALID_RESPONSE');
   return value as Record<string, unknown>;
@@ -28,7 +30,9 @@ export function parseParentCases(raw: unknown, expectedPharmacyId?: string): Par
           reply.attestationConfirmed !== true || !timestamp(reply.respondedAt)) throw new OnlineBoundaryError('INVALID_RESPONSE');
       parentResponse = { replyTextFa: reply.replyTextFa, respondedAt: reply.respondedAt, attestationConfirmed: true };
     } else if (item.status === 'REVIEWED') throw new OnlineBoundaryError('INVALID_RESPONSE');
-    return { caseId: item.caseId, pharmacyId: item.pharmacyId, questionSummaryFa: item.questionSummaryFa, status: item.status as ParentCase['status'], createdAt: item.createdAt, parentResponse };
+    if (item.careCard !== undefined && item.status !== 'REVIEWED') throw new OnlineBoundaryError('INVALID_RESPONSE');
+    const care = item.careCard === undefined ? {} : { careCard: parseCaseCareCard(item.careCard) };
+    return { ...care, caseId: item.caseId, pharmacyId: item.pharmacyId, questionSummaryFa: item.questionSummaryFa, status: item.status as ParentCase['status'], createdAt: item.createdAt, parentResponse };
   });
 }
 

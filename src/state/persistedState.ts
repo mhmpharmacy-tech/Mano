@@ -150,7 +150,7 @@ const persistedShape = shape({
   })),
   savedSyrupScans: list(shape({ id: 'string', detectedDrugNameFa: 'string', ingredientKey: 'string', dosageForm: 'string', mgAmount: 'number', perMlAmount: 'number', matchedFormulationIdRaw: 'string', confidence: 'string', safetyNoteFa: 'string', parentVerified: 'boolean', createdAtMs: 'number', createdAtLabelFa: 'string' })),
   pharmacistConsultations: list(shape({ id: 'string', createdAtMs: 'number', createdAtLabelFa: 'string', childAgeBand: 'string', weightKgText: 'string', topicFa: 'string', questionTextFa: 'string', symptomsSelectedFa: stringList, urgencyLevel: 'string', statusFa: 'string', pharmacistReplyFa: optional('string'), repliedAtLabelFa: optional('string') })),
-  careCards: list(shape({ id: 'string', titleFa: 'string', subtitleFa: 'string', cardType: 'string', badgeFa: 'string', summaryLinesFa: stringList, footerNoteFa: 'string', createdAtLabelFa: 'string', shareUrl: optional('string') })),
+  careCards: list(shape({ id: 'string', titleFa: 'string', subtitleFa: 'string', cardType: 'string', badgeFa: 'string', summaryLinesFa: stringList, footerNoteFa: 'string', createdAtLabelFa: 'string', shareUrl: optional('string'), familyFollowUps: optional(list(shape({ recordedAtMs: 'number', noteFa: 'string' }))) })),
 });
 
 export function loadPersistedState(options: {

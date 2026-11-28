@@ -385,6 +385,7 @@ const careCard = object<CareCardEntry>({
   footerNoteFa: text(4_000),
   createdAtLabelFa: text(256),
   shareUrl: optional(safeUrl),
+  familyFollowUps: optional(list(object({ recordedAtMs: pastTimestamp, noteFa: text(500, 1) }), 100)),
 });
 
 const snapshot = object<LocalBackupSnapshot>({

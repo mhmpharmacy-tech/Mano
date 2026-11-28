@@ -1,0 +1,8 @@
+*
+!package.json
+!package-lock.json
+!policy.mjs
+!server.mjs
+!demo-auth.mjs
+!integration-host.mjs
+!Dockerfile.internal

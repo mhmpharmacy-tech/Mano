@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test unit.test.mjs",
-    "test:integration": "node --test integration.test.mjs"
+    "test:integration": "node --experimental-transform-types --test integration.test.mjs",
+    "start:integration": "node integration-host.mjs"
   },
   "dependencies": {
     "pg": "8.16.3"

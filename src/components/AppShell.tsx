@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Calculator,
   Home,
@@ -26,6 +26,51 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [hubOpen, setHubOpen] = useState(false);
   const hubVisible = hubOpen && onboardingSeen && !searchOpen && !activeHighFeverAlert;
 
+  const headerRef = useRef<HTMLElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // Firefox can scroll a focused control underneath sticky/fixed chrome.
+    // Measure actual chrome (including large-text reflow) rather than fixed pixels.
+    const root = document.documentElement;
+    const header = headerRef.current;
+    const nav = mobileNavRef.current;
+    if (!header || !nav) return;
+    let frame = 0;
+    const measure = () => {
+      root.style.setProperty('--mano-focus-top', `${Math.ceil(header.getBoundingClientRect().height) + 4}px`);
+      root.style.setProperty('--mano-focus-bottom', `${Math.ceil(nav.getBoundingClientRect().height) + 4}px`);
+    };
+    const reveal = () => {
+      const target = document.activeElement;
+      const main = document.getElementById('mano-main-content');
+      if (!(target instanceof HTMLElement) || target === main || !main?.contains(target) ||
+          target.closest('[role="dialog"]')) return;
+      const rect = target.getBoundingClientRect();
+      const top = Math.max(0, header.getBoundingClientRect().bottom) + 4;
+      const navRect = nav.getBoundingClientRect();
+      const bottom = (navRect.height ? navRect.top : window.innerHeight) - 4;
+      if (bottom <= top) return;
+      const delta = rect.height > bottom - top || rect.top < top
+        ? rect.top - top : rect.bottom > bottom ? rect.bottom - bottom : 0;
+      if (Math.abs(delta) > 0.5) window.scrollBy({ top: delta, behavior: 'instant' });
+    };
+    const onFocus = () => {
+      cancelAnimationFrame(frame);
+      reveal();
+      frame = requestAnimationFrame(reveal);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(header); observer.observe(nav);
+    measure();
+    document.addEventListener('focusin', onFocus);
+    return () => {
+      cancelAnimationFrame(frame); observer.disconnect();
+      document.removeEventListener('focusin', onFocus);
+      root.style.removeProperty('--mano-focus-top');
+      root.style.removeProperty('--mano-focus-bottom');
+    };
+  }, []);
+
   const isNavActive = (name: AppRoute['name']) => route.name === name;
 
   const navLinkClass = (active: boolean) =>
@@ -49,7 +94,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
         رفتن به محتوای اصلی
       </a>
       {/* Strict 3-Zone Top Header Bar */}
-      <header className="sticky top-0 z-30 border-b border-[#DCE7E1] bg-[#FFFBF6]/92 backdrop-blur-md dark:border-[#23344D] dark:bg-[#0B1220]/92">
+      <header ref={headerRef} className="sticky top-0 z-30 border-b border-[#DCE7E1] bg-[#FFFBF6]/92 backdrop-blur-md dark:border-[#23344D] dark:bg-[#0B1220]/92">
         <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
           {/* Zone 1: Single-line Brand Title */}
           <button
@@ -115,6 +160,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
       {/* Mobile Bottom Tab Bar (5 tabs, compact 56px height) */}
       <nav
+        ref={mobileNavRef}
         aria-label="ناوبری موبایل"
         className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#DCE7E1] bg-[#FFFFFF]/95 backdrop-blur-md dark:border-[#23344D] dark:bg-[#111C2E]/95 md:hidden"
       >

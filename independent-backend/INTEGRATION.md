@@ -1,0 +1,57 @@
+# MANO Integration — internal synthetic only
+
+This stacked branch builds on the verified PostgreSQL stage PR #33. The operator's Liara screenshots show the seven preflight checks, three negative API tests and 18 synthetic smoke assertions passed. This is operator evidence for the previous code, not proof of this new host or adapters.
+
+## Architecture and boundaries
+- Run `npm ci --ignore-scripts` in independent-backend and `npm run start:integration` with process environment injected by the operator. No auto-loading of .env, no public port, no root web process modification. Bind 127.0.0.1 only (default port 3101), graceful shutdown, bounded requests, separate operator and upstream gates. Never add a public reverse proxy or expose port 3101. A supervisor in an isolated internal environment must own the lifecycle; the current public Liara web app is not a supervisor for this process.
+- All three enable/acknowledgement flags must be explicit. Use verify-full with a trusted CA and matching hostname; if the current private Liara database lacks TLS, private-test is permitted strictly for synthetic data. Do not disable certificate verification for real data. Confirm provider-supported authenticated encrypted transport or choose a suitable private TLS-enabled database before production. No TLS setup was performed by this branch.
+- The operator-only host accepts fixed profile/consent/logout paths plus optional demo auth issue/verify paths. The auth routes require a separate OTP key and injected synthetic delivery sink; absent sink means 404 (including the normal CLI launch). Codes are never returned from issue. It rejects browser Origin and Sec-Fetch-Site headers and caller-supplied upstream credentials; the gate remains server-side. Operator identity is not patient identity. Session bearer remains required. This is NOT a public BFF or mobile API.
+- Web TypeScript and Android Kotlin adapters share paths, strict synthetic record validation, explicit consent, memory-only session and invalidation on 401. They are independent of Firebase. A separate loopback-only browser test bridge is now provided; real mobile transport is still NOT implemented. Neither adapter is wired into the live application. No operator gate may be shipped to a browser or APK. No auto retry, dual-write or fallback to Firebase.
+- Existing demo-auth supports operator-delivered synthetic OTP only. No SMS delivery, registration, recovery, verified pharmacist onboarding, refresh or public endpoint. Future public authentication must have a separately reviewed identity flow and abuse limits.
+
+## Verification
+- PostgreSQL integration CI checks actual authorized reads through the host and operator gate rejection before DB access.
+- Existing root npm test includes src/online/independentStageClient.test.ts; no change to Vite or React.
+- Android adapter JVM CI now compiles the exact Kotlin source and unit tests with isolated Gradle configuration, no Android SDK or Firebase secrets required. Full Android APK remains separate. The repository has no tracked Gradle wrapper or google-services.json; use a configured internal Android SDK/Gradle and appropriate non-production Firebase config to run gradle :app:testDebugUnitTest --tests com.example.data.IndependentStageClientTest. Never commit real credentials. No APK built here.
+- Firefox focus fix passed the unchanged browser assertion at commit 28de8c2d (run 46146698339). Revalidate new revisions.
+- Before live wiring: implement authenticated browser/native transport (separate operator gate from user identity, CSRF/origin protection where relevant, TLS, rate limits, replay and account-switch concurrency), real account lifecycle, clinical schema, retention/deletion, backups and restore, safe migration. Full release requires real-device testing and clinical/security sign-off.
+- No main merge, public deployment, Firebase deletion or visual changes authorized.
+
+## Phase 2 verification
+- The real PostgreSQL CI also starts the integration service with startup checks, runs the TypeScript adapter over HTTP, exercises synthetic OTP issuance/replay rejection through HTTP, profile isolation and consent, and confirms revocation at the server.
+- Standalone Kotlin JVM tests: `gradle -p android-integration-test test --no-daemon`. This does not produce an APK or prove phone-to-server connectivity.
+- The operator must supply a separate internal execution environment and encrypted transport approved by the provider before any real-data rollout. Do not deploy this branch to the live app, do not expose the internal port, and do not copy local patient records. Existing demo fixtures can remain only in the synthetic database.
+
+## Phase 3 verification additions
+- Keyboard focus: measured sticky header and bottom navigation, scroll correction on focus; no changes to brand, colors, layout or navigation labels. Browser CI must pass unchanged assertions.
+- CI provisions short-lived TLS certificates only in disposable local PostgreSQL. Tests assert encrypted transport, startup readiness, and rejection of an unrelated CA. This does not configure Liara TLS.
+- Kotlin JVM HTTP test runs the actual adapter against the loopback integration host and a TLS-enabled disposable database. Test-only operator gate is never in Android main sources. Profile creation, isolation, consent, revocation and server-side logout are checked. This is not APK/device validation or public client transport.
+
+## Phase 4: actual browser transport (test only)
+- The private browser bridge binds an ephemeral loopback port, requires a random short-lived HttpOnly cookie injected by the test operator (no issuance endpoint), exact Host, same-origin mutation requests and a fixed custom header. It rejects caller-supplied server gate headers, cross-site requests, unknown paths, and limits concurrent requests. No production ingress or UI imports.
+- TypeScript browser transport uses same-origin fetch, in-memory user bearer, no redirect or persistent storage. Real Chromium CI loads the actual adapter source and tests creation, isolation, consent and revocation over the bridge to PostgreSQL with verified TLS. Neither server gate is sent by the browser. This is still a harness, not an authenticated public BFF or live React screen.
+- Verified previous baseline: all six CI jobs passed at 28de8c2d (Postgres run 46146698398 including Kotlin HTTP/TLS; web 46146698339; Kotlin JVM 46146698231). No public deployment or real data verified.
+
+## Phase 5: lifecycle, migration, restore and packaging
+- Browser bridge and full Chromium-to-PostgreSQL test passed in run 46148260792 (previous commit 4f3a0078). New revisions require fresh CI.
+- Operator-only synthetic enrollment/deactivation functions use dedicated administrator access, transactions and validated demo handles. Deactivation revokes sessions and pharmacist membership. No HTTP admin endpoint. Run CLI only in an explicitly synthetic environment with an authorized separate operator DB connection. It neither verifies real pharmacists nor registers real people.
+- Rehearse synthetic profile migration on disposable CI PostgreSQL with explicit owner mapping and deterministic destination IDs. Reject duplicates, unknown owners and conflicts. Unconditionally roll back; no Firebase calls or persistent migration writes. The prior inventory planner is still non-writing.
+- PostgreSQL logical backup restore rehearsal copies the synthetic schema into a disposable second CI database, compares row counts and checks RLS and privileges. Revoke all restored sessions before the restored database can be used. No production backup or encrypted storage retention established by this test.
+- Build the internal runtime from the independent-backend directory: docker build -f Dockerfile.internal -t mano-internal:review . The container is non-root and binds the integration listener to loopback; no port publication or public ingress. A separate private execution environment and secure secret injection must be approved before running it. No image push, Liara deploy or main merge.
+- Real SMS, real-account recovery, pharmacist identity proofing, clinical records, live user UI and actual Firebase migration remain intentionally blocked until production-grade identity and TLS are established. Do not interpret green synthetic tests as a release approval.
+
+## Phase 6: synthetic Care Loop backend
+- Apply care-loop.sql once, after schema.sql, only as schema owner in a dedicated synthetic database. CI applies both. Existing Liara schema has NOT been migrated. Default MANO_STAGE_CARE_ENABLED=false. New endpoints are direct stage API only, not yet exposed through integration host/browser bridge or wired into React/Android.
+- Pharmacist with active consent and pharmacy membership can issue a fixed demo-care-v1 card; owning parent acknowledges and requests follow-up; authorized pharmacist closes. The state transitions are serialized, with actor and state recorded in a separate protected event table. A parent cannot author a card; cross-account and cross-pharmacy requests are denied. Revoked consent denies future staff access while the parent retains their card.
+- No clinical advice, dosing, free-text clinical records, reminders or real patients. No public deployment. CI checks migration, permissions, state transitions, audit and restores the added tables. Real workflow screens and production identity remain separate gates.
+
+## Phase 7: isolated care workspace and client contracts
+- Phase 6 direct stage API/PostgreSQL tests passed at 4be801ab (run 46156620758). This is synthetic CI evidence only.
+- Added strictly validated care-card methods in TypeScript and Kotlin plus adapter tests, a Persian RTL React review component for home/continue care, profile selection, pharmacy consent, card issuance, acknowledgement and follow-up, and a separate synthetic OTP client contract. These components are not imported by the live app and require an injected authorized transport; no public route, actual SMS, APK or real patient data. A non-secret session epoch must change on account switch to remount the review workspace.
+- Care endpoints remain disabled by default. The integration-host/browser-bridge route contract for care and live UI wiring are not completed. No Liara schema changes, real migration or deployment were made. The operator must verify a secure private execution environment and actual TLS before proceeding to any real data use.
+- New client revision requires fresh CI. No merge or deploy.
+
+## Phase 8: private care flow integration
+- Fixed care-card route allowlists are now wired through the internal integration host, private browser bridge and web transport. Existing operator/cookie/origin checks remain mandatory. Care defaults off at each layer, and startup checks protected care schema privileges if enabled.
+- Browser and Kotlin real HTTP CI now exercise card issuance, acknowledgement, follow-up, closure, cross-account rejection and consent revocation on disposable PostgreSQL with verified TLS.
+- A CI-only React entry renders the Persian care workspace; browser CI builds that separate entry and clicks the full family/pharmacist flow using ephemeral fixture sessions. It is not included in the public app build. No live page routes or APK build modified. Actual Liara TLS, real SMS, verified real identity, deployment, live UI integration and real-data migration remain uncompleted. No merge or deploy.

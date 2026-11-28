@@ -34,6 +34,7 @@ export interface TriageDecision {
 }
 export interface PharmacyOption { pharmacyId: string; displayNameFa: string; acceptingCases: boolean }
 export interface ParentCase {
+  careCard?: import('./caseCareCard.ts').CaseCareCard;
   caseId: string;
   pharmacyId: string;
   questionSummaryFa: string;
@@ -71,7 +72,7 @@ export class OnlineBoundaryError extends Error {
 
 export type CallableName = 'listAcceptingPharmacies' | 'issueConsultationTriagePass' |
   'submitConsultationCase' | 'listParentConsultations' | 'getPharmacyInbox' |
-  'reviewConsultationCase' | 'getAccountDeletionPolicy' | 'requestAccountDeletion' | 'getAccountDeletionStatus';
+  'reviewConsultationCase' | 'updateCareCard' | 'getAccountDeletionPolicy' | 'requestAccountDeletion' | 'getAccountDeletionStatus';
 export interface DispatchIdentity { generation: number; uid: string | null }
 export interface CallableTransport { call(name: CallableName, data: unknown, identity: DispatchIdentity): Promise<unknown> }
 export interface SessionPort { getSession(): OnlineSession; enabled: boolean }
@@ -86,7 +87,7 @@ export function assertDispatchIdentity(port: SessionPort, identity: DispatchIden
 
 const CLINICAL_CALLABLES = new Set<CallableName>([
   'listAcceptingPharmacies', 'issueConsultationTriagePass', 'submitConsultationCase',
-  'listParentConsultations', 'getPharmacyInbox', 'reviewConsultationCase',
+  'listParentConsultations', 'getPharmacyInbox', 'reviewConsultationCase', 'updateCareCard',
 ]);
 
 /** Bound both before dispatch and after response; account switching never exposes old results. */

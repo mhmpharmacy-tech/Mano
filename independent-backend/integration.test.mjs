@@ -6,6 +6,10 @@ import pg from 'pg';
 import {createStageServer} from './server.mjs';
 import {digest,databaseOptions} from './policy.mjs';
 import {demoAuth} from './demo-auth.mjs';
+import {enrollDemo,deactivateDemo} from './operator-identity.mjs';
+import {createIntegrationHost,startIntegration} from './integration-host.mjs';
+import {IndependentStageClient} from '../src/online/independentStageClient.ts';
+import {once} from 'node:events';
 const token=()=>randomBytes(32).toString('base64url');
 test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and revocation',async t=>{
   const adminUrl=new URL(process.env.MANO_TEST_ADMIN_URL||'invalid:');
@@ -14,6 +18,7 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   t.after(()=>admin.end());
   await admin.query("CREATE ROLE mano_stage_app LOGIN PASSWORD 'ci-synthetic-only-password'");
   await admin.query(await readFile(new URL('./schema.sql',import.meta.url),'utf8'));
+  await admin.query(await readFile(new URL('./care-loop.sql',import.meta.url),'utf8'));
   const env={MANO_INDEPENDENT_STAGE_ENABLED:'true',MANO_STAGE_ACCESS_TOKEN:token(),
     MANO_STAGE_DATABASE_URL:'postgresql://mano_stage_app:ci-synthetic-only-password@'+adminUrl.host+'/mano_stage',
     MANO_STAGE_DB_TLS:'private-test'};
@@ -87,20 +92,139 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   assert.equal((await call('POST',path,p,consent)).status,403);
   assert.equal((await call('POST',path,a,consent)).status,200);
   assert.deepEqual(await list(p),[id]);assert.deepEqual(await list(q),[]);
+  // Care loop remains separately disabled unless explicitly enabled.
+  const care='/v1/profiles/'+id+'/care-cards';
+  const draft={pharmacyId:f,template:'demo-care-v1'};
+  assert.equal((await call('GET',care,a)).status,404);
+  env.MANO_STAGE_CARE_ENABLED='true';
+  assert.equal((await call('GET',care,b)).status,404);
+  assert.equal((await call('POST',care,a,draft)).status,403);
+  assert.equal((await call('POST',care,q,draft)).status,404);
+  assert.equal((await call('POST',care,p,{...draft,note:'not allowed'})).status,400);
+  const card=await call('POST',care,p,draft);
+  assert.equal(card.status,201);
+  const cid=card.data.id, state=care+'/'+cid+'/state';
+  assert.equal((await call('GET',care,a)).data.cards[0].state,'issued');
+  assert.equal((await call('POST',state,a,{state:'closed'})).status,404);
+  assert.equal((await call('POST',state,p,{state:'acknowledged'})).status,404);
+  assert.equal((await call('POST',state,b,{state:'acknowledged'})).status,404);
+  assert.equal((await call('POST',state,a,{state:'acknowledged'})).status,200);
+  assert.equal((await call('POST',state,a,{state:'acknowledged'})).status,404);
+  assert.equal((await call('POST',state,a,{state:'followup_requested'})).status,200);
+  // Even if the other pharmacy has consent to this child, it cannot access this card.
+  await admin.query("INSERT INTO mano_stage.shares(profile_id,pharmacy_id,consent_version) VALUES($1,$2,'synthetic-v1')",[id,other]);
+  assert.deepEqual((await call('GET',care,q)).data.cards,[]);
+  assert.equal((await call('POST',state,q,{state:'closed'})).status,404);
+  await admin.query('UPDATE mano_stage.shares SET revoked_at=now() WHERE profile_id=$1 AND pharmacy_id=$2',[id,other]);
+  assert.equal((await call('POST',state,p,{state:'closed'})).status,200);
+  assert.equal((await call('GET',care,a)).data.cards[0].state,'closed');
+  assert.deepEqual((await admin.query('SELECT state FROM mano_stage.care_events WHERE card_id=$1 ORDER BY id',[cid])).rows.map(r=>r.state),['issued','acknowledged','followup_requested','closed']);
+  await assert.rejects(pool.query('SELECT * FROM mano_stage.care_cards'),{code:'42501'});
+  await assert.rejects(pool.query('SELECT * FROM mano_stage.care_events'),{code:'42501'});
+  const operatorToken=token();
+  const host=createIntegrationHost(pool,{...env,MANO_INTEGRATION_ENABLED:'true',MANO_INTEGRATION_OPERATOR_TOKEN:operatorToken});
+  host.listen(0,'127.0.0.1');await once(host,'listening');
+  try{
+    const url='http://127.0.0.1:'+host.address().port+'/internal/mano/v1/profiles';
+    const get=async who=>{
+      const r=await fetch(url,{headers:{'x-mano-operator-token':operatorToken,authorization:'Bearer '+who.secret}});
+      assert.equal(r.status,200);return (await r.json()).profiles.map(p=>p.id);
+    };
+    assert.deepEqual(await get(a),[id]);assert.deepEqual(await get(b),[]);assert.deepEqual(await get(p),[id]);assert.deepEqual(await get(q),[]);
+  }finally{await new Promise(resolve=>host.close(resolve));}
+  // Real TypeScript adapter over the internal HTTP listener and the actual database.
+  const launchEnv={...env,MANO_INTEGRATION_ENABLED:'true',MANO_INTEGRATION_SYNTHETIC_ONLY:'true',
+    MANO_INTEGRATION_OPERATOR_TOKEN:token(),MANO_INTEGRATION_PORT:'0',
+    MANO_STAGE_DEMO_AUTH_ENABLED:'true',MANO_STAGE_OTP_KEY:token()};
+  await assert.rejects(startIntegration({...launchEnv,MANO_INTEGRATION_SYNTHETIC_ONLY:'false'}));
+  const otpMessages=[];
+  await admin.query('INSERT INTO mano_stage.demo_identity(handle,account_id) VALUES($1,$2)',['demo-integration',q.id]);
+  const running=await startIntegration(launchEnv,async msg=>{otpMessages.push(msg);});
+  try {
+    assert.equal(running.server.address().address,'127.0.0.1');
+    const base='http://127.0.0.1:'+running.server.address().port;
+    const authRequest=async(action,body,withGate=true)=>{
+      const r=await fetch(base+'/internal/mano/v1/auth/'+action,{method:'POST',headers:{'content-type':'application/json',
+        ...(withGate?{'x-mano-operator-token':launchEnv.MANO_INTEGRATION_OPERATOR_TOKEN}:{})},body:JSON.stringify(body)});
+      assert.equal(r.headers.get('cache-control'),'no-store');return {status:r.status,data:await r.json()};
+    };
+    assert.equal((await authRequest('issue',{handle:'demo-integration'},false)).status,404);
+    assert.equal((await authRequest('issue',{handle:'09123456789'})).status,400);
+    assert.equal((await authRequest('issue',{handle:'demo-unknown'})).status,202);
+    assert.equal(otpMessages.length,0);
+    const challenge=await authRequest('issue',{handle:'demo-integration'});
+    assert.equal(challenge.status,202);assert.deepEqual(Object.keys(challenge.data),['challengeId']);
+    assert.equal(otpMessages.length,1);
+    const proof={challengeId:challenge.data.challengeId,code:otpMessages[0].code};
+    const verified=await authRequest('verify',proof);
+    assert.equal(verified.status,200);assert.equal(typeof verified.data.token,'string');
+    assert.equal((await authRequest('verify',proof)).status,401);
+    const transport=async req=>{
+      const response=await fetch(base+req.path,{method:req.method,redirect:'error',signal:req.signal,
+        headers:{'x-mano-operator-token':launchEnv.MANO_INTEGRATION_OPERATOR_TOKEN,authorization:'Bearer '+req.bearer,
+          ...(req.body?{'content-type':'application/json'}:{})},
+        ...(req.body?{body:JSON.stringify(req.body)}:{})});
+      return {status:response.status,data:await response.json()};
+    };
+    const parent=new IndependentStageClient(true,transport);
+    const pharmacist=new IndependentStageClient(true,transport);
+    const otherParent=new IndependentStageClient(true,transport);
+    parent.setSession(a.secret);pharmacist.setSession(p.secret);otherParent.setSession(b.secret);
+    const otherPharmacy=new IndependentStageClient(true,transport);
+    otherPharmacy.setSession(verified.data.token);
+    assert.deepEqual(await otherPharmacy.list(),[]);
+    await otherPharmacy.logout();
+    assert.equal((await call('DELETE',path+'/'+f,b)).status,404);
+    assert.ok((await parent.list()).some(row=>row.id===id&&row.ageMonths===12));
+    assert.deepEqual(await otherParent.list(),[]);
+    assert.ok((await pharmacist.list()).some(row=>row.id===id));
+    // A second synthetic profile tests the complete adapter write/consent cycle.
+    const adapterId=await otherParent.create('demo-adapter',25);
+    assert.ok((await otherParent.list()).some(row=>row.id===adapterId));
+    assert.ok(!(await parent.list()).some(row=>row.id===adapterId));
+    assert.ok(!(await pharmacist.list()).some(row=>row.id===adapterId));
+    await otherParent.grant(adapterId,f,true);
+    assert.ok((await pharmacist.list()).some(row=>row.id===adapterId));
+    await otherParent.revoke(adapterId,f);
+    assert.ok(!(await pharmacist.list()).some(row=>row.id===adapterId));
+    await otherParent.logout();
+    await assert.rejects(otherParent.list());
+    // Logout must invalidate the same bearer even outside this adapter.
+    assert.equal((await call('GET','/v1/profiles',b)).status,401);
+  }finally{await running.close();}
   await admin.query('UPDATE mano_stage.memberships SET active=false WHERE account_id=$1',[p.id]);
   assert.deepEqual(await list(p),[]);
   await admin.query('UPDATE mano_stage.memberships SET active=true WHERE account_id=$1',[p.id]);
-  assert.equal((await call('DELETE',path+'/'+f,b)).status,404);
+  assert.equal((await call('DELETE',path+'/'+f,b)).status,401);
   assert.equal((await call('DELETE',path+'/'+f,a)).status,200);
   assert.deepEqual(await list(p),[]);
+  assert.equal((await call('GET',care,p)).status,404);
+  assert.equal((await call('POST',care,p,draft)).status,404);
+  assert.equal((await call('GET',care,a)).data.cards[0].state,'closed');
   await admin.query('UPDATE mano_stage.sessions SET revoked_at=now() WHERE account_id=$1',[a.id]);
   assert.equal((await call('GET','/v1/profiles',a)).status,401);
   await assert.rejects(pool.query('UPDATE mano_stage.accounts SET role=\'pharmacist\' WHERE id=$1',[b.id]),{code:'42501'});
   await assert.rejects(pool.query('DELETE FROM mano_stage.profiles WHERE id=$1',[id]),{code:'42501'});
   await assert.rejects(pool.query('SELECT * FROM mano_stage.audit_events'),{code:'42501'});
+  // Operator lifecycle is unavailable through the app role.
+  const command={syntheticOnly:true,handle:'demo-lifecycle',role:'pharmacist',pharmacyId:f};
+  await assert.rejects(enrollDemo(pool,command));
+  await assert.rejects(enrollDemo(admin,{...command,syntheticOnly:false}));
+  await assert.rejects(enrollDemo(admin,{...command,handle:'09123456789'}));
+  assert.deepEqual(await enrollDemo(admin,command),{created:true});
+  await assert.rejects(enrollDemo(admin,command));
+  const lifecycle=(await admin.query('SELECT account_id FROM mano_stage.demo_identity WHERE handle=$1',[command.handle])).rows[0].account_id;
+  const lifecycleSecret=token();
+  await admin.query("INSERT INTO mano_stage.sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '10 minutes')",[digest(lifecycleSecret),lifecycle]);
+  assert.equal((await call('GET','/v1/profiles',{secret:lifecycleSecret})).status,200);
+  await assert.rejects(deactivateDemo(pool,{syntheticOnly:true,handle:command.handle}));
+  assert.deepEqual(await deactivateDemo(admin,{syntheticOnly:true,handle:command.handle}),{deactivated:true});
+  assert.equal((await call('GET','/v1/profiles',{secret:lifecycleSecret})).status,401);
+  assert.equal((await admin.query('SELECT active FROM mano_stage.memberships WHERE account_id=$1',[lifecycle])).rows[0].active,false);
+  assert.ok((await admin.query('SELECT revoked_at FROM mano_stage.sessions WHERE account_id=$1',[lifecycle])).rows[0].revoked_at);
   const events=(await admin.query('SELECT actor_id,action FROM mano_stage.audit_events')).rows;
-  assert.equal(events.filter(e=>e.action==='profile.create').length,1);
-  assert.equal(events.filter(e=>e.action==='share.grant').length,1);
-  assert.equal(events.filter(e=>e.action==='share.revoke').length,1);
+  assert.equal(events.filter(e=>e.action==='profile.create').length,2);
+  assert.equal(events.filter(e=>e.action==='share.grant').length,2);
+  assert.equal(events.filter(e=>e.action==='share.revoke').length,2);
   assert.ok(events.some(e=>e.actor_id===b.id&&e.action==='session.logout'));
 });
