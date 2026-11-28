@@ -30,10 +30,18 @@ export function createHandler(pool,env) {
       const path = req.url || '';
       const share = /^\/v1\/profiles\/([^/]+)\/shares$/.exec(path);
       const revoke = /^\/v1\/profiles\/([^/]+)\/shares\/([^/]+)$/.exec(path);
+      const cards = /^\/v1\/profiles\/([^/]+)\/care-cards$/.exec(path);
+      const transition = /^\/v1\/profiles\/([^/]+)\/care-cards\/([^/]+)\/state$/.exec(path);
+      const care = cards || transition;
+      if(care && (env.MANO_STAGE_CARE_ENABLED!=='true'||!uuidPattern.test(care[1])||(transition&&!uuidPattern.test(transition[2]))))return reply(404,{code:'NOT_FOUND'});
       let body;
-      if (req.method==='POST' && (path==='/v1/profiles'||share)) {
+      if (req.method==='POST' && (path==='/v1/profiles'||share||care)) {
         try {body=await readBody(req);} catch {return reply(400,{code:'INVALID_BODY'});}
-        if (path==='/v1/profiles' ? !validProfile(body) : !validShare(body)) return reply(400,{code:'INVALID_BODY'});
+        const exact = (keys)=>body && typeof body==='object' && !Array.isArray(body) && Object.keys(body).sort().join(',')===keys;
+        const valid=cards?exact('pharmacyId,template')&&typeof body.pharmacyId==='string'&&uuidPattern.test(body.pharmacyId)&&body.template==='demo-care-v1':
+          transition?exact('state')&&['acknowledged','followup_requested','closed'].includes(body.state):
+          path==='/v1/profiles'?validProfile(body):validShare(body);
+        if(!valid)return reply(400,{code:'INVALID_BODY'});
       }
       client=await pool.connect();
       await client.query('BEGIN');
@@ -74,6 +82,23 @@ export function createHandler(pool,env) {
             RETURNING s.profile_id`,[revoke[1],actor.id,revoke[2]]);
           result=q.rowCount?[200,{ok:true}]:[404,{code:'NOT_FOUND'}];
         }
+      } else if(req.method==='GET' && cards){
+        const visible=await client.query('SELECT id FROM mano_stage.profiles WHERE id=$1',[cards[1]]);
+        if(!visible.rowCount)result=[404,{code:'NOT_FOUND'}];
+        else {
+          const {rows}=await client.query('SELECT * FROM mano_stage.list_care($1)',[cards[1]]);
+          result=[200,{cards:rows}];
+        }
+      } else if(req.method==='POST' && cards){
+        if(actor.role!=='pharmacist')result=[403,{code:'FORBIDDEN'}];
+        else{
+          const id=randomUUID();
+          const {rows:[r]}=await client.query('SELECT mano_stage.issue_care($1,$2,$3) AS ok',[id,cards[1],body.pharmacyId]);
+          result=r.ok?[201,{id}]:[404,{code:'NOT_FOUND'}];
+        }
+      } else if(req.method==='POST' && transition){
+        const {rows:[r]}=await client.query('SELECT mano_stage.transition_care($1,$2,$3) AS ok',[transition[2],transition[1],body.state]);
+        result=r.ok?[200,{ok:true}]:[404,{code:'NOT_FOUND_OR_INVALID_TRANSITION'}];
       } else result=[404,{code:'NOT_FOUND'}];
       if(actor && result[0]>=200 && result[0]<300 && path!=='/v1/session/logout'){
         const action=path==='/v1/profiles'?(req.method==='GET'?'profile.list':'profile.create'):share?'share.grant':revoke?'share.revoke':null;
