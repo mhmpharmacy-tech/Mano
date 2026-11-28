@@ -15,6 +15,7 @@ import { currentTimeFa } from '../domain/treatmentPlan.ts';
 import { toPersianDigits } from '../domain/persianNormalizer.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
+import { OnlineConsultationPanel } from '../components/OnlineConsultationPanel.tsx';
 
 const TOPIC_OPTIONS: { id: string; labelFa: string }[] = [
   { id: 'fever', labelFa: 'تب و انتخاب/تنظیم تب‌بر' },
@@ -113,11 +114,13 @@ export const AskPharmacistScreen: React.FC<{ initialTopic?: string }> = ({ initi
         </button>
       </div>
 
-      {/* Mandatory Honesty Banner: Local-Only Storage */}
+      <OnlineConsultationPanel />
+
+      {/* Local notes stay independent of the optional online account. */}
       <SeverityAlert
         severity="info"
-        title="شفافیت فنی: ذخیره‌سازی محلی در همین مرورگر"
-        body="در این نسخه وب، پرسش‌ها و پاسخ‌های بخش «پرسش از داروساز» صرفاً در حافظه همین دستگاه (localStorage) ذخیره می‌شوند و به سرور یا داروساز آنلاین ارسال نمی‌گردند. در شرایط فوری یا برای نسخه، به داروخانه یا پزشک مراجعه کنید."
+        title="یادداشت محلی برای مراجعهٔ حضوری"
+        body="پرسش‌ها و یادداشت‌های بخش محلیِ پایین فقط در همین مرورگر می‌مانند و برای داروساز ارسال نمی‌شوند. این یادداشت‌ها مستقل از حساب و سوابق آنلاین‌اند. در شرایط فوری یا برای نسخه، به داروخانه یا پزشک مراجعه کنید."
       />
 
       {/* 3-Tab Bar */}

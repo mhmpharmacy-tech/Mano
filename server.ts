@@ -8,6 +8,9 @@ import {
   resolveGatewayAccessPolicy,
   type GatewayAccessPolicy,
 } from './server/accessPolicy.ts';
+import {
+  closeHttpServer, installWebRuntime, serveProductionWeb, unknownApiRoute, type WebRuntimeState,
+} from './server/webRuntime.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +56,7 @@ export interface CreateAppOptions {
   gateway?: AiGatewayService;
   serveStatic?: boolean;
   accessPolicy?: GatewayAccessPolicy;
+  runtimeState?: WebRuntimeState;
 }
 
 export async function createApp(options?: CreateAppOptions) {
@@ -61,6 +65,8 @@ export async function createApp(options?: CreateAppOptions) {
   const accessPolicy = options?.accessPolicy ?? resolveGatewayAccessPolicy();
 
   const app = express();
+  const runtimeState = options?.runtimeState ?? { shuttingDown: false };
+  installWebRuntime(app, runtimeState, { production: process.env.NODE_ENV === 'production' });
   // Guard the route families before parsing bodies, including future AI routes.
   // The deployment token must only be held by trusted server callers.
   app.use('/api/gemini', requireGatewayAccess(accessPolicy, { requireClinicalRelease: true }));
@@ -195,13 +201,12 @@ export async function createApp(options?: CreateAppOptions) {
     }
   });
 
+  app.use('/api', unknownApiRoute);
+
   if (serveStatic) {
     if (process.env.NODE_ENV === 'production') {
       const distDir = path.resolve(__dirname, 'dist');
-      app.use(express.static(distDir));
-      app.get('/{*splat}', (_req: Request, res: Response) => {
-        res.sendFile(path.join(distDir, 'index.html'));
-      });
+      serveProductionWeb(app, distDir);
     } else {
       const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
@@ -223,11 +228,20 @@ const isMainModule =
 
 if (isMainModule && process.env.MANO_NO_LISTEN !== '1') {
   const port = Number.parseInt(process.env.PORT || '3000', 10) || 3000;
-  createApp()
+  const runtimeState: WebRuntimeState = { shuttingDown: false };
+  createApp({ runtimeState })
     .then((app) => {
-      app.listen(port, '0.0.0.0', () => {
-        console.log(`MANO Kid AI Gateway server running on http://0.0.0.0:${port}`);
+      const server = app.listen(port, '0.0.0.0', () => {
+        console.log(`MANO Kid preview server running on http://0.0.0.0:${port}`);
       });
+      const shutdown = async () => {
+        if (runtimeState.shuttingDown) return;
+        runtimeState.shuttingDown = true;
+        const { forced } = await closeHttpServer(server);
+        process.exit(forced ? 1 : 0);
+      };
+      process.once('SIGTERM', shutdown);
+      process.once('SIGINT', shutdown);
     })
     .catch((err) => {
       console.error('Failed to start MANO Kid server:', err);

@@ -10,14 +10,17 @@
     "build": "vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/domain/*.test.ts src/state/*.test.ts src/api/*.test.ts src/navigation/*.test.ts server/*.test.ts server/aiGateway/*.test.ts",
+    "test": "tsx --test src/domain/*.test.ts src/state/*.test.ts src/api/*.test.ts src/navigation/*.test.ts src/online/*.test.ts server/*.test.ts server/aiGateway/*.test.ts",
     "test:web": "node --test tests/web.test.mjs",
     "test:browser": "node tests/browser.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run test:web"
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:web",
+    "hosting:web:config": "tsx scripts/generate-web-hosting-config.ts",
+    "verify:web-build": "tsx scripts/verify-web-build.ts"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",
     "express": "^5.3.0",
+    "firebase": "13.4.0",
     "lucide-react": "^1.80.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

@@ -206,6 +206,269 @@ async function verifyRemainingFormDialogs(browser, errors) {
   console.log("Remaining form dialog browser checks passed: six short-screen modal contracts, dirty-input backdrop protection, native validation focus, explicit cancellation and retained routine records.");
 }
 
+async function verifyDailyChecklistRollover(browser, errors) {
+  const context = await browser.newContext({ viewport: { width: 360, height: 820 }, locale: "fa-IR", timezoneId: "Pacific/Honolulu", reducedMotion: "reduce" });
+  context.setDefaultTimeout(12_000);
+  const page = await context.newPage();
+  page.on("pageerror", error => errors.push(error.message));
+  // Deliberately use a device timezone whose midnight differs from both UTC
+  // and Tehran; the checklist follows the caregiver's local calendar.
+  await page.clock.install({ time: new Date("2026-11-28T09:59:00Z") });
+  await page.goto(`${origin}/?autostart=1#/supplements-hygiene`, { waitUntil: "networkidle" });
+  await page.getByTestId("supplements-hygiene-screen").waitFor();
+  await page.waitForFunction(() => localStorage.getItem("mano_kid_v2_store") !== null);
+  await page.evaluate(() => {
+    const snapshot = JSON.parse(localStorage.getItem("mano_kid_v2_store"));
+    snapshot.checkedHygieneIds = ["chk_vit_d"];
+    localStorage.setItem("mano_kid_v2_store", JSON.stringify(snapshot));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  const trigger = page.getByTestId("supplements-open-checklist-btn");
+  await trigger.click();
+  const checklist = page.locator("#mano-hygiene-checklist-dialog");
+  const first = checklist.getByRole("checkbox").nth(0);
+  const second = checklist.getByRole("checkbox").nth(1);
+  assert.equal(await first.isChecked(), false, "An undated legacy checkmark must not be presented as today's completed care");
+  await first.check();
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.checkedHygieneIds.some(value => value.endsWith("|chk_vit_d")));
+  await page.keyboard.press("Escape");
+  await trigger.click();
+  assert.equal(await first.isChecked(), true, "A current-day check must survive reopening its dialog");
+  await page.clock.setSystemTime(new Date("2026-11-28T10:01:00Z"));
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.waitForFunction(() => document.querySelector('#mano-hygiene-checklist-dialog input[type="checkbox"]')?.checked === false);
+  assert.equal(await first.isChecked(), false, "Yesterday's check must expire after device midnight even when the UTC and Tehran dates do not change");
+  await second.check();
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.checkedHygieneIds.some(value => value.endsWith("|chk_iron")));
+  await page.keyboard.press("Escape");
+  await page.reload({ waitUntil: "networkidle" });
+  await trigger.click();
+  assert.equal(await first.isChecked(), false);
+  assert.equal(await second.isChecked(), true, "The new day's record must persist independently of yesterday's completion");
+  await page.screenshot({ path: "web-artifacts/hygiene-device-midnight-rollover.png" });
+  await context.close();
+  console.log("Daily checklist browser checks passed: undated legacy checks stay unassigned, device-midnight rollover resets completion, and the next day's record persists.");
+}
+
+async function verifyEncryptedBackupAndRestore(browser, errors) {
+  const context = await browser.newContext({ viewport: { width: 360, height: 820 }, locale: "fa-IR", reducedMotion: "reduce", acceptDownloads: true });
+  context.setDefaultTimeout(12_000);
+  context.on("page", tab => tab.on("pageerror", error => errors.push(error.message)));
+  const originalAlias = "qa-backup-original-child";
+  const originalAllergy = "qa-backup-original-allergy";
+  const originalNote = "qa-backup-original-temperature-note";
+  const passphrase = "qa-backup-long-private-passphrase";
+  const leakedRequests = [];
+  const uploadRequests = [];
+  context.on("request", request => {
+    if (!["GET", "HEAD", "OPTIONS"].includes(request.method())) {
+      uploadRequests.push({ url: request.url(), method: request.method() });
+    }
+    const body = request.postData();
+    if (body && [originalAlias, originalAllergy, originalNote, passphrase].some(value => body.includes(value))) {
+      leakedRequests.push({ url: request.url(), method: request.method() });
+    }
+  });
+  const page = await context.newPage();
+  await page.goto(`${origin}/?autostart=1#/my-child`, { waitUntil: "networkidle" });
+  await page.locator("#child-alias").fill(originalAlias);
+  await page.locator("#child-age-months").fill("18");
+  await page.locator("#child-weight").fill("11.25");
+  await page.locator("#child-allergies").fill(originalAllergy);
+  await page.getByRole("button", { name: "ذخیره مشخصات کودک", exact: true }).click();
+  await waitForSavedAge(page, 18);
+  await openRoute(page, "home", "home-screen");
+  await page.getByTestId("timeline-add-temp-btn").click();
+  await page.getByTestId("timeline-temp-input").fill("37.3");
+  await page.getByTestId("timeline-temp-site-select").selectOption("زیر بغل (دیجیتال)");
+  await page.getByTestId("timeline-temp-time-input").fill(await recordedTime(page));
+  await page.getByLabel("یادداشت دما (اختیاری)", { exact: true }).fill(originalNote);
+  await page.getByTestId("timeline-temp-save-btn").click();
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null")?.feverLogs.length === 1);
+  const original = await savedSnapshot(page);
+
+  await openRoute(page, "my-child", "my-child-screen");
+  const exportTrigger = page.getByTestId("backup-export-open");
+  await exportTrigger.click();
+  const dialog = page.locator("#mano-local-backup-dialog");
+  await dialog.waitFor();
+  assert.equal(await dialog.locator("h2").evaluate(element => element === document.activeElement), true);
+  await page.getByTestId("backup-passphrase").fill(passphrase);
+  await page.getByTestId("backup-confirm-passphrase").fill(`${passphrase}-mismatch`);
+  assert.ok(await page.getByTestId("backup-export-submit").isDisabled(), "A mistyped backup password must not silently create an unrecoverable file");
+  await page.getByTestId("backup-confirm-passphrase").fill(passphrase);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("backup-export-submit").click();
+  const download = await downloadPromise;
+  assert.match(download.suggestedFilename(), /^mano-backup-\d{4}-\d{2}-\d{2}\.manobackup\.json$/);
+  const downloadPath = await download.path();
+  assert.ok(downloadPath);
+  const encryptedFile = await readFile(downloadPath);
+  const encryptedText = encryptedFile.toString("utf8");
+  const envelope = JSON.parse(encryptedText);
+  assert.equal(envelope.format, "mano-local-backup");
+  assert.equal(envelope.version, 1);
+  for (const secret of [originalAlias, originalAllergy, originalNote, passphrase, '"childProfile"', '"tempCelsius"']) {
+    assert.ok(!encryptedText.includes(secret), "A downloaded encrypted file must not expose its passphrase or clinical payload");
+  }
+  await dialog.waitFor({ state: "hidden" });
+  assert.equal(await exportTrigger.evaluate(element => element === document.activeElement), true);
+  const openBackupReview = async () => {
+    await page.getByTestId("backup-import-open").click();
+    await page.getByTestId("backup-file-input").setInputFiles({ name: download.suggestedFilename(), mimeType: "application/json", buffer: encryptedFile });
+    await page.getByTestId("backup-passphrase").fill(passphrase);
+    await page.getByTestId("backup-inspect-submit").click();
+    await page.getByTestId("backup-review").waitFor();
+    await page.waitForFunction(() => document.activeElement === document.querySelector('[data-testid="backup-review"] h3'));
+    assert.equal(await page.getByTestId("backup-review").locator("h3").evaluate(element => element === document.activeElement), true, "Successful inspection must move keyboard focus to its review heading");
+  };
+
+  // Create visibly different current data so inspection and replacement cannot
+  // accidentally pass by restoring an identical snapshot.
+  await page.locator("#child-alias").fill("qa-backup-current-child");
+  await page.locator("#child-age-months").fill("24");
+  await page.locator("#child-weight").fill("13.5");
+  await page.locator("#child-allergies").fill("qa-backup-current-allergy");
+  await page.getByRole("button", { name: "ذخیره مشخصات کودک", exact: true }).click();
+  await waitForSavedAge(page, 24);
+  const current = await savedSnapshot(page);
+  assert.notEqual(current.childProfile.aliasFa, original.childProfile.aliasFa);
+
+  const normalTab = await context.newPage();
+  await normalTab.goto(`${origin}/?autostart=1#/my-child`, { waitUntil: "networkidle" });
+  await normalTab.locator("#child-alias").fill("qa-backup-dirty-normal-tab");
+  await normalTab.locator("#child-allergies").fill("qa-backup-dirty-normal-allergy");
+  const delayedTab = await context.newPage();
+  await delayedTab.addInitScript(() => {
+    // Model a suspended tab that misses storage events until its next write.
+    window.addEventListener("storage", event => event.stopImmediatePropagation(), true);
+  });
+  await delayedTab.goto(`${origin}/?autostart=1#/my-child`, { waitUntil: "networkidle" });
+  await delayedTab.locator("#child-alias").fill("qa-backup-dirty-delayed-tab");
+
+  await page.getByTestId("backup-import-open").click();
+  await dialog.waitFor();
+  await page.getByTestId("backup-file-input").setInputFiles({ name: download.suggestedFilename(), mimeType: "application/json", buffer: encryptedFile });
+  await page.getByTestId("backup-passphrase").fill("qa-backup-wrong-passphrase");
+  await page.getByTestId("backup-inspect-submit").click();
+  await page.getByTestId("backup-error").waitFor();
+  assert.equal(await page.getByTestId("backup-review").count(), 0);
+  assert.deepEqual(await savedSnapshot(page), current, "A wrong password must leave every saved record unchanged");
+  await page.getByTestId("backup-passphrase").fill(passphrase);
+  await page.getByTestId("backup-inspect-submit").click();
+  const review = page.getByTestId("backup-review");
+  await review.waitFor();
+  await page.waitForFunction(() => document.activeElement === document.querySelector('[data-testid="backup-review"] h3'));
+  assert.equal(await review.locator("h3").evaluate(element => element === document.activeElement), true);
+  assert.ok((await review.textContent()).includes(originalAlias));
+  assert.equal(await page.getByTestId("backup-replace-confirm").isChecked(), false);
+  assert.ok(await page.getByTestId("backup-restore-submit").isDisabled(), "Opening a file must not authorize replacing current records");
+  assert.deepEqual(await savedSnapshot(page), current, "Decryption and review must not modify current clinical records");
+  await page.screenshot({ path: "web-artifacts/encrypted-backup-review.png", fullPage: true });
+  await page.getByTestId("backup-replace-confirm").check();
+  await page.getByTestId("backup-restore-submit").click();
+  await dialog.waitFor({ state: "hidden" });
+  await page.waitForFunction(previousEpoch => {
+    const snapshot = JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null");
+    return snapshot?.storageEpoch !== previousEpoch && snapshot?.childProfile?.aliasFa === "qa-backup-original-child";
+  }, current.storageEpoch);
+  const restored = await savedSnapshot(page);
+  assert.notEqual(restored.storageEpoch, current.storageEpoch, "Restoring a backup must create a fresh storage generation");
+  assert.deepEqual(restored.childProfile, original.childProfile);
+  for (const key of ["feverLogs", "doseLogs", "growthMeasurements", "savedVisitDrafts", "savedSyrupScans", "nutritionPlans", "pharmacistConsultations", "careCards"]) {
+    assert.equal(restored[key].length, original[key].length, `Restored ${key} must preserve the backup's record count`);
+  }
+  assert.equal(restored.feverLogs[0].noteFa, originalNote);
+  assert.equal(restored.feverLogs[0].tempCelsius, 37.3);
+  assert.equal(restored.feverLogs[0].isSyncedCloud, false, "A local file must never create a cloud synchronization claim");
+  assert.equal(await page.getByRole("alertdialog").count(), 0, "Restored historical measurements must not become a new emergency event");
+  for (const tab of [page, normalTab]) {
+    await tab.waitForFunction(() => document.querySelector("#child-alias")?.value === "qa-backup-original-child");
+    assert.equal(await tab.locator("#child-age-months").inputValue(), "18");
+    assert.equal(await tab.locator("#child-allergies").inputValue(), originalAllergy, "Restoration must replace unsaved drafts in other open tabs");
+  }
+  await page.waitForFunction(() => document.activeElement === document.querySelector("#mano-main-content"));
+  assert.equal(await delayedTab.locator("#child-alias").inputValue(), "qa-backup-dirty-delayed-tab");
+  await delayedTab.getByTestId("open-hub-drawer-btn").click();
+  await delayedTab.getByTestId("theme-toggle-btn").click();
+  await delayedTab.waitForFunction(() => document.querySelector("#child-alias")?.value === "qa-backup-original-child");
+  const afterDelayedWrite = await savedSnapshot(page);
+  assert.equal(afterDelayedWrite.storageEpoch, restored.storageEpoch);
+  assert.deepEqual(afterDelayedWrite.childProfile, original.childProfile, "A pre-restore tab must not overwrite the restored profile when it resumes writing");
+  assert.equal(afterDelayedWrite.feverLogs.length, original.feverLogs.length);
+  await delayedTab.close();
+
+  // Deletion in another tab must destroy an already-decrypted review and any
+  // staged restore, so an old confirmation cannot bring deleted data back.
+  await openBackupReview();
+  await normalTab.getByRole("button", { name: "پاک‌سازی کامل داده‌های محلی", exact: true }).click();
+  await normalTab.getByRole("button", { name: "تایید حذف همه‌چیز", exact: true }).click();
+  await dialog.waitFor({ state: "hidden" });
+  await page.waitForFunction(() => {
+    const snapshot = JSON.parse(localStorage.getItem("mano_kid_v2_store") || "null");
+    return snapshot?.childProfile?.aliasFa === "کودک من" && snapshot?.feverLogs.length === 0;
+  });
+  assert.equal(await page.getByTestId("backup-review").count(), 0);
+  assert.equal(await page.evaluate(() => localStorage.getItem("mano_kid_v2_pending_restore")), null);
+  assert.ok(!(await page.locator("body").textContent()).includes(originalAlias));
+  assert.ok(!(await page.evaluate(() => JSON.stringify(localStorage))).includes(passphrase), "Backup passphrases must not be retained in local storage");
+  await normalTab.close();
+
+  // Corrupt local data must remain recoverable: showing a safe empty screen is
+  // not permission to overwrite the original bytes or export a false backup.
+  const corruptObject = await page.evaluate(snapshot => {
+    const epoch = JSON.parse(localStorage.getItem("mano_kid_v2_store")).storageEpoch;
+    const corrupt = {
+      ...snapshot, storageEpoch: epoch,
+      childProfile: { ...snapshot.childProfile, aliasFa: "qa-corrupt-retained-child" },
+      treatmentPlan: { ...snapshot.treatmentPlan, medications: null },
+    };
+    const raw = JSON.stringify(corrupt);
+    localStorage.setItem("mano_kid_v2_store", raw);
+    return raw;
+  }, original);
+  await page.reload({ waitUntil: "networkidle" });
+  const recoveryWarning = page.getByRole("alert").filter({ hasText: "اطلاعات ذخیره‌شده قابل خواندن نیست" });
+  await recoveryWarning.waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem("mano_kid_v2_store")), corruptObject);
+  await page.getByTestId("open-hub-drawer-btn").click();
+  await page.getByTestId("theme-toggle-btn").click();
+  await page.getByRole("button", { name: "بستن منو", exact: true }).click();
+  assert.ok(await recoveryWarning.isVisible(), "Ordinary settings changes must not clear the recovery lock");
+  assert.equal(await page.evaluate(() => localStorage.getItem("mano_kid_v2_store")), corruptObject, "A theme edit must not overwrite a corrupt snapshot with display defaults");
+  await page.getByTestId("backup-export-open").click();
+  await page.getByTestId("backup-passphrase").fill(passphrase);
+  await page.getByTestId("backup-confirm-passphrase").fill(passphrase);
+  await page.getByTestId("backup-export-submit").click();
+  await page.getByTestId("backup-error").waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem("mano_kid_v2_store")), corruptObject, "Exporting a fallback view must be blocked while original records need recovery");
+  await page.keyboard.press("Escape");
+  await openBackupReview();
+  assert.equal(await page.evaluate(() => localStorage.getItem("mano_kid_v2_store")), corruptObject, "Recovery still requires explicit replacement after review");
+  await page.getByTestId("backup-replace-confirm").check();
+  await page.getByTestId("backup-restore-submit").click();
+  await dialog.waitFor({ state: "hidden" });
+  await page.waitForFunction(() => document.querySelector("#child-alias")?.value === "qa-backup-original-child");
+  assert.equal(await page.getByRole("alert").count(), 0, "A successful explicit restore must clear the persistent recovery warning");
+
+  const malformedJson = '{"qa-original-unparsed-records":';
+  await page.evaluate(raw => localStorage.setItem("mano_kid_v2_store", raw), malformedJson);
+  await page.reload({ waitUntil: "networkidle" });
+  await recoveryWarning.waitFor();
+  assert.equal(await page.evaluate(() => localStorage.getItem("mano_kid_v2_store")), malformedJson, "Malformed JSON must remain untouched until an explicit recovery action");
+  await openBackupReview();
+  await page.getByTestId("backup-replace-confirm").check();
+  await page.getByTestId("backup-restore-submit").click();
+  await dialog.waitFor({ state: "hidden" });
+  await page.waitForFunction(() => document.querySelector("#child-alias")?.value === "qa-backup-original-child");
+  assert.equal((await savedSnapshot(page)).feverLogs[0].noteFa, originalNote);
+  assert.equal(await page.getByRole("alert").count(), 0);
+  assert.deepEqual(leakedRequests, [], "Backup encryption, review and restore must never upload child context or passphrases");
+  assert.deepEqual(uploadRequests, [], "Local backup operations must not upload even an encrypted payload to any endpoint");
+  await context.close();
+  console.log("Encrypted backup browser checks passed: private download, wrong-password rejection, explicit review/replace, atomic cross-tab restore, delayed-tab protection, deletion of decrypted staging and lossless recovery from corrupt records.");
+}
+
 async function verifyShortScreenCareDialogs(browser, errors) {
   const context = await browser.newContext({ viewport: { width: 320, height: 480 }, locale: "fa-IR", reducedMotion: "reduce" });
   context.setDefaultTimeout(12_000);
@@ -844,6 +1107,8 @@ try {
   await verifyKeyboardAndTaskNavigation(browser, errors);
   await verifyShortScreenCareDialogs(browser, errors);
   await verifyRemainingFormDialogs(browser, errors);
+  await verifyDailyChecklistRollover(browser, errors);
+  await verifyEncryptedBackupAndRestore(browser, errors);
 
   // Keep the previous approved visual demo available, isolated and clearly separate.
   await page.goto(`${origin}/preview/`, { waitUntil: "networkidle" });

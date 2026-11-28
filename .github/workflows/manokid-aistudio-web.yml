@@ -10,6 +10,11 @@ on:
       - "package*.json"
       - "server.ts"
       - "server/**"
+      - "functions/**"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "firebase.web*.json"
+      - "scripts/*web*"
       - "src/**"
       - "tests/**"
       - "tsconfig.json"
@@ -25,6 +30,11 @@ on:
       - "package*.json"
       - "server.ts"
       - "server/**"
+      - "functions/**"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "firebase.web*.json"
+      - "scripts/*web*"
       - "src/**"
       - "tests/**"
       - "tsconfig.json"
@@ -55,6 +65,9 @@ jobs:
       - run: npm run build
         env:
           MANO_GATEWAY_ACCESS_TOKEN: ci-server-only-token-must-never-reach-browser-8d85a1d0
+      - run: npm run verify:web-build
+        env:
+          MANO_GATEWAY_ACCESS_TOKEN: ci-server-only-token-must-never-reach-browser-8d85a1d0
       - name: Upload internal review build
         uses: actions/upload-artifact@v4
         with:
@@ -64,9 +77,14 @@ jobs:
           retention-days: 7
 
   chromium-ui:
+    name: Browser safety (${{ matrix.browser }})
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     needs: static-and-security
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,18 +94,21 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Install locked Chromium browser
-        run: npx playwright install --with-deps chromium
+      - name: Install locked browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run build
         env:
           MANO_GATEWAY_ACCESS_TOKEN: ci-server-only-token-must-never-reach-browser-8d85a1d0
       - name: Exercise the production server and browser safety flows
         run: node tests/browser.mjs
+        env:
+          MANO_BROWSER: ${{ matrix.browser }}
       - name: Upload mobile browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mano-web-mobile-screenshots
+          name: mano-web-mobile-screenshots-${{ matrix.browser }}
           path: web-artifacts/
           if-no-files-found: ignore
           retention-days: 7
+

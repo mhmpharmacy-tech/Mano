@@ -20,4 +20,5 @@ debug.keystore
 node_modules/
 dist/
 web-artifacts/
+firebase.web.generated.json
 

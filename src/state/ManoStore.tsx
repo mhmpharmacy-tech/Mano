@@ -1,3 +1,6 @@
+import { loadPersistedState, type PersistedState, type HomeViewStyle } from './persistedState.ts';
+import { createEncryptedLocalBackup, prepareLocalBackupForRestore, type LocalBackupSnapshot } from '../domain/localBackup.ts';
+import { checkedChecklistItemsToday, toggleChecklistItemToday } from '../domain/dailyChecklist.ts';
 import { parseHashToRoute, routeToHash, type AppRoute } from '../navigation/routes.ts';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type {
@@ -20,7 +23,6 @@ import {
   type FeverDoseTimelineSnapshot,
 } from '../domain/feverDoseTimelineEngine.ts';
 import {
-  createDefaultTreatmentPlan,
   currentDayKey,
   currentTimeFa,
   normalizePlanForToday,
@@ -30,111 +32,18 @@ import {
 import { resolveVaccineSchedule } from '../domain/vaccinationScheduleEngine.ts';
 import { ageBandFromMonths, resolveClinicalAge, shouldShowFeverAlert } from '../domain/clinicalAge.ts';
 import {
-  clearLocalSnapshot, currentStorageEpoch, LEGACY_EPOCH, persistLocalSnapshot,
-  readLocalSnapshot, STORAGE_EPOCH_KEY, STORAGE_KEY, STORAGE_LOCK_NAME, type StorageLock,
+  clearLocalSnapshot, currentStorageEpoch, persistLocalSnapshot, replaceLocalSnapshot,
+  STORAGE_EPOCH_KEY, STORAGE_KEY, STORAGE_RESTORE_KEY, STORAGE_LOCK_NAME, type StorageLock,
 } from './localPersistence.ts';
 
 export type { AppRoute } from '../navigation/routes.ts';
 
-export type HomeViewStyle = 'calm' | 'orbital';
+export type { HomeViewStyle } from './persistedState.ts';
 
 export interface ToastMessage {
   id: string;
   text: string;
   tone: 'info' | 'success' | 'danger';
-}
-
-interface PersistedState {
-  storageEpoch: string;
-  theme: 'light' | 'dark';
-  homeViewStyle: HomeViewStyle;
-  onboardingSeen: boolean;
-  childProfile: ChildProfile;
-  feverLogs: TimelineTempPoint[];
-  doseLogs: TimelineDosePoint[];
-  growthMeasurements: GrowthMeasurementEntry[];
-  checkedMilestones: string[];
-  vaccineBirthDateEpochMs: number | null;
-  vaccineRecords: Record<string, VaccineRecord>;
-  vaccineReminders: VaccineReminderSettings;
-  checkedMedSafetyIds: string[];
-  checkedHygieneIds: string[];
-  bookmarkedSlugs: string[];
-  treatmentPlan: PediatricTreatmentPlan;
-  savedVisitDrafts: SavedVisitDraft[];
-  nutritionPlans: NutritionPlan[];
-  savedSyrupScans: SavedSyrupScan[];
-  pharmacistConsultations: PharmacistConsultation[];
-  careCards: CareCardEntry[];
-}
-
-function defaultChildProfile(): ChildProfile {
-  return {
-    id: 'child_primary',
-    aliasFa: 'کودک من',
-    ageBand: 'TODDLER_1_3Y',
-    ageMonthsExact: null,
-    sex: null, // Never fabricate initial biological sex
-    birthDateOrAgeFa: '',
-    birthDateEpochMs: null,
-    weightKgText: '',
-    allergiesFa: '',
-    updatedAtLabelFa: 'پروفایل آماده ثبت',
-  };
-}
-
-function createInitialPersistedState(storageEpoch = LEGACY_EPOCH): PersistedState {
-  const autostart =
-    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('autostart') === '1';
-
-  return {
-    storageEpoch,
-    theme: 'light',
-    homeViewStyle: 'calm',
-    onboardingSeen: autostart,
-    childProfile: defaultChildProfile(),
-    feverLogs: [],
-    doseLogs: [],
-    growthMeasurements: [], // Initially empty — zero fabricated percentiles
-    checkedMilestones: [],
-    vaccineBirthDateEpochMs: null,
-    vaccineRecords: {},
-    vaccineReminders: { enabled: false, leadDaysBefore: 3 },
-    checkedMedSafetyIds: [],
-    checkedHygieneIds: [],
-    bookmarkedSlugs: [],
-    treatmentPlan: createDefaultTreatmentPlan(),
-    savedVisitDrafts: [],
-    nutritionPlans: [],
-    savedSyrupScans: [],
-    pharmacistConsultations: [],
-    careCards: [],
-  };
-}
-
-function loadPersistedState(): PersistedState {
-  const fallback = createInitialPersistedState();
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const { snapshot: parsed, epoch } = readLocalSnapshot<Partial<PersistedState>>(window.localStorage);
-    const fresh = createInitialPersistedState(epoch);
-    if (!parsed) return fresh;
-    const autostart = new URLSearchParams(window.location.search).get('autostart') === '1';
-    const merged: PersistedState = {
-      ...fresh,
-      ...parsed,
-      storageEpoch: epoch,
-      childProfile: {
-        ...fresh.childProfile,
-        ...(parsed.childProfile || {}),
-      },
-      treatmentPlan: normalizePlanForToday(parsed.treatmentPlan || fresh.treatmentPlan),
-      onboardingSeen: autostart ? true : Boolean(parsed.onboardingSeen),
-    };
-    return merged;
-  } catch {
-    return fallback;
-  }
 }
 
 interface ManoContextValue {
@@ -210,6 +119,8 @@ interface ManoContextValue {
   toasts: ToastMessage[];
   notify: (text: string, tone?: ToastMessage['tone']) => void;
   clearAllSavedLocalData: () => Promise<void>;
+  createLocalBackup: (passphrase: string) => Promise<string>;
+  restoreLocalBackup: (snapshot: LocalBackupSnapshot, expectedEpoch: string) => Promise<void>;
 }
 
 const ManoContext = createContext<ManoContextValue | null>(null);
@@ -220,7 +131,20 @@ const browserStorageLock: StorageLock = (operation) => {
 };
 
 export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<PersistedState>(() => loadPersistedState());
+  const [loaded, setLoaded] = useState(() => loadPersistedState());
+  const state = loaded.state;
+  const recoveryIssue = loaded.issue;
+  const recoveryIssueRef = useRef(recoveryIssue);
+  // Recovery fallback is a read-only view, never a replacement for unreadable
+  // records. Keep this guard stable so all existing mutation callbacks share it.
+  const setState: React.Dispatch<React.SetStateAction<PersistedState>> = useCallback((action) => {
+    if (recoveryIssueRef.current) return;
+    setLoaded((previous) => {
+      if (recoveryIssueRef.current) return previous;
+      const next = typeof action === 'function' ? action(previous.state) : action;
+      return { state: next, issue: previous.issue };
+    });
+  }, []);
   const [route, setRoute] = useState<AppRoute>(() =>
     typeof window !== 'undefined' ? parseHashToRoute(window.location.hash) : { name: 'home' },
   );
@@ -233,10 +157,12 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetToEpoch = useCallback((epoch: string) => {
     if (currentEpochRef.current === epoch) return;
-    currentEpochRef.current = epoch;
-    const fresh = createInitialPersistedState(epoch);
-    fresh.onboardingSeen = true;
-    setState(fresh);
+    const next = loadPersistedState({ fallbackEpoch: epoch });
+    currentEpochRef.current = next.state.storageEpoch;
+    recoveryIssueRef.current = next.issue;
+    next.state.onboardingSeen = true;
+    setLoaded(next);
+    setPersistenceIssue(null);
     setActiveHighFeverAlert(null);
     setSearchOpen(false);
     setToasts([]);
@@ -255,6 +181,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // A cross-tab lock and deletion generation prevent stale snapshots from
   // restoring deleted clinical data. Never persist without the lock.
   useEffect(() => {
+    if (recoveryIssueRef.current) return;
     let active = true;
     void (async () => {
       try {
@@ -267,13 +194,13 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     })();
     return () => { active = false; };
-  }, [state, resetToEpoch]);
+  }, [state, recoveryIssue, resetToEpoch]);
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       try {
         if (event.storageArea !== window.localStorage ||
-            (event.key !== STORAGE_EPOCH_KEY && event.key !== STORAGE_KEY && event.key !== null)) return;
+            (event.key !== STORAGE_EPOCH_KEY && event.key !== STORAGE_KEY && event.key !== STORAGE_RESTORE_KEY && event.key !== null)) return;
         if (event.key === null) {
           // A browser-wide clear also needs a tombstone for surviving tabs.
           void clearLocalSnapshot(window.localStorage, browserStorageLock, crypto.randomUUID())
@@ -312,6 +239,8 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const notify = useCallback((text: string, tone: ToastMessage['tone'] = 'info') => {
+    // A blocked save must never be followed by an apparent success toast.
+    if (recoveryIssueRef.current && tone !== 'danger') return;
     const id = `t_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     setToasts((prev) => [...prev.slice(-2), { id, text, tone }]);
     setTimeout(() => {
@@ -330,15 +259,15 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const toggleTheme = useCallback(() => {
     setState((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }));
-  }, []);
+  }, [setState]);
 
   const setHomeViewStyle = useCallback((homeViewStyle: HomeViewStyle) => {
     setState((prev) => ({ ...prev, homeViewStyle }));
-  }, []);
+  }, [setState]);
 
   const completeOnboarding = useCallback(() => {
     setState((prev) => ({ ...prev, onboardingSeen: true }));
-  }, []);
+  }, [setState]);
 
   const updateChildProfile = useCallback(
     (patch: Partial<ChildProfile>) => {
@@ -354,7 +283,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       notify('مشخصات کودک در حافظه همین دستگاه ذخیره شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const addTempLog = useCallback(
@@ -384,12 +313,12 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         notify(`دمای ${formatTempC(input.tempCelsius)} ثبت شد.`, 'success');
       }
     },
-    [notify, state.childProfile, state.vaccineBirthDateEpochMs],
+    [notify, state.childProfile, state.vaccineBirthDateEpochMs, setState],
   );
 
   const deleteTempLog = useCallback((id: string) => {
     setState((prev) => ({ ...prev, feverLogs: prev.feverLogs.filter((t) => t.id !== id) }));
-  }, []);
+  }, [setState]);
 
   const addDoseLog = useCallback(
     (input: {
@@ -422,12 +351,12 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setState((prev) => ({ ...prev, doseLogs: [...prev.doseLogs, entry] }));
       notify(`مصرف ${input.medicationNameFa} در جدول ۲۴ ساعته ثبت شد.`, 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const deleteDoseLog = useCallback((id: string) => {
     setState((prev) => ({ ...prev, doseLogs: prev.doseLogs.filter((d) => d.id !== id) }));
-  }, []);
+  }, [setState]);
 
   const timelineSnapshot = useMemo(
     () => buildTimelineSnapshot(state.feverLogs, state.doseLogs, timelineNowMs),
@@ -442,7 +371,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       notify('اندازه‌گیری جدید روی نمودار رشد WHO ثبت شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const deleteGrowthMeasurement = useCallback((id: string) => {
@@ -450,7 +379,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       growthMeasurements: prev.growthMeasurements.filter((g) => g.id !== id),
     }));
-  }, []);
+  }, [setState]);
 
   const toggleMilestone = useCallback((id: string) => {
     setState((prev) => {
@@ -462,7 +391,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : [...prev.checkedMilestones, id],
       };
     });
-  }, []);
+  }, [setState]);
 
   const setVaccineBirthDateEpochMs = useCallback(
     (epochMs: number | null) => {
@@ -488,7 +417,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         notify('تاریخ تولد و زمان‌بندی واکسیناسیون به‌روزرسانی شد.', 'success');
       }
     },
-    [notify],
+    [notify, setState],
   );
 
   const markVaccineAdministered = useCallback(
@@ -509,7 +438,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       notify('تزریق واکسن ثبت شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const clearVaccineRecord = useCallback((vaccineId: string) => {
@@ -518,7 +447,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       delete next[vaccineId];
       return { ...prev, vaccineRecords: next };
     });
-  }, []);
+  }, [setState]);
 
   const toggleVaccineDeferred = useCallback((vaccineId: string) => {
     setState((prev) => {
@@ -536,11 +465,11 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       };
     });
-  }, []);
+  }, [setState]);
 
   const setVaccineReminders = useCallback((vaccineReminders: VaccineReminderSettings) => {
     setState((prev) => ({ ...prev, vaccineReminders }));
-  }, []);
+  }, [setState]);
 
   const vaccineSummary = useMemo(
     () =>
@@ -559,16 +488,19 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? prev.checkedMedSafetyIds.filter((x) => x !== id)
         : [...prev.checkedMedSafetyIds, id],
     }));
-  }, []);
+  }, [setState]);
 
   const toggleHygieneItem = useCallback((id: string) => {
     setState((prev) => ({
       ...prev,
-      checkedHygieneIds: prev.checkedHygieneIds.includes(id)
-        ? prev.checkedHygieneIds.filter((x) => x !== id)
-        : [...prev.checkedHygieneIds, id],
+      checkedHygieneIds: toggleChecklistItemToday(prev.checkedHygieneIds, id),
     }));
-  }, []);
+  }, [setState]);
+
+  const checkedHygieneIds = useMemo(
+    () => checkedChecklistItemsToday(state.checkedHygieneIds, timelineNowMs),
+    [state.checkedHygieneIds, timelineNowMs],
+  );
 
   const toggleBookmark = useCallback(
     (slug: string) => {
@@ -583,7 +515,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       });
     },
-    [notify],
+    [notify, setState],
   );
 
   const toggleTreatmentSlot = useCallback((medId: string, slotIndex: number) => {
@@ -608,7 +540,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       };
     });
-  }, []);
+  }, [setState]);
 
   const upsertTreatmentMedication = useCallback(
     (med: TreatmentMedicationItem) => {
@@ -622,7 +554,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       notify('فهرست دارویی برنامه درمانی به‌روزرسانی شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const deleteTreatmentMedication = useCallback(
@@ -636,7 +568,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       notify('دارو از برنامه درمانی حذف شد.', 'info');
     },
-    [notify],
+    [notify, setState],
   );
 
   const toggleTreatmentReminders = useCallback(() => {
@@ -647,7 +579,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         smartRemindersEnabled: !prev.treatmentPlan.smartRemindersEnabled,
       },
     }));
-  }, []);
+  }, [setState]);
 
   const resetTreatmentToday = useCallback(() => {
     setState((prev) => ({
@@ -662,7 +594,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
     }));
     notify('تیک نوبت‌های امروز بازنشانی شد.', 'info');
-  }, [notify]);
+  }, [notify, setState]);
 
   const saveVisitDraft = useCallback(
     (titleFa: string, draftTextFa: string) => {
@@ -675,7 +607,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setState((prev) => ({ ...prev, savedVisitDrafts: [entry, ...prev.savedVisitDrafts] }));
       notify('خلاصه ویزیت پزشک ذخیره شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const deleteVisitDraft = useCallback((id: string) => {
@@ -683,14 +615,14 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       savedVisitDrafts: prev.savedVisitDrafts.filter((d) => d.id !== id),
     }));
-  }, []);
+  }, [setState]);
 
   const saveNutritionPlan = useCallback(
     (plan: NutritionPlan) => {
       setState((prev) => ({ ...prev, nutritionPlans: [plan, ...prev.nutritionPlans.slice(0, 9)] }));
       notify('برنامه غذایی در تاریخچه ذخیره شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const saveSyrupScan = useCallback(
@@ -698,7 +630,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setState((prev) => ({ ...prev, savedSyrupScans: [scan, ...prev.savedSyrupScans.slice(0, 14)] }));
       notify('ثبت شربت اسکن‌شده ذخیره شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const addPharmacistConsultation = useCallback(
@@ -709,7 +641,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       notify('پرسش شما در حافظه همین دستگاه ثبت شد (ارسال ابری فعال نیست).', 'info');
     },
-    [notify],
+    [notify, setState],
   );
 
   const replyPharmacistConsultation = useCallback(
@@ -729,7 +661,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       notify('یادداشت پاسخ در میز داروساز ذخیره شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const addCareCard = useCallback(
@@ -737,12 +669,12 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setState((prev) => ({ ...prev, careCards: [card, ...prev.careCards] }));
       notify('کارت مراقبت جدید ساخته شد.', 'success');
     },
-    [notify],
+    [notify, setState],
   );
 
   const deleteCareCard = useCallback((id: string) => {
     setState((prev) => ({ ...prev, careCards: prev.careCards.filter((c) => c.id !== id) }));
-  }, []);
+  }, [setState]);
 
   const clearAllSavedLocalData = useCallback(async () => {
     try {
@@ -756,9 +688,34 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [notify, resetToEpoch]);
 
+  const createLocalBackup = useCallback(async (passphrase: string) => {
+    if (recoveryIssueRef.current) throw new Error('LOCAL_DATA_RECOVERY_REQUIRED');
+    const { storageEpoch, ...snapshot } = state;
+    if (currentStorageEpoch(window.localStorage) !== storageEpoch) throw new Error('LOCAL_DATA_CHANGED');
+    const encrypted = await createEncryptedLocalBackup(snapshot, passphrase);
+    if (currentEpochRef.current !== storageEpoch || currentStorageEpoch(window.localStorage) !== storageEpoch) {
+      throw new Error('LOCAL_DATA_CHANGED');
+    }
+    return encrypted;
+  }, [state]);
+
+  const restoreLocalBackup = useCallback(async (snapshot: LocalBackupSnapshot, expectedEpoch: string) => {
+    const reviewed = prepareLocalBackupForRestore(snapshot);
+    const replacement: PersistedState = {
+      ...reviewed,
+      storageEpoch: crypto.randomUUID(),
+      onboardingSeen: true,
+      treatmentPlan: normalizePlanForToday(reviewed.treatmentPlan),
+    };
+    const epoch = await replaceLocalSnapshot(window.localStorage, browserStorageLock, expectedEpoch, replacement);
+    resetToEpoch(epoch);
+    setPersistenceIssue(null);
+    notify('فایل پشتیبان جایگزین اطلاعات محلی شد. سن، وزن و برچسب داروها را دوباره بررسی کنید.', 'info');
+  }, [notify, resetToEpoch]);
+
   const value: ManoContextValue = {
     dataGeneration: state.storageEpoch,
-    persistenceIssue,
+    persistenceIssue: recoveryIssue ?? persistenceIssue,
     route,
     navigate,
     theme: state.theme,
@@ -794,7 +751,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     vaccineSummary,
     checkedMedSafetyIds: state.checkedMedSafetyIds,
     toggleMedSafetyItem,
-    checkedHygieneIds: state.checkedHygieneIds,
+    checkedHygieneIds,
     toggleHygieneItem,
     bookmarkedSlugs: state.bookmarkedSlugs,
     toggleBookmark,
@@ -822,6 +779,8 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toasts,
     notify,
     clearAllSavedLocalData,
+    createLocalBackup,
+    restoreLocalBackup,
   };
 
   return <ManoContext.Provider value={value}>{children}</ManoContext.Provider>;

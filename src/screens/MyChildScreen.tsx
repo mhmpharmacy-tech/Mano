@@ -18,6 +18,8 @@ import { toPersianDigits } from '../domain/persianNormalizer.ts';
 import { parseClinicalDecimal } from '../domain/clinicalNumberInput.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { SeverityAlert } from '../components/SeverityAlert.tsx';
+import { LocalBackupPanel } from '../components/LocalBackupPanel.tsx';
+import { OnlineAccountPanel } from '../components/OnlineAccountPanel.tsx';
 
 export const MyChildScreen: React.FC = () => {
   const {
@@ -108,8 +110,9 @@ export const MyChildScreen: React.FC = () => {
       <SeverityAlert
         severity="info"
         title="سوابق و پیش‌نویس‌ها در مرورگر همین دستگاه ذخیره می‌شوند"
-        body="ذخیره سوابق به صورت محلی است. قابلیت‌های هوش مصنوعی در نسخه فعلی مرورگر در دسترس نیستند؛ در صورت فعال‌سازی اختیاری آن‌ها، اطلاعات انتخاب‌شده فقط پس از رضایت شما برای پردازش ارسال می‌شود."
+        body="این پرونده مستقل از حساب آنلاین است. ورود یا خروج از حساب، این ثبت‌ها را به سرور منتقل یا از دستگاه پاک نمی‌کند. در دستگاه مشترک، از اطلاعات واقعی بیمار استفاده نکنید. ارسال آنلاین فقط از فرم جداگانه و با رضایت شما انجام می‌شود؛ پاسخ هوش مصنوعی در این نسخه فعال نیست."
       />
+      <OnlineAccountPanel />
       {(currentAge.status === 'conflict' || currentAge.status === 'invalid') && !clearBirthDate ? (
         <SeverityAlert severity="caution" title="سن پرونده نیاز به اصلاح دارد" body={currentAge.messageFa ?? ''} testId="age-profile-conflict" />
       ) : null}
@@ -243,6 +246,8 @@ export const MyChildScreen: React.FC = () => {
           <span>ذخیره مشخصات کودک</span>
         </button>
       </form>
+
+      <LocalBackupPanel />
 
       {/* Bookmarks */}
       <section className="space-y-3 rounded-3xl border border-[#DCE7E1] bg-white p-5 dark:border-[#23344D] dark:bg-[#111C2E]">

@@ -2,6 +2,7 @@ import React from 'react';
 import { ManoProvider, useMano } from './state/ManoStore.tsx';
 import { AppShell } from './components/AppShell.tsx';
 import { HomeScreen } from './screens/HomeScreen.tsx';
+import { OnlineProvider } from './online/OnlineProvider.tsx';
 const SymptomNavigatorScreen = React.lazy(() => import('./screens/SymptomNavigatorScreen.tsx').then((module) => ({ default: module.SymptomNavigatorScreen })));
 const FeverDoseCalculatorScreen = React.lazy(() => import('./screens/FeverDoseCalculatorScreen.tsx').then((module) => ({ default: module.FeverDoseCalculatorScreen })));
 const SyrupScannerScreen = React.lazy(() => import('./screens/SyrupScannerScreen.tsx').then((module) => ({ default: module.SyrupScannerScreen })));
@@ -83,6 +84,13 @@ const RouteView: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { dataGeneration } = useMano();
+  const previousGeneration = React.useRef(dataGeneration);
+  React.useLayoutEffect(() => {
+    if (previousGeneration.current !== dataGeneration) {
+      document.getElementById('mano-main-content')?.focus({ preventScroll: true });
+      previousGeneration.current = dataGeneration;
+    }
+  }, [dataGeneration]);
   return (
     <AppShell key={dataGeneration}>
       <React.Suspense fallback={<p role="status" className="py-8 text-center text-sm">در حال بازکردن بخش…</p>}>
@@ -94,9 +102,11 @@ const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <ManoProvider>
-      <AppContent />
-    </ManoProvider>
+    <OnlineProvider>
+      <ManoProvider>
+        <AppContent />
+      </ManoProvider>
+    </OnlineProvider>
   );
 };
 
