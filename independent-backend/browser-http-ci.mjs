@@ -26,10 +26,10 @@ try{
  await admin.query('INSERT INTO mano_stage.memberships(account_id,pharmacy_id,active) VALUES($1,$2,true)',[p.id,pharmacy]);
  const env={MANO_INTEGRATION_ENABLED:'true',MANO_INDEPENDENT_STAGE_ENABLED:'true',
    MANO_INTEGRATION_SYNTHETIC_ONLY:'true',MANO_INTEGRATION_OPERATOR_TOKEN:token(),
-   MANO_STAGE_ACCESS_TOKEN:token(),MANO_INTEGRATION_PORT:'0',MANO_STAGE_DATABASE_URL:stage.href,
+   MANO_STAGE_ACCESS_TOKEN:token(),MANO_STAGE_CARE_ENABLED:'true',MANO_INTEGRATION_PORT:'0',MANO_STAGE_DATABASE_URL:stage.href,
    MANO_STAGE_DB_TLS:'verify-full',MANO_STAGE_DB_CA:await readFile(process.env.MANO_TEST_TLS_CA,'utf8')};
  running=await startIntegration(env);
- bridge=await startBrowserBridge({upstreamPort:running.server.address().port,operatorToken:env.MANO_INTEGRATION_OPERATOR_TOKEN,syntheticOnly:true});
+ bridge=await startBrowserBridge({upstreamPort:running.server.address().port,operatorToken:env.MANO_INTEGRATION_OPERATOR_TOKEN,syntheticOnly:true,careEnabled:true});
  browser=await chromium.launch({headless:true});
  const context=await browser.newContext();
  await context.addCookies([{name:'mano_harness',value:bridge.cookie,url:bridge.origin,httpOnly:true,sameSite:'Strict'}]);
@@ -46,7 +46,7 @@ try{
  const result=await page.evaluate(async({a,b,p,pharmacy})=>{
   const {IndependentStageClient}=await import('/independentStageClient.js');
   const {privateBrowserTransport}=await import('/independentBrowserTransport.js');
-  const clients=[a,b,p].map(t=>{const c=new IndependentStageClient(true,privateBrowserTransport(true));c.setSession(t);return c;});
+  const clients=[a,b,p].map(t=>{const c=new IndependentStageClient(true,privateBrowserTransport(true,true));c.setSession(t);return c;});
   const [parent,other,pharmacist]=clients;
   const id=await parent.create('demo-browser',24);
   const checks=[];
@@ -56,13 +56,22 @@ try{
   try{await other.grant(id,pharmacy,true);checks.push(false);}catch{checks.push(true);}
   await parent.grant(id,pharmacy,true);
   checks.push((await pharmacist.list()).some(x=>x.id===id));
+  const card=await pharmacist.issueCare(id,pharmacy,true);
+  checks.push((await parent.listCare(id)).some(x=>x.id===card&&x.state==='issued'));
+  try{await other.listCare(id);checks.push(false);}catch{checks.push(true);}
+  await parent.transitionCare(id,card,'acknowledged');
+  await parent.transitionCare(id,card,'followup_requested');
+  checks.push((await pharmacist.listCare(id)).some(x=>x.id===card&&x.state==='followup_requested'));
+  await pharmacist.transitionCare(id,card,'closed');
+  checks.push((await parent.listCare(id)).some(x=>x.id===card&&x.state==='closed'));
   await parent.revoke(id,pharmacy);
+  try{await pharmacist.listCare(id);checks.push(false);}catch{checks.push(true);}
   checks.push(!(await pharmacist.list()).some(x=>x.id===id));
   for(const c of clients){await c.logout();try{await c.list();checks.push(false);}catch{checks.push(true);}}
   checks.push(!document.cookie.includes('mano_harness'));
   return checks;
  },{a:a.secret,b:b.secret,p:p.secret,pharmacy});
- assert.equal(result.length,10);assert.ok(result.every(Boolean));assert.equal(leaked,false);
+ assert.equal(result.length,15);assert.ok(result.every(Boolean));assert.equal(leaked,false);
  const {rows:[r]}=await admin.query('SELECT count(*)::int AS n FROM mano_stage.sessions WHERE account_id=ANY($1::uuid[]) AND revoked_at IS NOT NULL',[[a.id,b.id,p.id]]);
  assert.equal(r.n,3);
  console.log('BROWSER + PRIVATE BRIDGE + VERIFIED POSTGRES TLS: PASS');
