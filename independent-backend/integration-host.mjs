@@ -46,7 +46,7 @@ export async function startIntegration(env=process.env){
     if(!ready?.ok||(env.MANO_STAGE_DB_TLS==='verify-full'&&!ready.encrypted))throw new Error('Integration readiness failed');
     await pool.query('SELECT id FROM mano_stage.actor() LIMIT 0');
     const port=Number(env.MANO_INTEGRATION_PORT||'3101');
-    if(!Number.isInteger(port)||port<1024||port>65535||port===3000)throw new Error('Invalid internal port');
+    if(!Number.isInteger(port)||(port!==0&&port<1024)||port>65535||port===3000)throw new Error('Invalid internal port');
     server.listen(port,'127.0.0.1');await once(server,'listening');
     return {server,close:async()=>{if(server.listening)await new Promise(resolve=>server.close(resolve));await pool.end();}};
   }catch(e){if(server?.listening)server.close();await pool.end();throw e;}
