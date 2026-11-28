@@ -92,13 +92,15 @@ export function createStageServer(pool,env=process.env) {
   return http.createServer({requestTimeout:10000,headersTimeout:5000,maxHeaderSize:8192},createHandler(pool,env));
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
+  let pool;
   try {
     if(process.env.MANO_INDEPENDENT_STAGE_ENABLED!=='true'||!tokenPattern.test(process.env.MANO_STAGE_ACCESS_TOKEN||'')) throw new Error('Disabled');
-    const pool=new pg.Pool(databaseOptions(process.env));
+    pool=new pg.Pool(databaseOptions(process.env));
     pool.on('error',()=>console.error('STAGE_POOL_ERROR'));
-    await pool.query('SELECT 1 FROM mano_stage.accounts LIMIT 0');
+    await pool.query('SELECT id FROM mano_stage.profiles LIMIT 0');
+    await pool.query('SELECT id FROM mano_stage.actor() LIMIT 0');
     const server=createStageServer(pool);
     server.listen(3100,'127.0.0.1',()=>console.log('Synthetic stage listening on loopback:3100'));
     for(const signal of ['SIGINT','SIGTERM']) process.once(signal,()=>{server.close(()=>{void pool.end();});});
-  } catch {console.error('STAGE_STARTUP_FAILED');process.exitCode=1;}
+  } catch {console.error('STAGE_STARTUP_FAILED');if(pool)await pool.end();process.exitCode=1;}
 }
