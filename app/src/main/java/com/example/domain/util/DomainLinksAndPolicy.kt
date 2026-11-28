@@ -33,7 +33,9 @@ object ManoDomainLinks {
   fun homeUrl(domain: String = "manokid.ir"): String = "https://$domain"
   fun topicsUrl(domain: String = "manokid.ir"): String = "https://$domain/topics"
   fun topicUrl(slug: String, domain: String = "manokid.ir"): String = "https://$domain/topics/$slug"
-  fun medicinesUrl(domain: String = "manokid.ir"): String = "https://$domain/medicines"
+  fun medicinesUrl(tabKey: String? = null, domain: String = "manokid.ir"): String =
+    if (tabKey.isNullOrBlank()) "https://$domain/medicines"
+    else "https://$domain/medicines?tab=${Uri.encode(tabKey.trim())}"
   fun medicineUrl(slug: String, domain: String = "manokid.ir"): String = "https://$domain/medicines/$slug"
   fun vaccinesUrl(domain: String = "manokid.ir"): String = "https://$domain/vaccines"
   fun nutritionUrl(domain: String = "manokid.ir"): String = "https://$domain/nutrition"
@@ -46,24 +48,37 @@ object ManoDomainLinks {
   fun buildMedicineShareText(nameFa: String, slug: String): String =
     "راهنمای ایمنی داروی کودک در مانو کید:\n$nameFa\n${medicineUrl(slug)}"
 
-  fun buildPharmacyIntroductionText(pharmacyNameFa: String, pharmacyId: String): String {
+  fun buildMedicineShareText(medication: com.example.domain.model.MedicationMonograph): String =
+    "راهنمای ایمنی داروی کودک در مانو کید:\n${medication.nameFa} (${medication.genericNameEn})\n${medication.dosageFormAlertFa}\n${medicineUrl(medication.slug)}"
+
+  fun buildPharmacyIntroductionText(
+    pharmacyId: String,
+    displayNameFa: String = "داروخانه منتخب",
+  ): String? {
     val cleanId = pharmacyId.trim()
-    return if (isValidPublicPharmacyId(cleanId)) {
-      "دعوت‌نامه گفت‌وگو با داروساز در مانو کید ($pharmacyNameFa):\n${pharmacyInvitationUrl(cleanId)}"
-    } else {
-      "معرفی همراه دیجیتال سلامت کودک مانو کید:\n${homeUrl()}"
-    }
+    if (!isValidPublicPharmacyId(cleanId)) return null
+    val label = displayNameFa.trim().ifBlank { "داروخانه منتخب" }
+    return "دعوت‌نامه گفت‌وگو با داروساز در مانو کید ($label):\n${pharmacyInvitationUrl(cleanId)}\n\nتوجه: در موارد فوری به اورژانس ۱۱۵ مراجعه کنید."
   }
 
   fun buildAssetLinksJson(
     packageName: String,
     sha256Fingerprints: List<String>,
+    includeReleasePlaceholder: Boolean = false,
   ): String {
     val prints = sha256Fingerprints
       .map { it.trim().uppercase() }
       .filter { it.isNotEmpty() }
       .distinct()
-      .ifEmpty { listOf("SHA256_FINGERPRINT_REQUIRED") }
+      .let { list ->
+        if (list.isEmpty()) {
+          listOf("REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FINGERPRINT")
+        } else if (includeReleasePlaceholder && list.none { it.contains("PLAY_APP_SIGNING") }) {
+          list + "REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FINGERPRINT"
+        } else {
+          list
+        }
+      }
     val fingerprintLines = prints.joinToString(",\n        ") { "\"$it\"" }
     return """
       [
@@ -243,8 +258,8 @@ data class AssetLinksDomainReport(
 
 object AssetLinksVerifier {
   suspend fun verifyAllPrimaryDomains(
-    packageName: String,
-    expectedSha256Fingerprints: List<String>,
+    expectedPackageName: String,
+    expectedFingerprints: List<String>,
   ): List<AssetLinksDomainReport> = withContext(Dispatchers.IO) {
     ManoDomainLinks.PRIMARY_DOMAINS.map { domain ->
       val url = "https://$domain/.well-known/assetlinks.json"
@@ -266,8 +281,8 @@ object AssetLinksVerifier {
             detailsFa = "فایل assetlinks.json هنوز روی $domain منتشر نشده یا در دسترس نیست.",
           )
         } else {
-          val pkgOk = body.contains(packageName)
-          val fpOk = expectedSha256Fingerprints.any { fp ->
+          val pkgOk = body.contains(expectedPackageName)
+          val fpOk = expectedFingerprints.any { fp ->
             fp.isNotBlank() && body.contains(fp, ignoreCase = true)
           }
           when {
@@ -276,7 +291,7 @@ object AssetLinksVerifier {
               url = url,
               severity = AssetLinksCheckSeverity.VERIFIED,
               headlineFa = "تأییدشده و آماده App Links",
-              detailsFa = "بسته $packageName و امضای SHA-256 روی این دامنه ثبت شده است.",
+              detailsFa = "بسته $expectedPackageName و امضای SHA-256 روی این دامنه ثبت شده است.",
             )
             pkgOk -> AssetLinksDomainReport(
               domain = domain,
@@ -290,7 +305,7 @@ object AssetLinksVerifier {
               url = url,
               severity = AssetLinksCheckSeverity.FAILED,
               headlineFa = "شناسه برنامه در فایل دامنه یافت نشد",
-              detailsFa = "فایل assetlinks.json موجود با شناسه $packageName هماهنگ نیست.",
+              detailsFa = "فایل assetlinks.json موجود با شناسه $expectedPackageName هماهنگ نیست.",
             )
           }
         }

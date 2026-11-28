@@ -140,7 +140,7 @@ object VaccinationScheduleEngine {
     cloudRecords: List<VaccineRecord> = emptyList(),
     localRecords: List<VaccineRecord> = emptyList(),
     birthDateEpochMs: Long?,
-    reminderSettings: VaccineReminderSettings,
+    reminderSettings: VaccineReminderSettings = VaccineReminderSettings(),
     nowEpochMs: Long = System.currentTimeMillis(),
   ): VaccineScheduleSummary {
     val recordById = (localRecords + cloudRecords).associateBy { it.vaccineId }
@@ -216,9 +216,66 @@ object VaccinationScheduleEngine {
       VaccineStatus.UPCOMING -> "${PersianNormalizer.toPersianDigits(days.toString())} روز آینده"
     }
   }
+
+  fun addDaysToDay(baseEpochMs: Long, days: Int): Long = baseEpochMs + days.toLong() * DAY_MS
+
+  fun diffDays(fromEpochMs: Long, toEpochMs: Long): Int = ((toEpochMs - fromEpochMs) / DAY_MS).toInt()
+
+  fun toPersianDigits(input: String): String = PersianNormalizer.toPersianDigits(input)
+
+  fun formatPersianDate(epochMs: Long): String {
+    val cal = GregorianCalendar(TimeZone.getTimeZone("Asia/Tehran")).apply { timeInMillis = epochMs }
+    val gy = cal.get(Calendar.YEAR)
+    val gm = cal.get(Calendar.MONTH) + 1
+    val gd = cal.get(Calendar.DAY_OF_MONTH)
+    val (jy, jm, jd) = gregorianToJalali(gy, gm, gd)
+    val mStr = jm.toString().padStart(2, '0')
+    val dStr = jd.toString().padStart(2, '0')
+    return PersianNormalizer.toPersianDigits("$jy/$mStr/$dStr")
+  }
+
+  private fun gregorianToJalali(gyInput: Int, gm: Int, gd: Int): Triple<Int, Int, Int> {
+    val gDaysInMonth = intArrayOf(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
+    val gy2 = if (gm > 2) gyInput + 1 else gyInput
+    var days =
+      355666 +
+        (365 * gyInput) +
+        ((gy2 + 3) / 4) -
+        ((gy2 + 99) / 100) +
+        ((gy2 + 399) / 400) +
+        gd +
+        gDaysInMonth[gm - 1]
+    var jy = -1595 + 33 * (days / 12053)
+    days %= 12053
+    jy += 4 * (days / 1461)
+    days %= 1461
+    if (days > 365) {
+      jy += (days - 1) / 365
+      days = (days - 1) % 365
+    }
+    val jm = if (days < 186) 1 + days / 31 else 7 + (days - 186) / 30
+    val jd = 1 + if (days < 186) days % 31 else (days - 186) % 30
+    return Triple(jy, jm, jd)
+  }
 }
 
 object NutritionPromptBuilder {
+  fun isLikelyUnderSixMonths(
+    ageBand: com.example.domain.model.AgeBand,
+    ageDetailFa: String,
+  ): Boolean {
+    if (ageBand == com.example.domain.model.AgeBand.NEWBORN) return true
+    if (ageBand != com.example.domain.model.AgeBand.INFANT_3_12M) return false
+    val ascii = PersianNormalizer.toAsciiDigits(ageDetailFa).trim()
+    val monthMatch = Regex("(\\d+(?:\\.\\d+)?)\\s*(?:ماه|month|m\\b)", RegexOption.IGNORE_CASE).find(ascii)
+    val months = monthMatch?.groupValues?.get(1)?.toFloatOrNull()
+    if (months != null) return months < 6f
+    val weekMatch = Regex("(\\d+)\\s*(?:هفته|week|w\\b)", RegexOption.IGNORE_CASE).find(ascii)
+    val weeks = weekMatch?.groupValues?.get(1)?.toIntOrNull()
+    if (weeks != null) return weeks < 26
+    return false
+  }
+
   fun formatShareableNutritionTextFa(plan: NutritionPlanResult): String =
     buildString {
       appendLine(plan.planTitleFa)

@@ -4,14 +4,22 @@ import com.example.domain.util.FeverDoseTimelineEngine
 import com.example.domain.util.PersianNormalizer
 import kotlinx.serialization.Serializable
 
+typealias TreatmentPlan = PediatricTreatmentPlan
+
 @Serializable
 data class SymptomReferral(
   val id: String,
   val symptomFlowId: String,
   val ageBand: AgeBand,
   val summaryFa: String,
+  val temperatureCelsius: Float? = null,
+  val durationHours: Int? = null,
+  val ageMonthsExact: Int? = null,
+  val selectedRedFlagIds: Set<String> = emptySet(),
   val createdAtMs: Long = System.currentTimeMillis(),
-)
+) {
+  val flowId: String get() = symptomFlowId
+}
 
 @Serializable
 data class DoctorVisitDraft(
@@ -46,14 +54,18 @@ data class GrowthMeasurement(
 }
 
 sealed interface PreviousCare {
+  val recordedAtMs: Long
+
   data class Temperature(
     val celsius: Float,
-    val recordedAtMs: Long,
+    override val recordedAtMs: Long,
   ) : PreviousCare
 
   data class Growth(
     val measurement: GrowthMeasurement,
-  ) : PreviousCare
+  ) : PreviousCare {
+    override val recordedAtMs: Long get() = measurement.recordedAtMs
+  }
 
   companion object {
     fun latest(
@@ -139,7 +151,9 @@ data class VaccineScheduleItem(
   val dueDateEpochMs: Long?,
   val record: VaccineRecord?,
   val daysRemaining: Int?,
-)
+) {
+  val effectiveDueDateEpochMs: Long? get() = dueDateEpochMs
+}
 
 data class VaccineScheduleSummary(
   val items: List<VaccineScheduleItem>,
@@ -199,6 +213,7 @@ data class NutritionPlanResult(
   val safetyAvoidListFa: List<String> = emptyList(),
   val doctorFollowUpHintFa: String = "",
   val createdAtMs: Long = System.currentTimeMillis(),
+  val createdAtLabelFa: String = "",
 )
 
 @Serializable

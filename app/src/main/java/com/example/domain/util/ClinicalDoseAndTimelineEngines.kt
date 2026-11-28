@@ -104,6 +104,20 @@ enum class LiquidFormulationId(
     minMgPerKg = 0.15f,
     maxMgPerKg = 0.25f,
   ),
+  ;
+
+  val shortLabelFa: String get() = shortTagFa
+  val concentrationLabelFa: String get() = titleFa
+  val maxSyringeScaleMl: Float get() = maxSyringeMl
+  val intervalFa: String
+    get() =
+      when (this) {
+        ACETAMINOPHEN_DROPS_100,
+        ACETAMINOPHEN_SYRUP_120_5,
+        ACETAMINOPHEN_SYRUP_160_5 -> "هر ۴ تا ۶ ساعت (حداکثر ۴ نوبت در ۲۴ ساعت)"
+        IBUPROFEN_SYRUP_100_5 -> "هر ۶ تا ۸ ساعت همراه با شیر یا غذا (زیر ۶ ماه ممنوع)"
+        CETIRIZINE_SYRUP_5_5 -> "روزی یک نوبت طبق دستور پزشک (زیر ۲ سال ممنوع)"
+      }
 }
 
 data class ClinicalDoseCalculationResult(
@@ -246,7 +260,7 @@ object LiquidDoseVisualizerEngine {
       minSafeMl = minMl.coerceIn(0.2f, formulation.maxSyringeMl),
       maxSafeMl = maxMl.coerceIn(0.2f, formulation.maxSyringeMl),
       recommendedMg = rawRecMg.roundToInt(),
-      alertSeverity = AlertSeverity.SAFE,
+      alertSeverity = AlertSeverity.SUCCESS,
       alertTitleFa = "نمایش آموزشی سرنگ بر اساس وزن و غلظت انتخاب‌شده",
       alertBodyFa = "پیش از کشیدن دارو، غلظت روی جعبه دارو را با ${formulation.shortTagFa} مطابقت دهید و بیش از ۴ نوبت در ۲۴ ساعت مصرف نکنید.",
     )
@@ -313,7 +327,7 @@ object MedicationOverlapEngine {
         actionStepsFa = listOf("فاصله زمانی با لبنیات یا مکمل‌ها را روی برچسب داروخانه بخوانید."),
       )
       else -> MedicationOverlapResult(
-        severity = AlertSeverity.SAFE,
+        severity = AlertSeverity.SUCCESS,
         titleFa = "هم‌پوشانی تکراری آشکار شناسایی نشد (تأیید نهایی با داروساز)",
         summaryFa = "در مقایسه اولیه دو نام، ماده مؤثر مشابهی دیده نشد؛ با این حال همیشه برچسب ترکیبات جانبی شربت‌ها را چک کنید.",
         actionStepsFa = listOf(
@@ -358,14 +372,18 @@ data class FeverDoseTimelineSnapshot(
   val acetaminophenCount24h: Int,
   val ibuprofenCount24h: Int,
   val hasFeverAlert: Boolean,
-)
+) {
+  val latestTempTimeFa: String get() = tempPoints.lastOrNull()?.timeLabelFa ?: ""
+}
 
 data class HighFeverClinicalAlert(
   val titleFa: String,
   val bodyFa: String,
   val tempCelsius: Float,
   val isNewbornEmergency: Boolean,
-)
+) {
+  val summaryFa: String get() = bodyFa
+}
 
 object FeverDoseTimelineEngine {
   const val HIGH_FEVER_ALERT_THRESHOLD_C = 39.0f

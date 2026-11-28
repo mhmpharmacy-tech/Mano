@@ -176,13 +176,19 @@ enum class ManoThemeMode(val id: String, val labelFa: String) {
   DARK("dark", "حالت تیره"),
 }
 
-enum class ManoHapticIntensity(val id: String, val labelFa: String) {
-  OFF("off", "خاموش"),
-  SUBTLE("subtle", "ملایم"),
-  STANDARD("standard", "معمولی"),
+enum class ManoHapticIntensity(
+  val id: String,
+  val labelFa: String,
+  val summaryFa: String,
+) {
+  OFF("off", "خاموش", "بدون لرزش لمسی در تمام بخش‌ها"),
+  SUBTLE("subtle", "ملایم", "لرزش بسیار ظریف هنگام لمس مدار و کلیدها"),
+  MEDIUM("medium", "متعادل", "بازخورد متعادل برای لمس مانو و کنترل‌ها"),
+  STANDARD("standard", "معمولی", "لرزش واضح استاندارد برای تایید اقدامات مهم");
 }
 
 enum class ManoWebGlQuality(val id: String, val labelFa: String) {
+  AUTO("auto", "خودکار (متناسب با دستگاه)"),
   LOW("low", "سبک"),
   BALANCED("balanced", "متعادل"),
   HIGH("high", "کیفیت بالا"),

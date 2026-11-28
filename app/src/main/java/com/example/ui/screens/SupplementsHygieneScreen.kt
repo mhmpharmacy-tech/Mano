@@ -547,12 +547,32 @@ fun SupplementsHygieneScreen(
       }
 
       // 5. Compact 2-Column Icon Flowchart Grid (All 5 guides + Daily Checklist fit above the fold!)
-      item {
-        val gridEntries: List<Pair<SupplementOrHygieneGuide?, Boolean>> =
-          visibleGuides.map { it to false } + (null to true)
-        val rows = gridEntries.chunked(2)
+      if (visibleGuides.isEmpty()) {
+        item {
+          com.example.ui.components.ManoSectionEmptyStateCard(
+            domain = com.example.ui.components.ManoEmptyStateDomain.SUPPLEMENTS,
+            titleFa = "راهنمای مکمل یا بهداشتی با این فیلتر پیدا نشد",
+            subtitleFa = "عبارت جست‌وجو را پاک کنید یا برای انتخاب مکمل و محصول مناسب کودک از داروساز راهنمایی بگیرید.",
+            nextStepsFa = listOf(
+              "فیلتر سنی و جست‌وجو را بازنشانی کنید تا همه راهنماها برگردند.",
+              "در صورت تردید درباره قطره آهن یا ویتامین D با داروساز مشورت کنید.",
+            ),
+            primaryActionLabelFa = "نمایش همه راهنماها",
+            onPrimaryAction = {
+              searchQuery = ""
+              selectedAgeFilterId = CareAgeFilter.ALL.id
+            },
+            secondaryActionLabelFa = "پرسش از داروساز",
+            onSecondaryAction = { onNavigateAskPharmacist("supplement") },
+          )
+        }
+      } else {
+        item {
+          val gridEntries: List<Pair<SupplementOrHygieneGuide?, Boolean>> =
+            visibleGuides.map { it to false } + (null to true)
+          val rows = gridEntries.chunked(2)
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
           rows.forEachIndexed { rowIdx, pair ->
             Row(
               modifier = Modifier.fillMaxWidth(),
@@ -587,6 +607,7 @@ fun SupplementsHygieneScreen(
                 Spacer(Modifier.weight(1f))
               }
             }
+          }
           }
         }
       }

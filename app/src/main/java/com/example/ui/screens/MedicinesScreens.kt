@@ -441,15 +441,21 @@ fun MedicinesScreen(
 
           if (medications.isEmpty()) {
             item {
-              EmptyState(
-                title = "دارویی با این عبارت پیدا نشد",
-                subtitle = "عبارت جست‌وجو یا فیلتر دسته‌بندی را پاک کنید یا سوال دارویی خود را برای داروساز بفرستید.",
-                pose = MascotPose.WAIT,
-                actionLabel = "نمایش همه داروها",
-                onAction = {
+              com.example.ui.components.ManoSectionEmptyStateCard(
+                domain = com.example.ui.components.ManoEmptyStateDomain.MEDICINES,
+                titleFa = "دارویی با این عبارت پیدا نشد",
+                subtitleFa = "عبارت جست‌وجو یا فیلتر دسته‌بندی را پاک کنید یا سوال دارویی خود را برای داروساز بفرستید.",
+                nextStepsFa = listOf(
+                  "فیلتر جست‌وجو را پاک کنید تا همه راهنماهای دارویی نمایش داده شوند.",
+                  "نام ماده مؤثر (مثل استامینوفن یا ایبوپروفن) را امتحان کنید یا از داروساز بپرسید.",
+                ),
+                primaryActionLabelFa = "نمایش همه داروها",
+                onPrimaryAction = {
                   onQueryChange("")
                   onCategorySelect(null)
                 },
+                secondaryActionLabelFa = "پرسش از داروساز",
+                onSecondaryAction = onNavigateAskPharmacist,
               )
             }
           } else {
