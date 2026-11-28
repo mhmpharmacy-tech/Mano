@@ -13,16 +13,16 @@ export function createIntegrationHost(pool,env,deliver){
      !tokenPattern.test(env.MANO_INTEGRATION_OPERATOR_TOKEN||'')||
      env.MANO_INTEGRATION_OPERATOR_TOKEN===env.MANO_STAGE_ACCESS_TOKEN)throw new Error('Integration disabled or invalid gates');
   const handler=createHandler(pool,env);
-  const auth=demoAuth(pool,env,deliver);
+  const auth=env.MANO_STAGE_OTP_KEY!==env.MANO_INTEGRATION_OPERATOR_TOKEN?demoAuth(pool,env,deliver):null;
   return http.createServer({requestTimeout:10000,headersTimeout:5000,maxHeaderSize:8192},(req,res)=>{
     const reject=()=>{res.writeHead(404,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end('{"code":"NOT_FOUND"}');};
     const host=req.headers.host||'';
-    if(!/^127\.0\.0\.1:\d+$/.test(host)||req.headers.origin||req.headers['sec-fetch-site']||
+    if(env.MANO_INTEGRATION_ENABLED!=='true'||env.MANO_INDEPENDENT_STAGE_ENABLED!=='true'||!/^127\.0\.0\.1:\d+$/.test(host)||req.headers.origin||req.headers['sec-fetch-site']||
        !sameToken(req.headers['x-mano-operator-token'],env.MANO_INTEGRATION_OPERATOR_TOKEN)||
        req.headers['x-mano-stage-token']||!['GET','POST','DELETE'].includes(req.method))return reject();
     const p=req.url||'';
     if(p==='/internal/mano/v1/auth/issue'||p==='/internal/mano/v1/auth/verify'){
-      if(!auth||req.method!=='POST'||req.headers.authorization)return reject();
+      if(!auth||env.MANO_STAGE_DEMO_AUTH_ENABLED!=='true'||req.method!=='POST'||req.headers.authorization)return reject();
       void handleDemoAuth(req,res,auth,p);return;
     }
     if(!/^\/internal\/mano\/v1\/(?:profiles(?:\/[a-fA-F0-9-]{36}\/shares(?:\/[a-fA-F0-9-]{36})?)?|session\/logout)$/.test(p))return reject();
