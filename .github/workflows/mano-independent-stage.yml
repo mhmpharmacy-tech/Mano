@@ -96,6 +96,26 @@ jobs:
           MANO_TEST_TLS_URL: postgresql://mano_stage_app:ci-synthetic-only-password@127.0.0.1:5432/mano_stage
           MANO_TEST_TLS_CA: ${{ runner.temp }}/mano-ci-tls/ca.crt
         run: node browser-http-ci.mjs
+      - name: Restore rehearsal on disposable CI database
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          docker exec -u postgres "$PG_CONTAINER" createdb mano_stage_restore
+          docker exec -u postgres "$PG_CONTAINER" pg_dump -Fc -n mano_stage mano_stage | docker exec -i -u postgres "$PG_CONTAINER" pg_restore --exit-on-error -d mano_stage_restore
+          for table in accounts sessions profiles shares memberships pharmacies demo_identity demo_challenge audit_events; do
+            a=$(docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage -Atc "SELECT count(*) FROM mano_stage.$table")
+            b=$(docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage_restore -Atc "SELECT count(*) FROM mano_stage.$table")
+            test "$a" = "$b"
+          done
+          test "$(docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage_restore -Atc "SELECT count(*) FROM pg_tables WHERE schemaname='mano_stage' AND rowsecurity")" = "2"
+          test "$(docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage_restore -Atc "SELECT has_table_privilege('mano_stage_app','mano_stage.sessions','SELECT')")" = "f"
+          docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage_restore -v ON_ERROR_STOP=1 -c "SET ROLE mano_stage_app; SELECT id FROM mano_stage.profiles" | grep -q '(0 rows)'
+          docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage_restore -v ON_ERROR_STOP=1 -c "UPDATE mano_stage.sessions SET revoked_at=now() WHERE revoked_at IS NULL"
+          test "$(docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage_restore -Atc "SELECT count(*) FROM mano_stage.sessions WHERE revoked_at IS NULL")" = "0"
+          echo "SYNTHETIC RESTORE REHEARSAL: PASS"
+      - name: Build isolated runtime image (no publishing)
+        run: docker build -f Dockerfile.internal -t mano-internal-ci:local .
       - uses: actions/upload-artifact@v4
         with:
           name: independent-stage-lockfile-review
