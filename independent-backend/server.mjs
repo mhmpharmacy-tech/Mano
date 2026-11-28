@@ -42,7 +42,10 @@ export function createHandler(pool,env) {
       const actor=(await client.query('SELECT id,role FROM mano_stage.actor()')).rows[0];
       let result;
       if (!actor) result=[401,{code:'AUTH_REQUIRED'}];
-      else if(req.method==='GET' && path==='/v1/profiles') {
+      else if(req.method==='POST' && path==='/v1/session/logout') {
+        await client.query('SELECT mano_stage.revoke_session()');
+        result=[200,{ok:true}];
+      } else if(req.method==='GET' && path==='/v1/profiles') {
         const {rows}=await client.query('SELECT id,alias,age_months FROM mano_stage.profiles ORDER BY id LIMIT 100');
         result=[200,{profiles:rows}];
       } else if (req.method==='POST' && path==='/v1/profiles') {
