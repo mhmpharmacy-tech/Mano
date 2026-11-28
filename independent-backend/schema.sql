@@ -127,4 +127,17 @@ $;
 REVOKE ALL ON FUNCTION mano_stage.issue_demo_challenge(text,uuid,text),mano_stage.verify_demo_challenge(uuid,text,text),mano_stage.revoke_session() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION mano_stage.issue_demo_challenge(text,uuid,text),mano_stage.verify_demo_challenge(uuid,text,text),mano_stage.revoke_session() TO mano_stage_app;
 REVOKE ALL ON mano_stage.demo_identity,mano_stage.demo_challenge FROM PUBLIC;
+CREATE TABLE mano_stage.audit_events (
+ id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ actor_id uuid NOT NULL REFERENCES mano_stage.accounts(id),
+ action text NOT NULL CHECK(action IN ('profile.list','profile.create','share.grant','share.revoke','session.logout')),
+ occurred_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE FUNCTION mano_stage.record_audit(event_action text) RETURNS void
+LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+ INSERT INTO mano_stage.audit_events(actor_id,action) SELECT id,event_action FROM mano_stage.actor()
+$;
+REVOKE ALL ON mano_stage.audit_events FROM PUBLIC;
+REVOKE ALL ON FUNCTION mano_stage.record_audit(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION mano_stage.record_audit(text) TO mano_stage_app;
 COMMIT;
