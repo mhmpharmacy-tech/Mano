@@ -22,3 +22,6 @@ Current Firestore rules expose owner-scoped profiles, doseLogs, consultations, b
 - Real clinical schema, consent/revocation concurrency, database tenant isolation/RLS, encrypted storage/backups and tested recovery, deletion/retention and safety review.
 - Preserve Firebase clinical triage gates and App Check equivalents, implement web/Android adapters without UI changes, verify real devices. Existing Firefox keyboard-focus CI failure remains separate.
 - No publication, DNS change, real-data transfer or clinical activation by this PR.
+
+## Phase 2 additions
+The synthetic database now enforces RLS on profiles and shares, using a transaction-local session digest and narrowly scoped SECURITY DEFINER helpers. Direct access to account/session/membership tables is revoked from runtime. The helpers rely on the trusted runtime and migration owner; independent security review and concurrency testing remain necessary. The optional demo-auth module exercises HMAC-bound single-use OTPs, persistent per-handle cooldown, attempt limit, expiry and session issuance against pre-enrolled synthetic accounts. It has no public route or SMS provider. Logout revokes the current session. AES-256-GCM backup helpers cover synthetic profiles only, not actual PostgreSQL backups. Neither real authentication nor real data use is approved.
