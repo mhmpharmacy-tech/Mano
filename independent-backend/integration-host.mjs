@@ -34,7 +34,16 @@ export async function startIntegration(env=process.env){
   let server;
   try{
     server=createIntegrationHost(pool,env);
-    await pool.query('SELECT id FROM mano_stage.profiles LIMIT 0');
+    const {rows:[ready]}=await pool.query(`SELECT current_database()='mano_stage' AND current_user='mano_stage_app'
+      AND r.rolcanlogin AND NOT(r.rolsuper OR r.rolbypassrls OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication)
+      AND NOT EXISTS(SELECT 1 FROM pg_auth_members m WHERE m.member=r.oid)
+      AND (SELECT count(*)=2 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='mano_stage' AND c.relname IN ('profiles','shares') AND c.relrowsecurity AND c.relowner<>r.oid)
+      AND NOT has_table_privilege(current_user,'mano_stage.sessions','SELECT')
+      AND NOT has_table_privilege(current_user,'mano_stage.audit_events','SELECT')
+      AS ok, COALESCE((SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()),false) AS encrypted
+      FROM pg_roles r WHERE r.rolname=current_user`);
+    if(!ready?.ok||(env.MANO_STAGE_DB_TLS==='verify-full'&&!ready.encrypted))throw new Error('Integration readiness failed');
     await pool.query('SELECT id FROM mano_stage.actor() LIMIT 0');
     const port=Number(env.MANO_INTEGRATION_PORT||'3101');
     if(!Number.isInteger(port)||port<1024||port>65535||port===3000)throw new Error('Invalid internal port');
