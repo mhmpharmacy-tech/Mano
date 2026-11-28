@@ -25,7 +25,11 @@ export function createIntegrationHost(pool,env,deliver){
       if(!auth||env.MANO_STAGE_DEMO_AUTH_ENABLED!=='true'||req.method!=='POST'||req.headers.authorization)return reject();
       void handleDemoAuth(req,res,auth,p);return;
     }
-    if(!/^\/internal\/mano\/v1\/(?:profiles(?:\/[a-fA-F0-9-]{36}\/shares(?:\/[a-fA-F0-9-]{36})?)?|session\/logout)$/.test(p))return reject();
+    const existingRoute=/^\/internal\/mano\/v1\/(?:profiles(?:\/[a-fA-F0-9-]{36}\/shares(?:\/[a-fA-F0-9-]{36})?)?|session\/logout)$/.test(p);
+    const careRoute=env.MANO_STAGE_CARE_ENABLED==='true' &&
+      ((['GET','POST'].includes(req.method) && /^\/internal\/mano\/v1\/profiles\/[a-fA-F0-9-]{36}\/care-cards$/.test(p)) ||
+       (req.method==='POST' && /^\/internal\/mano\/v1\/profiles\/[a-fA-F0-9-]{36}\/care-cards\/[a-fA-F0-9-]{36}\/state$/.test(p)));
+    if(!existingRoute&&!careRoute)return reject();
     req.url=p.slice('/internal/mano'.length);
     req.headers['x-mano-stage-token']=env.MANO_STAGE_ACCESS_TOKEN;
     delete req.headers['x-mano-operator-token'];
