@@ -103,12 +103,31 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   }finally{await new Promise(resolve=>host.close(resolve));}
   // Real TypeScript adapter over the internal HTTP listener and the actual database.
   const launchEnv={...env,MANO_INTEGRATION_ENABLED:'true',MANO_INTEGRATION_SYNTHETIC_ONLY:'true',
-    MANO_INTEGRATION_OPERATOR_TOKEN:token(),MANO_INTEGRATION_PORT:'0'};
+    MANO_INTEGRATION_OPERATOR_TOKEN:token(),MANO_INTEGRATION_PORT:'0',
+    MANO_STAGE_DEMO_AUTH_ENABLED:'true',MANO_STAGE_OTP_KEY:token()};
   await assert.rejects(startIntegration({...launchEnv,MANO_INTEGRATION_SYNTHETIC_ONLY:'false'}));
-  const running=await startIntegration(launchEnv);
+  const otpMessages=[];
+  await admin.query('INSERT INTO mano_stage.demo_identity(handle,account_id) VALUES($1,$2)',['demo-integration',q.id]);
+  const running=await startIntegration(launchEnv,async msg=>{otpMessages.push(msg);});
   try {
     assert.equal(running.server.address().address,'127.0.0.1');
     const base='http://127.0.0.1:'+running.server.address().port;
+    const authRequest=async(action,body,withGate=true)=>{
+      const r=await fetch(base+'/internal/mano/v1/auth/'+action,{method:'POST',headers:{'content-type':'application/json',
+        ...(withGate?{'x-mano-operator-token':launchEnv.MANO_INTEGRATION_OPERATOR_TOKEN}:{})},body:JSON.stringify(body)});
+      assert.equal(r.headers.get('cache-control'),'no-store');return {status:r.status,data:await r.json()};
+    };
+    assert.equal((await authRequest('issue',{handle:'demo-integration'},false)).status,404);
+    assert.equal((await authRequest('issue',{handle:'09123456789'})).status,400);
+    assert.equal((await authRequest('issue',{handle:'demo-unknown'})).status,202);
+    assert.equal(otpMessages.length,0);
+    const challenge=await authRequest('issue',{handle:'demo-integration'});
+    assert.equal(challenge.status,202);assert.deepEqual(Object.keys(challenge.data),['challengeId']);
+    assert.equal(otpMessages.length,1);
+    const proof={challengeId:challenge.data.challengeId,code:otpMessages[0].code};
+    const verified=await authRequest('verify',proof);
+    assert.equal(verified.status,200);assert.equal(typeof verified.data.token,'string');
+    assert.equal((await authRequest('verify',proof)).status,401);
     const transport=async req=>{
       const response=await fetch(base+req.path,{method:req.method,redirect:'error',signal:req.signal,
         headers:{'x-mano-operator-token':launchEnv.MANO_INTEGRATION_OPERATOR_TOKEN,authorization:'Bearer '+req.bearer,
@@ -120,6 +139,11 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
     const pharmacist=new IndependentStageClient(true,transport);
     const otherParent=new IndependentStageClient(true,transport);
     parent.setSession(a.secret);pharmacist.setSession(p.secret);otherParent.setSession(b.secret);
+    const otherPharmacy=new IndependentStageClient(true,transport);
+    otherPharmacy.setSession(verified.data.token);
+    assert.deepEqual(await otherPharmacy.list(),[]);
+    await otherPharmacy.logout();
+    assert.equal((await call('DELETE',path+'/'+f,b)).status,404);
     assert.ok((await parent.list()).some(row=>row.id===id&&row.ageMonths===12));
     assert.deepEqual(await otherParent.list(),[]);
     assert.ok((await pharmacist.list()).some(row=>row.id===id));
