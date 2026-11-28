@@ -48,13 +48,13 @@ BEGIN
  INSERT INTO mano_stage.care_cards(id,profile_id,pharmacy_id,author_id,template) VALUES(cid,pid,fid,a.id,'demo-care-v1');
  INSERT INTO mano_stage.care_events(card_id,actor_id,state) VALUES(cid,a.id,'issued');
  RETURN true;
-END $care$;
+END; $care$;
 CREATE FUNCTION mano_stage.transition_care(cid uuid,pid uuid,next_state text) RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $care$
 DECLARE a record; c mano_stage.care_cards%ROWTYPE;
 BEGIN
  SELECT * INTO a FROM mano_stage.actor();
- IF NOT FOUND THEN RETURN false; END IF;
+ IF NOT FOUND OR next_state IS NULL THEN RETURN false; END IF;
  SELECT * INTO c FROM mano_stage.care_cards WHERE id=cid AND profile_id=pid FOR UPDATE;
  IF NOT FOUND THEN RETURN false; END IF;
  IF a.role='parent' THEN
@@ -72,7 +72,7 @@ BEGIN
  UPDATE mano_stage.care_cards SET state=next_state,updated_at=now() WHERE id=cid;
  INSERT INTO mano_stage.care_events(card_id,actor_id,state) VALUES(cid,a.id,next_state);
  RETURN true;
-END $care$;
+END; $care$;
 REVOKE ALL ON FUNCTION mano_stage.care_staff(uuid,uuid,uuid),mano_stage.list_care(uuid),mano_stage.issue_care(uuid,uuid,uuid),mano_stage.transition_care(uuid,uuid,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION mano_stage.list_care(uuid),mano_stage.issue_care(uuid,uuid,uuid),mano_stage.transition_care(uuid,uuid,text) TO mano_stage_app;
 COMMIT;
