@@ -4,7 +4,7 @@ This is a synthetic-only review, not production. No public ingress, clinical use
 
 ## Evidence
 - Baseline 7d5787ca: Kotlin HTTP care loop and verified PostgreSQL TLS passed (46157188814); private React browser run failed with a generic error. Web and Kotlin validation passed (46157188799, 46157188805).
-- 2b80ea3d: explicit production React environment in the isolated bundle, project-root resolution, and bounded diagnostic phase names. This revision requires a fresh browser run. Do not waive the UI gate.
+- 2b80ea3d: explicit production React environment in the isolated bundle, project-root resolution, and bounded diagnostic phase names. The fixed revision and follow-up 06de9c03 passed all CI jobs (46157575096, 46157575101, 46157575097). Do not waive the UI gate for later revisions.
 
 ## Private test sequence
 1. Verify all CI jobs for the exact selected commit. Verify PostgreSQL care-card schema, care events, RLS, cross-pharmacy denial, consent revocation, Kotlin, and actual React buttons. Do not substitute an older green commit for current evidence.
@@ -17,3 +17,6 @@ This is a synthetic-only review, not production. No public ingress, clinical use
 
 ## Provider support question (Persian)
 سلام. برای PostgreSQL مدیریت‌شده mano-db روی شبکه خصوصی، آیا TLS با اعتبارسنجی کامل گواهی و نام میزبان (verify-full) پشتیبانی می‌شود؟ در آزمون SSLRequest قبلی پاسخ عدم پشتیبانی دریافت شد. لطفاً روش رسمی فعال‌سازی TLS، نام میزبان معتبر، CA مورد اعتماد، نیاز به ری‌استارت یا تغییر پلن و هزینه احتمالی را اعلام کنید. بدون تأیید قبلی هیچ تغییر یا هزینه‌ای اعمال نشود. دیتابیس نباید عمومی شود.
+
+## Operator visual review
+The CI-only browser harness now uses the existing MANO stylesheet and a 390 × 844 RTL viewport. After the real synthetic flow succeeds, CI saves five screenshots and a sanitized result.json into a seven-day GitHub Actions artifact named mano-synthetic-care-review. No database dumps, session tokens, cookies, real identities or secrets in that artifact. Screenshots are review evidence, not a live or downloadable app. The public build remains unchanged. This change itself requires a fresh green CI run.
