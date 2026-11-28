@@ -111,7 +111,11 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   assert.equal((await call('POST',state,a,{state:'acknowledged'})).status,200);
   assert.equal((await call('POST',state,a,{state:'acknowledged'})).status,404);
   assert.equal((await call('POST',state,a,{state:'followup_requested'})).status,200);
+  // Even if the other pharmacy has consent to this child, it cannot access this card.
+  await admin.query("INSERT INTO mano_stage.shares(profile_id,pharmacy_id,consent_version) VALUES($1,$2,'synthetic-v1')",[id,other]);
+  assert.deepEqual((await call('GET',care,q)).data.cards,[]);
   assert.equal((await call('POST',state,q,{state:'closed'})).status,404);
+  await admin.query('UPDATE mano_stage.shares SET revoked_at=now() WHERE profile_id=$1 AND pharmacy_id=$2',[id,other]);
   assert.equal((await call('POST',state,p,{state:'closed'})).status,200);
   assert.equal((await call('GET',care,a)).data.cards[0].state,'closed');
   assert.deepEqual((await admin.query('SELECT state FROM mano_stage.care_events WHERE card_id=$1 ORDER BY id',[cid])).rows.map(r=>r.state),['issued','acknowledged','followup_requested','closed']);
