@@ -13,6 +13,7 @@ import {startBrowserBridge} from './browser-bridge.mjs';
 
 const token=()=>randomBytes(32).toString('base64url');
 let admin,running,bridge,browser;
+let phase='configuration';
 try{
  const url=new URL(process.env.MANO_TEST_ADMIN_URL||'invalid:');
  const stage=new URL(process.env.MANO_TEST_TLS_URL||'invalid:');
@@ -31,8 +32,10 @@ try{
    MANO_INTEGRATION_SYNTHETIC_ONLY:'true',MANO_INTEGRATION_OPERATOR_TOKEN:token(),
    MANO_STAGE_ACCESS_TOKEN:token(),MANO_STAGE_CARE_ENABLED:'true',MANO_INTEGRATION_PORT:'0',MANO_STAGE_DATABASE_URL:stage.href,
    MANO_STAGE_DB_TLS:'verify-full',MANO_STAGE_DB_CA:await readFile(process.env.MANO_TEST_TLS_CA,'utf8')};
+ phase='private host startup';
  running=await startIntegration(env);
  bridge=await startBrowserBridge({upstreamPort:running.server.address().port,operatorToken:env.MANO_INTEGRATION_OPERATOR_TOKEN,syntheticOnly:true,careEnabled:true});
+ phase='browser startup';
  browser=await chromium.launch({headless:true});
  const context=await browser.newContext();
  await context.addCookies([{name:'mano_harness',value:bridge.cookie,url:bridge.origin,httpOnly:true,sameSite:'Strict'}]);
@@ -45,16 +48,24 @@ try{
   const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
   await page.route(bridge.origin+'/'+name+'.js',r=>r.fulfill({contentType:'text/javascript',body:js}));
  }
- const built=await build({configFile:false,logLevel:'error',plugins:[react()],build:{write:false,minify:false,lib:{entry:fileURLToPath(new URL('./care-review-entry.tsx',import.meta.url)),formats:['es'],fileName:'care-review'}}});
+ phase='React review bundle';
+ const built=await build({
+  root:fileURLToPath(new URL('../',import.meta.url)),configFile:false,logLevel:'error',plugins:[react()],
+  define:{'process.env.NODE_ENV':JSON.stringify('production')},
+  build:{write:false,minify:false,lib:{entry:fileURLToPath(new URL('./care-review-entry.tsx',import.meta.url)),formats:['es'],fileName:'care-review'}}
+ });
  const chunks=(Array.isArray(built)?built:[built]).flatMap(o=>o.output).filter(x=>x.type==='chunk');
  assert.equal(chunks.length,1);
  await page.route(bridge.origin+'/care-review.js',r=>r.fulfill({contentType:'text/javascript',body:chunks[0].code}));
+ phase='review document load';
  await page.goto(bridge.origin+'/harness');
  const mount=async(role,session)=>page.evaluate(async ({role,session,pharmacy})=>{
    const ui=await import('/care-review.js');ui.mountReview(role,session,pharmacy);
  },{role,session,pharmacy});
  const button=name=>page.getByRole('button',{name,exact:true});
+ phase='parent review mount';
  await mount('parent',a.secret);
+ phase='parent create profile';
  await button('انتخاب پرونده آزمایشی').click();
  await button('ساخت پرونده نمونه').click();
  const fixture=page.getByRole('button',{name:/demo-review-/});
@@ -62,10 +73,12 @@ try{
  const fixtureName=await fixture.innerText();
  await fixture.click();
  await page.getByRole('checkbox').check();
+ phase='parent consent';
  await button('اعطای دسترسی').click();
  await button('تازه‌سازی کارت‌ها').waitFor();
  await page.getByRole('checkbox').waitFor();
  await page.waitForFunction(()=>!document.querySelector('button:disabled') || !Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='تازه‌سازی کارت‌ها')?.disabled);
+ phase='pharmacist issue review';
  await mount('pharmacist',p.secret);
  await page.getByRole('heading',{name:'پنل آزمایشی داروساز'}).waitFor();
  await button('پرونده کودک').click();
@@ -73,6 +86,7 @@ try{
  await page.getByRole('checkbox').check();
  await button('صدور کارت مراقبت آزمایشی').click();
  await page.getByText('صادر شده',{exact:true}).waitFor();
+ phase='parent followup review';
  await mount('parent',a.secret);
  await page.getByRole('heading',{name:'مراقبت خانواده'}).waitFor();
  await button('پرونده کودک').click();
@@ -84,10 +98,12 @@ try{
  await page.getByRole('heading',{name:'پنل آزمایشی داروساز'}).waitFor();
  await button('پرونده کودک').click();
  await button(fixtureName).click();
+ phase='pharmacist close review';
  await button('بستن پیگیری آزمایشی').click();
  await page.getByText('پیگیری بسته شد',{exact:true}).waitFor();
  await page.evaluate(async()=>{const ui=await import('/care-review.js');ui.unmountReview();});
  console.log('PERSIAN CARE REVIEW UI: PASS');
+ phase='browser adapter assertions';
  const result=await page.evaluate(async({a,b,p,pharmacy})=>{
   const {IndependentStageClient}=await import('/independentStageClient.js');
   const {privateBrowserTransport}=await import('/independentBrowserTransport.js');
@@ -117,8 +133,9 @@ try{
   return checks;
  },{a:a.secret,b:b.secret,p:p.secret,pharmacy});
  assert.equal(result.length,15);assert.ok(result.every(Boolean));assert.equal(leaked,false);
+ phase='server logout verification';
  const {rows:[r]}=await admin.query('SELECT count(*)::int AS n FROM mano_stage.sessions WHERE account_id=ANY($1::uuid[]) AND revoked_at IS NOT NULL',[[a.id,b.id,p.id]]);
  assert.equal(r.n,3);
  console.log('BROWSER + PRIVATE BRIDGE + VERIFIED POSTGRES TLS: PASS');
-}catch(e){console.error('BROWSER PRIVATE INTEGRATION: FAIL',e.name);process.exitCode=1;}
+}catch(e){console.error('BROWSER PRIVATE INTEGRATION: FAIL',phase,e.name); if(phase==='React review bundle') console.error('Bundle failure category:',e.code||'BUILD_ERROR');process.exitCode=1;}
 finally{if(browser)await browser.close();if(bridge)await bridge.close();if(running)await running.close();if(admin)await admin.end();}
