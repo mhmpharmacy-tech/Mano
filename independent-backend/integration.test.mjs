@@ -6,7 +6,8 @@ import pg from 'pg';
 import {createStageServer} from './server.mjs';
 import {digest,databaseOptions} from './policy.mjs';
 import {demoAuth} from './demo-auth.mjs';
-import {createIntegrationHost} from './integration-host.mjs';
+import {createIntegrationHost,startIntegration} from './integration-host.mjs';
+import {IndependentStageClient} from '../src/online/independentStageClient.ts';
 import {once} from 'node:events';
 const token=()=>randomBytes(32).toString('base64url');
 test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and revocation',async t=>{
@@ -100,10 +101,46 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
     };
     assert.deepEqual(await get(a),[id]);assert.deepEqual(await get(b),[]);assert.deepEqual(await get(p),[id]);assert.deepEqual(await get(q),[]);
   }finally{await new Promise(resolve=>host.close(resolve));}
+  // Real TypeScript adapter over the internal HTTP listener and the actual database.
+  const launchEnv={...env,MANO_INTEGRATION_ENABLED:'true',MANO_INTEGRATION_SYNTHETIC_ONLY:'true',
+    MANO_INTEGRATION_OPERATOR_TOKEN:token(),MANO_INTEGRATION_PORT:'0'};
+  await assert.rejects(startIntegration({...launchEnv,MANO_INTEGRATION_SYNTHETIC_ONLY:'false'}));
+  const running=await startIntegration(launchEnv);
+  try {
+    assert.equal(running.server.address().address,'127.0.0.1');
+    const base='http://127.0.0.1:'+running.server.address().port;
+    const transport=async req=>{
+      const response=await fetch(base+req.path,{method:req.method,redirect:'error',signal:req.signal,
+        headers:{'x-mano-operator-token':launchEnv.MANO_INTEGRATION_OPERATOR_TOKEN,authorization:'Bearer '+req.bearer,
+          ...(req.body?{'content-type':'application/json'}:{})},
+        ...(req.body?{body:JSON.stringify(req.body)}:{})});
+      return {status:response.status,data:await response.json()};
+    };
+    const parent=new IndependentStageClient(true,transport);
+    const pharmacist=new IndependentStageClient(true,transport);
+    const otherParent=new IndependentStageClient(true,transport);
+    parent.setSession(a.secret);pharmacist.setSession(p.secret);otherParent.setSession(b.secret);
+    assert.ok((await parent.list()).some(row=>row.id===id&&row.ageMonths===12));
+    assert.deepEqual(await otherParent.list(),[]);
+    assert.ok((await pharmacist.list()).some(row=>row.id===id));
+    // A second synthetic profile tests the complete adapter write/consent cycle.
+    const adapterId=await otherParent.create('demo-adapter',25);
+    assert.ok((await otherParent.list()).some(row=>row.id===adapterId));
+    assert.ok(!(await parent.list()).some(row=>row.id===adapterId));
+    assert.ok(!(await pharmacist.list()).some(row=>row.id===adapterId));
+    await otherParent.grant(adapterId,f,true);
+    assert.ok((await pharmacist.list()).some(row=>row.id===adapterId));
+    await otherParent.revoke(adapterId,f);
+    assert.ok(!(await pharmacist.list()).some(row=>row.id===adapterId));
+    await otherParent.logout();
+    await assert.rejects(otherParent.list());
+    // Logout must invalidate the same bearer even outside this adapter.
+    assert.equal((await call('GET','/v1/profiles',b)).status,401);
+  }finally{await running.close();}
   await admin.query('UPDATE mano_stage.memberships SET active=false WHERE account_id=$1',[p.id]);
   assert.deepEqual(await list(p),[]);
   await admin.query('UPDATE mano_stage.memberships SET active=true WHERE account_id=$1',[p.id]);
-  assert.equal((await call('DELETE',path+'/'+f,b)).status,404);
+  assert.equal((await call('DELETE',path+'/'+f,b)).status,401);
   assert.equal((await call('DELETE',path+'/'+f,a)).status,200);
   assert.deepEqual(await list(p),[]);
   await admin.query('UPDATE mano_stage.sessions SET revoked_at=now() WHERE account_id=$1',[a.id]);
@@ -112,8 +149,8 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   await assert.rejects(pool.query('DELETE FROM mano_stage.profiles WHERE id=$1',[id]),{code:'42501'});
   await assert.rejects(pool.query('SELECT * FROM mano_stage.audit_events'),{code:'42501'});
   const events=(await admin.query('SELECT actor_id,action FROM mano_stage.audit_events')).rows;
-  assert.equal(events.filter(e=>e.action==='profile.create').length,1);
-  assert.equal(events.filter(e=>e.action==='share.grant').length,1);
-  assert.equal(events.filter(e=>e.action==='share.revoke').length,1);
+  assert.equal(events.filter(e=>e.action==='profile.create').length,2);
+  assert.equal(events.filter(e=>e.action==='share.grant').length,2);
+  assert.equal(events.filter(e=>e.action==='share.revoke').length,2);
   assert.ok(events.some(e=>e.actor_id===b.id&&e.action==='session.logout'));
 });
