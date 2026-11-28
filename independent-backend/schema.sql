@@ -44,25 +44,25 @@ GRANT UPDATE (revoked_at,granted_at) ON mano_stage.shares TO mano_stage_app;
 -- Resolve the request identity from the session digest, not a caller-supplied role.
 -- SECURITY DEFINER helpers are owned by the schema migration owner, not the runtime role.
 CREATE FUNCTION mano_stage.actor() RETURNS TABLE(id uuid, role text)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, mano_stage AS $
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, mano_stage AS $mano$
   SELECT a.id,a.role FROM mano_stage.sessions s JOIN mano_stage.accounts a ON a.id=s.account_id
   WHERE s.token_hash=current_setting('mano_stage.session_digest',true)
     AND s.revoked_at IS NULL AND s.expires_at>statement_timestamp() AND a.active
-$;
+$mano$;
 CREATE FUNCTION mano_stage.can_read_profile(pid uuid) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, mano_stage AS $
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, mano_stage AS $mano$
  SELECT EXISTS(SELECT 1 FROM mano_stage.actor() a JOIN mano_stage.profiles p ON p.id=pid
  WHERE (a.role='parent' AND p.owner_id=a.id) OR
  (a.role='pharmacist' AND EXISTS(SELECT 1 FROM mano_stage.shares s
  JOIN mano_stage.memberships m ON m.pharmacy_id=s.pharmacy_id
  JOIN mano_stage.pharmacies f ON f.id=s.pharmacy_id
  WHERE s.profile_id=p.id AND s.revoked_at IS NULL AND m.account_id=a.id AND m.active AND f.active)))
-$;
+$mano$;
 CREATE FUNCTION mano_stage.owns_profile(pid uuid) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, mano_stage AS $
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, mano_stage AS $mano$
  SELECT EXISTS(SELECT 1 FROM mano_stage.profiles p JOIN mano_stage.actor() a ON a.id=p.owner_id
  WHERE p.id=pid AND a.role='parent')
-$;
+$mano$;
 REVOKE ALL ON FUNCTION mano_stage.actor(), mano_stage.can_read_profile(uuid), mano_stage.owns_profile(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION mano_stage.actor(), mano_stage.can_read_profile(uuid), mano_stage.owns_profile(uuid) TO mano_stage_app;
 REVOKE SELECT ON mano_stage.sessions, mano_stage.accounts, mano_stage.memberships FROM mano_stage_app;
@@ -95,7 +95,7 @@ CREATE TABLE mano_stage.demo_challenge (
   consumed boolean NOT NULL DEFAULT false
 );
 CREATE FUNCTION mano_stage.issue_demo_challenge(h text,c uuid,proof text) RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $mano$
 BEGIN
  IF NOT EXISTS (SELECT 1 FROM mano_stage.demo_identity i JOIN mano_stage.accounts a ON a.id=i.account_id WHERE i.handle=h AND a.active) THEN RETURN false; END IF;
  INSERT INTO mano_stage.demo_challenge(handle,challenge_id,proof_hash,expires_at)
@@ -104,9 +104,9 @@ BEGIN
  expires_at=now()+interval '5 minutes',attempts=0,consumed=false
  WHERE mano_stage.demo_challenge.issued_at < now()-interval '60 seconds';
  RETURN FOUND;
-END $;
+END $mano$;
 CREATE FUNCTION mano_stage.verify_demo_challenge(c uuid,proof text,new_session text) RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $mano$
 DECLARE d mano_stage.demo_challenge%ROWTYPE; aid uuid;
 BEGIN
  SELECT * INTO d FROM mano_stage.demo_challenge WHERE challenge_id=c FOR UPDATE;
@@ -118,12 +118,12 @@ BEGIN
  UPDATE mano_stage.demo_challenge SET consumed=true WHERE challenge_id=c;
  INSERT INTO mano_stage.sessions(token_hash,account_id,expires_at) VALUES(new_session,aid,now()+interval '30 minutes');
  RETURN true;
-END $;
+END $mano$;
 CREATE FUNCTION mano_stage.revoke_session() RETURNS void
-LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $mano$
  UPDATE mano_stage.sessions SET revoked_at=now()
  WHERE token_hash=current_setting('mano_stage.session_digest',true) AND revoked_at IS NULL
-$;
+$mano$;
 REVOKE ALL ON FUNCTION mano_stage.issue_demo_challenge(text,uuid,text),mano_stage.verify_demo_challenge(uuid,text,text),mano_stage.revoke_session() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION mano_stage.issue_demo_challenge(text,uuid,text),mano_stage.verify_demo_challenge(uuid,text,text),mano_stage.revoke_session() TO mano_stage_app;
 REVOKE ALL ON mano_stage.demo_identity,mano_stage.demo_challenge FROM PUBLIC;
@@ -134,9 +134,9 @@ CREATE TABLE mano_stage.audit_events (
  occurred_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE FUNCTION mano_stage.record_audit(event_action text) RETURNS void
-LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $mano$
  INSERT INTO mano_stage.audit_events(actor_id,action) SELECT id,event_action FROM mano_stage.actor()
-$;
+$mano$;
 REVOKE ALL ON mano_stage.audit_events FROM PUBLIC;
 REVOKE ALL ON FUNCTION mano_stage.record_audit(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION mano_stage.record_audit(text) TO mano_stage_app;
