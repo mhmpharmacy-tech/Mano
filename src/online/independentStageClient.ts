@@ -5,6 +5,12 @@ export type StageTransport = (request: {
   method: 'GET' | 'POST' | 'DELETE'; path: string; bearer: string; body?: object; signal: AbortSignal;
 }) => Promise<{ status: number; data: unknown }>;
 export type StageProfile = { id: string; alias: string; ageMonths: number };
+export const careStates = ['issued','acknowledged','followup_requested','closed'] as const;
+export type CareState = typeof careStates[number];
+export type StageCareCard = { id: string; pharmacyId: string; template: 'demo-care-v1'; state: CareState };
+function isCareState(value: unknown): value is CareState {
+  return typeof value === 'string' && (careStates as readonly string[]).includes(value);
+}
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const aliasPattern = /^demo-[a-z0-9-]{1,40}$/;
 const record = (value: unknown): value is Record<string, unknown> =>
@@ -66,6 +72,28 @@ export class IndependentStageClient {
   async revoke(id: string, pharmacyId: string) {
     if (!uuid.test(id)||!uuid.test(pharmacyId)) throw new Error('INVALID_ID');
     const data=await this.request('DELETE','/internal/mano/v1/profiles/'+id+'/shares/'+pharmacyId,200);
+    if (!record(data)||data.ok!==true) throw new Error('INVALID_RESPONSE');
+  }
+  async listCare(profileId: string): Promise<StageCareCard[]> {
+    if (!uuid.test(profileId)) throw new Error('INVALID_ID');
+    const data = await this.request('GET','/internal/mano/v1/profiles/'+profileId+'/care-cards',200);
+    if (!record(data) || !Array.isArray(data.cards) || data.cards.length > 100) throw new Error('INVALID_RESPONSE');
+    return data.cards.map((card: unknown) => {
+      if (!record(card) || typeof card.id !== 'string' || !uuid.test(card.id) ||
+          typeof card.pharmacy_id !== 'string' || !uuid.test(card.pharmacy_id) ||
+          card.template !== 'demo-care-v1' || !isCareState(card.state)) throw new Error('INVALID_RESPONSE');
+      return {id:card.id,pharmacyId:card.pharmacy_id,template:card.template,state:card.state};
+    });
+  }
+  async issueCare(profileId: string, pharmacyId: string, confirmed: boolean) {
+    if (!uuid.test(profileId)||!uuid.test(pharmacyId)||confirmed!==true) throw new Error('CONFIRMATION_REQUIRED');
+    const data = await this.request('POST','/internal/mano/v1/profiles/'+profileId+'/care-cards',201,{pharmacyId,template:'demo-care-v1'});
+    if (!record(data)||typeof data.id!=='string'||!uuid.test(data.id)) throw new Error('INVALID_RESPONSE');
+    return data.id;
+  }
+  async transitionCare(profileId: string, cardId: string, state: Exclude<CareState,'issued'>) {
+    if (!uuid.test(profileId)||!uuid.test(cardId)||!isCareState(state)||(state as CareState)==='issued') throw new Error('INVALID_TRANSITION');
+    const data = await this.request('POST','/internal/mano/v1/profiles/'+profileId+'/care-cards/'+cardId+'/state',200,{state});
     if (!record(data)||data.ok!==true) throw new Error('INVALID_RESPONSE');
   }
   async logout() {
