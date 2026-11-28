@@ -5,7 +5,7 @@ import {sameToken,tokenPattern} from './policy.mjs';
 
 // Operator-only local browser harness, NOT a deployable public BFF.
 // The test runner injects a short-lived HttpOnly cookie; there is no cookie issuance route.
-export async function startBrowserBridge({upstreamPort,operatorToken,syntheticOnly}){
+export async function startBrowserBridge({upstreamPort,operatorToken,syntheticOnly,careEnabled=false}){
  if(syntheticOnly!==true||!Number.isInteger(upstreamPort)||upstreamPort<1024||upstreamPort>65535||!tokenPattern.test(operatorToken||''))throw new Error('Invalid bridge configuration');
  const cookie=randomBytes(32).toString('base64url');
  const expiry=Date.now()+15*60*1000;
@@ -22,7 +22,11 @@ export async function startBrowserBridge({upstreamPort,operatorToken,syntheticOn
      (req.headers['sec-fetch-site']&&req.headers['sec-fetch-site']!=='same-origin')||
      !['GET','POST','DELETE'].includes(req.method))return notFound();
   if(req.method!=='GET'&&req.headers.origin!==origin)return notFound();
-  if(!/^\/internal\/mano\/v1\/(?:profiles(?:\/[a-fA-F0-9-]{36}\/shares(?:\/[a-fA-F0-9-]{36})?)?|session\/logout|auth\/(?:issue|verify))$/.test(path))return notFound();
+  const existingRoute=/^\/internal\/mano\/v1\/(?:profiles(?:\/[a-fA-F0-9-]{36}\/shares(?:\/[a-fA-F0-9-]{36})?)?|session\/logout|auth\/(?:issue|verify))$/.test(path);
+  const careRoute=careEnabled===true &&
+    ((['GET','POST'].includes(req.method)&&/^\/internal\/mano\/v1\/profiles\/[a-fA-F0-9-]{36}\/care-cards$/.test(path))||
+    (req.method==='POST'&&/^\/internal\/mano\/v1\/profiles\/[a-fA-F0-9-]{36}\/care-cards\/[a-fA-F0-9-]{36}\/state$/.test(path)));
+  if(!existingRoute&&!careRoute)return notFound();
   if(++requests>200||active>=4)return send(429,{code:'RATE_LIMITED'});
   active++;
   try{
