@@ -21,3 +21,8 @@ This stacked branch builds on the verified PostgreSQL stage PR #33. The operator
 - The real PostgreSQL CI also starts the integration service with startup checks, runs the TypeScript adapter over HTTP, exercises synthetic OTP issuance/replay rejection through HTTP, profile isolation and consent, and confirms revocation at the server.
 - Standalone Kotlin JVM tests: `gradle -p android-integration-test test --no-daemon`. This does not produce an APK or prove phone-to-server connectivity.
 - The operator must supply a separate internal execution environment and encrypted transport approved by the provider before any real-data rollout. Do not deploy this branch to the live app, do not expose the internal port, and do not copy local patient records. Existing demo fixtures can remain only in the synthetic database.
+
+## Phase 3 verification additions
+- Keyboard focus: measured sticky header and bottom navigation, scroll correction on focus; no changes to brand, colors, layout or navigation labels. Browser CI must pass unchanged assertions.
+- CI provisions short-lived TLS certificates only in disposable local PostgreSQL. Tests assert encrypted transport, startup readiness, and rejection of an unrelated CA. This does not configure Liara TLS.
+- Kotlin JVM HTTP test runs the actual adapter against the loopback integration host and a TLS-enabled disposable database. Test-only operator gate is never in Android main sources. Profile creation, isolation, consent, revocation and server-side logout are checked. This is not APK/device validation or public client transport.
