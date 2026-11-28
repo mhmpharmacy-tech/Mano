@@ -82,14 +82,12 @@ CREATE POLICY share_update ON mano_stage.shares FOR UPDATE TO mano_stage_app
 -- Runtime role must never be owner, member of owner role or BYPASSRLS.
 -- Synthetic-only authentication: pre-enrolled identifiers, no open signup or SMS delivery.
 CREATE TABLE mano_stage.demo_identity (
-  handle text PRIMARY KEY CHECK(handle ~ '^demo-[a-z0-9]{1,40}
-),
+  handle text PRIMARY KEY CHECK(handle ~ '^demo-[a-z0-9]{1,40}$'),
   account_id uuid UNIQUE NOT NULL REFERENCES mano_stage.accounts(id)
 );
 CREATE TABLE mano_stage.demo_challenge (
   handle text PRIMARY KEY REFERENCES mano_stage.demo_identity(handle),
-  challenge_id uuid UNIQUE NOT NULL, proof_hash text NOT NULL CHECK(proof_hash ~ '^[a-f0-9]{64}
-),
+  challenge_id uuid UNIQUE NOT NULL, proof_hash text NOT NULL CHECK(proof_hash ~ '^[a-f0-9]{64}$'),
   issued_at timestamptz NOT NULL DEFAULT now(), expires_at timestamptz NOT NULL,
   attempts integer NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 5),
   consumed boolean NOT NULL DEFAULT false
