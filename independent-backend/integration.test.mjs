@@ -18,6 +18,7 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   t.after(()=>admin.end());
   await admin.query("CREATE ROLE mano_stage_app LOGIN PASSWORD 'ci-synthetic-only-password'");
   await admin.query(await readFile(new URL('./schema.sql',import.meta.url),'utf8'));
+  await admin.query(await readFile(new URL('./care-loop.sql',import.meta.url),'utf8'));
   const env={MANO_INDEPENDENT_STAGE_ENABLED:'true',MANO_STAGE_ACCESS_TOKEN:token(),
     MANO_STAGE_DATABASE_URL:'postgresql://mano_stage_app:ci-synthetic-only-password@'+adminUrl.host+'/mano_stage',
     MANO_STAGE_DB_TLS:'private-test'};
@@ -91,6 +92,31 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   assert.equal((await call('POST',path,p,consent)).status,403);
   assert.equal((await call('POST',path,a,consent)).status,200);
   assert.deepEqual(await list(p),[id]);assert.deepEqual(await list(q),[]);
+  // Care loop remains separately disabled unless explicitly enabled.
+  const care='/v1/profiles/'+id+'/care-cards';
+  const draft={pharmacyId:f,template:'demo-care-v1'};
+  assert.equal((await call('GET',care,a)).status,404);
+  env.MANO_STAGE_CARE_ENABLED='true';
+  assert.equal((await call('GET',care,b)).status,404);
+  assert.equal((await call('POST',care,a,draft)).status,403);
+  assert.equal((await call('POST',care,q,draft)).status,404);
+  assert.equal((await call('POST',care,p,{...draft,note:'not allowed'})).status,400);
+  const card=await call('POST',care,p,draft);
+  assert.equal(card.status,201);
+  const cid=card.data.id, state=care+'/'+cid+'/state';
+  assert.equal((await call('GET',care,a)).data.cards[0].state,'issued');
+  assert.equal((await call('POST',state,a,{state:'closed'})).status,404);
+  assert.equal((await call('POST',state,p,{state:'acknowledged'})).status,404);
+  assert.equal((await call('POST',state,b,{state:'acknowledged'})).status,404);
+  assert.equal((await call('POST',state,a,{state:'acknowledged'})).status,200);
+  assert.equal((await call('POST',state,a,{state:'acknowledged'})).status,404);
+  assert.equal((await call('POST',state,a,{state:'followup_requested'})).status,200);
+  assert.equal((await call('POST',state,q,{state:'closed'})).status,404);
+  assert.equal((await call('POST',state,p,{state:'closed'})).status,200);
+  assert.equal((await call('GET',care,a)).data.cards[0].state,'closed');
+  assert.deepEqual((await admin.query('SELECT state FROM mano_stage.care_events WHERE card_id=$1 ORDER BY id',[cid])).rows.map(r=>r.state),['issued','acknowledged','followup_requested','closed']);
+  await assert.rejects(pool.query('SELECT * FROM mano_stage.care_cards'),{code:'42501'});
+  await assert.rejects(pool.query('SELECT * FROM mano_stage.care_events'),{code:'42501'});
   const operatorToken=token();
   const host=createIntegrationHost(pool,{...env,MANO_INTEGRATION_ENABLED:'true',MANO_INTEGRATION_OPERATOR_TOKEN:operatorToken});
   host.listen(0,'127.0.0.1');await once(host,'listening');
@@ -168,6 +194,9 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   assert.equal((await call('DELETE',path+'/'+f,b)).status,401);
   assert.equal((await call('DELETE',path+'/'+f,a)).status,200);
   assert.deepEqual(await list(p),[]);
+  assert.equal((await call('GET',care,p)).status,404);
+  assert.equal((await call('POST',care,p,draft)).status,404);
+  assert.equal((await call('GET',care,a)).data.cards[0].state,'closed');
   await admin.query('UPDATE mano_stage.sessions SET revoked_at=now() WHERE account_id=$1',[a.id]);
   assert.equal((await call('GET','/v1/profiles',a)).status,401);
   await assert.rejects(pool.query('UPDATE mano_stage.accounts SET role=\'pharmacist\' WHERE id=$1',[b.id]),{code:'42501'});
