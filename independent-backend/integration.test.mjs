@@ -5,6 +5,7 @@ import {readFile} from 'node:fs/promises';
 import pg from 'pg';
 import {createStageServer} from './server.mjs';
 import {digest,databaseOptions} from './policy.mjs';
+import {demoAuth} from './demo-auth.mjs';
 const token=()=>randomBytes(32).toString('base64url');
 test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and revocation',async t=>{
   const adminUrl=new URL(process.env.MANO_TEST_ADMIN_URL||'invalid:');
@@ -51,6 +52,36 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   assert.equal(created.status,201);const id=created.data.id;
   const list=async who=>(await call('GET','/v1/profiles',who)).data.profiles.map(x=>x.id);
   assert.deepEqual(await list(a),[id]);assert.deepEqual(await list(b),[]);assert.deepEqual(await list(p),[]);
+  assert.deepEqual((await pool.query('SELECT id FROM mano_stage.profiles')).rows,[]);
+  await assert.rejects(pool.query('SELECT token_hash FROM mano_stage.sessions'),{code:'42501'});
+  const scoped=await pool.connect();
+  try {
+    await scoped.query('BEGIN');
+    await scoped.query("SELECT set_config('mano_stage.session_digest',$1,true)",[digest(b.secret)]);
+    assert.deepEqual((await scoped.query('SELECT id FROM mano_stage.profiles')).rows,[]);
+    await scoped.query('ROLLBACK');
+  } finally {scoped.release();}
+  await admin.query('INSERT INTO mano_stage.demo_identity(handle,account_id) VALUES($1,$2)',['demo-auth',b.id]);
+  const deliveries=[];
+  const auth=demoAuth(pool,{...env,MANO_STAGE_DEMO_AUTH_ENABLED:'true',MANO_STAGE_OTP_KEY:token()},async msg=>{deliveries.push(msg);});
+  assert.equal(demoAuth(pool,env,()=>{}),null);
+  await auth.issue('demo-missing');assert.equal(deliveries.length,0);
+  const challenge=await auth.issue('demo-auth');assert.equal(deliveries.length,1);
+  assert.deepEqual(Object.keys(challenge),['challengeId']);
+  await auth.issue('demo-auth');assert.equal(deliveries.length,1);
+  const code=deliveries[0].code,wrong=code==='000000'?'000001':'000000';
+  assert.equal(await auth.verify(challenge.challengeId,wrong),null);
+  const newSession=await auth.verify(challenge.challengeId,code);assert.ok(newSession.token);
+  assert.equal(await auth.verify(challenge.challengeId,code),null);
+  const signed={secret:newSession.token};
+  assert.equal((await call('GET','/v1/profiles',signed)).status,200);
+  assert.equal((await call('POST','/v1/session/logout',signed)).status,200);
+  assert.equal((await call('GET','/v1/profiles',signed)).status,401);
+  await admin.query("UPDATE mano_stage.demo_challenge SET issued_at=now()-interval '2 minutes' WHERE handle='demo-auth'");
+  const second=await auth.issue('demo-auth');
+  const wrong2=deliveries[1].code==='000000'?'000001':'000000';
+  for(let i=0;i<5;i++)assert.equal(await auth.verify(second.challengeId,wrong2),null);
+  assert.equal(await auth.verify(second.challengeId,deliveries[1].code),null);
   const path='/v1/profiles/'+id+'/shares',consent={pharmacyId:f,consent:'synthetic-v1'};
   assert.equal((await call('POST',path,b,consent)).status,404);
   assert.equal((await call('POST',path,p,consent)).status,403);
