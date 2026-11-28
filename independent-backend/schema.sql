@@ -80,4 +80,51 @@ CREATE POLICY share_update ON mano_stage.shares FOR UPDATE TO mano_stage_app
  USING (mano_stage.owns_profile(profile_id)) WITH CHECK (mano_stage.owns_profile(profile_id));
 -- Schema owner intentionally bypasses RLS for controlled admin/provisioning only.
 -- Runtime role must never be owner, member of owner role or BYPASSRLS.
+-- Synthetic-only authentication: pre-enrolled identifiers, no open signup or SMS delivery.
+CREATE TABLE mano_stage.demo_identity (
+  handle text PRIMARY KEY CHECK(handle ~ '^demo-[a-z0-9]{1,40}
+),
+  account_id uuid UNIQUE NOT NULL REFERENCES mano_stage.accounts(id)
+);
+CREATE TABLE mano_stage.demo_challenge (
+  handle text PRIMARY KEY REFERENCES mano_stage.demo_identity(handle),
+  challenge_id uuid UNIQUE NOT NULL, proof_hash text NOT NULL CHECK(proof_hash ~ '^[a-f0-9]{64}
+),
+  issued_at timestamptz NOT NULL DEFAULT now(), expires_at timestamptz NOT NULL,
+  attempts integer NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 5),
+  consumed boolean NOT NULL DEFAULT false
+);
+CREATE FUNCTION mano_stage.issue_demo_challenge(h text,c uuid,proof text) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM mano_stage.demo_identity i JOIN mano_stage.accounts a ON a.id=i.account_id WHERE i.handle=h AND a.active) THEN RETURN false; END IF;
+ INSERT INTO mano_stage.demo_challenge(handle,challenge_id,proof_hash,expires_at)
+ VALUES(h,c,proof,now()+interval '5 minutes')
+ ON CONFLICT(handle) DO UPDATE SET challenge_id=c,proof_hash=proof,issued_at=now(),
+ expires_at=now()+interval '5 minutes',attempts=0,consumed=false
+ WHERE mano_stage.demo_challenge.issued_at < now()-interval '60 seconds';
+ RETURN FOUND;
+END $;
+CREATE FUNCTION mano_stage.verify_demo_challenge(c uuid,proof text,new_session text) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+DECLARE d mano_stage.demo_challenge%ROWTYPE; aid uuid;
+BEGIN
+ SELECT * INTO d FROM mano_stage.demo_challenge WHERE challenge_id=c FOR UPDATE;
+ IF NOT FOUND OR d.consumed OR d.attempts>=5 OR d.expires_at<=clock_timestamp() THEN RETURN false; END IF;
+ UPDATE mano_stage.demo_challenge SET attempts=attempts+1 WHERE challenge_id=c;
+ IF d.proof_hash<>proof THEN RETURN false; END IF;
+ SELECT a.id INTO aid FROM mano_stage.demo_identity i JOIN mano_stage.accounts a ON a.id=i.account_id WHERE i.handle=d.handle AND a.active;
+ IF aid IS NULL THEN RETURN false; END IF;
+ UPDATE mano_stage.demo_challenge SET consumed=true WHERE challenge_id=c;
+ INSERT INTO mano_stage.sessions(token_hash,account_id,expires_at) VALUES(new_session,aid,now()+interval '30 minutes');
+ RETURN true;
+END $;
+CREATE FUNCTION mano_stage.revoke_session() RETURNS void
+LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,mano_stage AS $
+ UPDATE mano_stage.sessions SET revoked_at=now()
+ WHERE token_hash=current_setting('mano_stage.session_digest',true) AND revoked_at IS NULL
+$;
+REVOKE ALL ON FUNCTION mano_stage.issue_demo_challenge(text,uuid,text),mano_stage.verify_demo_challenge(uuid,text,text),mano_stage.revoke_session() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION mano_stage.issue_demo_challenge(text,uuid,text),mano_stage.verify_demo_challenge(uuid,text,text),mano_stage.revoke_session() TO mano_stage_app;
+REVOKE ALL ON mano_stage.demo_identity,mano_stage.demo_challenge FROM PUBLIC;
 COMMIT;
