@@ -19,7 +19,7 @@ export function createIntegrationHost(pool,env){
        !sameToken(req.headers['x-mano-operator-token'],env.MANO_INTEGRATION_OPERATOR_TOKEN)||
        req.headers['x-mano-stage-token']||!['GET','POST','DELETE'].includes(req.method))return reject();
     const p=req.url||'';
-    if(!/^\/internal\/mano\/v1\/(?:profiles(?:\/[a-f0-9-]{36}\/shares(?:\/[a-f0-9-]{36})?)?|session\/logout)$/.test(p))return reject();
+    if(!/^\/internal\/mano\/v1\/(?:profiles(?:\/[a-fA-F0-9-]{36}\/shares(?:\/[a-fA-F0-9-]{36})?)?|session\/logout)$/.test(p))return reject();
     req.url=p.slice('/internal/mano'.length);
     req.headers['x-mano-stage-token']=env.MANO_STAGE_ACCESS_TOKEN;
     delete req.headers['x-mano-operator-token'];
