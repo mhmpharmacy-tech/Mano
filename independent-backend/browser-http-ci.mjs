@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import {randomBytes,randomUUID} from 'node:crypto';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import pg from 'pg';
 import ts from 'typescript';
 import {chromium} from 'playwright';
 import {build} from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import {fileURLToPath} from 'node:url';
 import {digest} from './policy.mjs';
 import {startIntegration} from './integration-host.mjs';
@@ -37,12 +38,15 @@ try{
  bridge=await startBrowserBridge({upstreamPort:running.server.address().port,operatorToken:env.MANO_INTEGRATION_OPERATOR_TOKEN,syntheticOnly:true,careEnabled:true});
  phase='browser startup';
  browser=await chromium.launch({headless:true});
- const context=await browser.newContext();
+ const context=await browser.newContext({viewport:{width:390,height:844},locale:'fa-IR',reducedMotion:'reduce'});
+ const evidenceDir=new URL('./review-evidence/',import.meta.url);
+ await mkdir(evidenceDir,{recursive:true});
+ const capture=async name=>{await page.screenshot({path:fileURLToPath(new URL(name+'.png',evidenceDir)),fullPage:true,animations:'disabled'});};
  await context.addCookies([{name:'mano_harness',value:bridge.cookie,url:bridge.origin,httpOnly:true,sameSite:'Strict'}]);
  const page=await context.newPage();
  let leaked=false;
  page.on('request',req=>{if(req.headers()['x-mano-operator-token']||req.headers()['x-mano-stage-token'])leaked=true;});
- await page.route(bridge.origin+'/harness',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><html lang="fa" dir="rtl"><title>MANO synthetic harness</title><div id="care-review-root"></div></html>'}));
+ await page.route(bridge.origin+'/harness',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><html lang="fa" dir="rtl"><title>MANO synthetic harness</title><link rel="stylesheet" href="/review.css"><main style="max-width:640px;margin:auto;padding:16px"><div id="care-review-root"></div></main></html>'}));
  for(const name of ['independentStageClient','independentBrowserTransport']){
   const source=await readFile(new URL('../src/online/'+name+'.ts',import.meta.url),'utf8');
   const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -50,12 +54,15 @@ try{
  }
  phase='React review bundle';
  const built=await build({
-  root:fileURLToPath(new URL('../',import.meta.url)),configFile:false,logLevel:'error',plugins:[react()],
+  root:fileURLToPath(new URL('../',import.meta.url)),configFile:false,logLevel:'error',plugins:[react(),tailwindcss()],
   define:{'process.env.NODE_ENV':JSON.stringify('production')},
   build:{write:false,minify:false,lib:{entry:fileURLToPath(new URL('./care-review-entry.tsx',import.meta.url)),formats:['es'],fileName:'care-review'}}
  });
  const chunks=(Array.isArray(built)?built:[built]).flatMap(o=>o.output).filter(x=>x.type==='chunk');
  assert.equal(chunks.length,1);
+ const assets=(Array.isArray(built)?built:[built]).flatMap(o=>o.output).filter(x=>x.type==='asset'&&x.fileName.endsWith('.css'));
+ assert.equal(assets.length,1);
+ await page.route(bridge.origin+'/review.css',r=>r.fulfill({contentType:'text/css',body:assets[0].source}));
  await page.route(bridge.origin+'/care-review.js',r=>r.fulfill({contentType:'text/javascript',body:chunks[0].code}));
  phase='review document load';
  await page.goto(bridge.origin+'/harness');
@@ -65,12 +72,15 @@ try{
  const button=name=>page.getByRole('button',{name,exact:true});
  phase='parent review mount';
  await mount('parent',a.secret);
+ await page.getByRole('heading',{name:'مراقبت خانواده'}).waitFor();
+ await capture('01-family-home');
  phase='parent create profile';
  await button('انتخاب پرونده آزمایشی').click();
  await button('ساخت پرونده نمونه').click();
  const fixture=page.getByRole('button',{name:/demo-review-/});
  await fixture.waitFor();
  const fixtureName=await fixture.innerText();
+ await capture('02-child-profile');
  await fixture.click();
  await page.getByRole('checkbox').check();
  phase='parent consent';
@@ -86,6 +96,7 @@ try{
  await page.getByRole('checkbox').check();
  await button('صدور کارت مراقبت آزمایشی').click();
  await page.getByText('صادر شده',{exact:true}).waitFor();
+ await capture('03-pharmacist-card');
  phase='parent followup review';
  await mount('parent',a.secret);
  await page.getByRole('heading',{name:'مراقبت خانواده'}).waitFor();
@@ -94,6 +105,7 @@ try{
  await button('تأیید دریافت').click();
  await button('درخواست پیگیری').click();
  await page.getByText('در انتظار پیگیری',{exact:true}).waitFor();
+ await capture('04-family-followup');
  await mount('pharmacist',p.secret);
  await page.getByRole('heading',{name:'پنل آزمایشی داروساز'}).waitFor();
  await button('پرونده کودک').click();
@@ -101,6 +113,7 @@ try{
  phase='pharmacist close review';
  await button('بستن پیگیری آزمایشی').click();
  await page.getByText('پیگیری بسته شد',{exact:true}).waitFor();
+ await capture('05-followup-closed');
  await page.evaluate(async()=>{const ui=await import('/care-review.js');ui.unmountReview();});
  console.log('PERSIAN CARE REVIEW UI: PASS');
  phase='browser adapter assertions';
@@ -136,6 +149,7 @@ try{
  phase='server logout verification';
  const {rows:[r]}=await admin.query('SELECT count(*)::int AS n FROM mano_stage.sessions WHERE account_id=ANY($1::uuid[]) AND revoked_at IS NOT NULL',[[a.id,b.id,p.id]]);
  assert.equal(r.n,3);
+ await writeFile(new URL('result.json',evidenceDir),JSON.stringify({syntheticOnly:true,commit:process.env.GITHUB_SHA||'local',reactCareFlow:'pass',browserAssertions:result.length,allPassed:true,serverLogout:'pass',operatorHeadersExposed:false},null,2));
  console.log('BROWSER + PRIVATE BRIDGE + VERIFIED POSTGRES TLS: PASS');
 }catch(e){console.error('BROWSER PRIVATE INTEGRATION: FAIL',phase,e.name); if(phase==='React review bundle') console.error('Bundle failure category:',e.code||'BUILD_ERROR');process.exitCode=1;}
 finally{if(browser)await browser.close();if(bridge)await bridge.close();if(running)await running.close();if(admin)await admin.end();}
