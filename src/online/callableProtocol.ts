@@ -4,7 +4,7 @@ import { assertDispatchIdentity, OnlineBoundaryError, type CallableName, type Di
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const CALLABLE_NAMES = new Set<CallableName>([
   'listAcceptingPharmacies', 'issueConsultationTriagePass', 'submitConsultationCase',
-  'listParentConsultations', 'getPharmacyInbox', 'reviewConsultationCase',
+  'listParentConsultations', 'getPharmacyInbox', 'reviewConsultationCase', 'updateCareCard',
   'getAccountDeletionPolicy', 'requestAccountDeletion', 'getAccountDeletionStatus',
 ]);
 const ERROR_STATUS = new Set(['INVALID_ARGUMENT', 'FAILED_PRECONDITION', 'OUT_OF_RANGE', 'UNAUTHENTICATED', 'PERMISSION_DENIED', 'NOT_FOUND', 'ALREADY_EXISTS', 'ABORTED', 'RESOURCE_EXHAUSTED', 'CANCELLED', 'DATA_LOSS', 'UNKNOWN', 'INTERNAL', 'UNIMPLEMENTED', 'UNAVAILABLE', 'DEADLINE_EXCEEDED']);

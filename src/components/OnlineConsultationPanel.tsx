@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useMano } from '../state/ManoStore.tsx';
+import { CaseCarePanel } from './CaseCarePanel.tsx';
 import { useOnline } from '../online/context.ts';
 import { onlineErrorMessage } from '../online/config.ts';
 import { buildOnlineTriageInput, ONLINE_FLOWS, OnlineIntakeError, onlineRedFlags, selectedOnlineFlow, type OnlineIntakeDraft } from '../online/intake.ts';
@@ -36,7 +36,7 @@ const ConsultationForm: React.FC = () => {
     finally { if (isCurrent()) setBusy(false); }
   };
   const refreshCases = async () => {
-    const rows = parseParentCases(await controller.call<unknown>('listParentConsultations', { limit: 25 }, { clinical: true }));
+    const rows = parseParentCases(await controller.call<unknown>('listParentConsultations', { limit: 25 }, { clinical: true, expectedGeneration: generation }));
     if (isCurrent()) {
       setCases(rows);
       if (rows.length === 0) setNotice('هنوز پرسش آنلاینی برای این حساب ثبت نشده است.');
@@ -87,7 +87,7 @@ const ConsultationForm: React.FC = () => {
     </form>
     {error && <p role="alert" className="text-xs leading-6 text-[#B32334] dark:text-[#FF8594]">{error}</p>}
     {notice && <p role="status" className="text-xs leading-6">{notice}</p>}
-    {cases.length > 0 && <div className="space-y-3"><h3 className="text-sm font-bold">سوابق آنلاین همین حساب</h3>{cases.map(item => <article key={`${item.pharmacyId}-${item.caseId}`} className="space-y-2 rounded-2xl bg-[#F5F9F6] p-3 text-xs leading-6 dark:bg-[#16243B]"><p>{CASE_STATUS_LABELS[item.status]}</p><p className="whitespace-pre-wrap break-words">{item.questionSummaryFa}</p>{item.parentResponse ? <p className="whitespace-pre-wrap break-words">پاسخ داروساز: {item.parentResponse.replyTextFa}</p> : <p>هنوز پاسخی برای مراقب منتشر نشده است.</p>}</article>)}</div>}
+    {cases.length > 0 && <div className="space-y-3"><h3 className="text-sm font-bold">سوابق آنلاین همین حساب</h3>{cases.map(item => <article key={`${item.pharmacyId}-${item.caseId}`} className="space-y-2 rounded-2xl bg-[#F5F9F6] p-3 text-xs leading-6 dark:bg-[#16243B]"><p>{CASE_STATUS_LABELS[item.status]}</p><p className="whitespace-pre-wrap break-words">{item.questionSummaryFa}</p>{item.parentResponse ? <p className="whitespace-pre-wrap break-words">پاسخ داروساز: {item.parentResponse.replyTextFa}</p> : <p>هنوز پاسخی برای مراقب منتشر نشده است.</p>}<CaseCarePanel row={item} pharmacist={false} refresh={refreshCases} /></article>)}</div>}
   </div>;
 };
 
@@ -112,6 +112,11 @@ const PharmacistDesk: React.FC = () => {
     catch (err) { if (isCurrent()) setError(onlineErrorMessage(err)); }
     finally { if (isCurrent()) setBusy(false); }
   };
+  const refreshInbox = async () => {
+      if (!pharmacyId) return;
+      const rows = parseParentCases(await controller.call<unknown>('getPharmacyInbox', { pharmacyId, limit: 30 }, { clinical: true, expectedGeneration: generation }), pharmacyId);
+      if (isCurrent()) { setCases(rows); setSelected(''); setReply(''); setNote(''); setAttested(false); if (rows.length === 0) setNotice('در فهرست فعلی پرسشی وجود ندارد.'); }
+  };
   const updateCase = async (item: ParentCase, reviewed: boolean) => {
     if (!pharmacyId || item.pharmacyId !== pharmacyId) return;
     const result = await controller.call<unknown>('reviewConsultationCase', {
@@ -125,11 +130,7 @@ const PharmacistDesk: React.FC = () => {
   return <div className="space-y-4">
     <h3 className="text-sm font-bold">میز آنلاین داروساز</h3>
     <p className="text-xs leading-6">این بخش فقط برای داروساز تأییدشده و عضو فعال داروخانهٔ حساب است. حساب مدیریتی، دسترسی بررسی بالینی ندارد. «دریافت پرسش» به معنی تأیید درمان نیست.</p>
-    <button type="button" className={buttonClass} disabled={busy} onClick={() => void perform(async () => {
-      if (!pharmacyId) return;
-      const rows = parseParentCases(await controller.call<unknown>('getPharmacyInbox', { pharmacyId, limit: 30 }, { clinical: true }), pharmacyId);
-      if (isCurrent()) { setCases(rows); setSelected(''); setReply(''); setNote(''); setAttested(false); if (rows.length === 0) setNotice('در فهرست فعلی پرسشی وجود ندارد.'); }
-    })}>دریافت درخواست‌های داروخانهٔ من</button>
+    <button type="button" className={buttonClass} disabled={busy} onClick={() => void perform(refreshInbox)}>دریافت درخواست‌های داروخانهٔ من</button>
     <div className="space-y-3">{cases.map(item => <article key={item.caseId} className="space-y-3 rounded-2xl bg-[#F5F9F6] p-3 text-xs leading-6 dark:bg-[#16243B]">
       <p className="font-bold">{CASE_STATUS_LABELS[item.status]}</p><p className="whitespace-pre-wrap break-words">{item.questionSummaryFa}</p>
       {item.status === 'PENDING' && <button type="button" className={buttonClass} disabled={busy} onClick={() => void perform(() => updateCase(item, false))}>ثبت دریافت این پرسش</button>}
@@ -141,6 +142,7 @@ const PharmacistDesk: React.FC = () => {
         <button type="submit" className={buttonClass} disabled={busy || !attested || reply.trim().length < 10}>ثبت بررسی و انتشار پاسخ برای مراقب</button>
       </form>}
       {item.parentResponse && <p className="whitespace-pre-wrap break-words">پاسخ منتشرشده: {item.parentResponse.replyTextFa}</p>}
+      <CaseCarePanel row={item} pharmacist refresh={refreshInbox} />
     </article>)}</div>
     {error && <p role="alert" className="text-xs leading-6 text-[#B32334] dark:text-[#FF8594]">{error}</p>}
     {notice && <p role="status" className="text-xs leading-6">{notice}</p>}
@@ -149,14 +151,11 @@ const PharmacistDesk: React.FC = () => {
 
 export const OnlineConsultationPanel: React.FC = () => {
   const { enabled, session } = useOnline();
-  const { navigate } = useMano();
   return <section className="space-y-3 rounded-3xl border border-[#DCE7E1] bg-white p-5 dark:border-[#23344D] dark:bg-[#111C2E]" data-testid="online-consultation-panel">
     <h2 className="text-base font-extrabold">پرسش آنلاین غیرفوری</h2>
     {!enabled ? <p className="text-xs leading-6">ارسال آنلاین در این نسخه فعال نیست؛ یادداشت محلیِ پایین برای مراجعهٔ حضوری است و برای داروساز ارسال نمی‌شود.</p> : !session.user ? <p className="text-xs leading-6">برای استفاده از این بخش، از «پرونده کودک» وارد حساب آنلاین شوید. اطلاعات محلی به‌صورت خودکار ارسال نمی‌شود.</p> : !session.user.emailVerified ? <p className="text-xs leading-6">ایمیل را در بخش حساب تأیید کنید و وضعیت را تازه کنید. تا آن زمان اطلاعات مراقبتی ارسال نمی‌شود.</p> : session.user.staffRole ? session.user.staffRole === 'pharmacist' && session.user.staffVerified && session.user.pharmacyId ? <PharmacistDesk key={session.generation} /> : <p className="text-xs leading-6">دسترسی بالینی این حساب کارکنان تأیید نشده است. حساب مدیریتی نیز نمی‌تواند پاسخ بالینی را تأیید کند.</p> : <ConsultationForm key={session.generation} />}
     {enabled && !session.pending && !session.user?.emailVerified && (
-      <button type="button" className={buttonClass} onClick={() => navigate({ name: 'my-child' })}>
-        ورود یا تأیید حساب
-      </button>
+      <a className={`inline-flex items-center ${buttonClass}`} href="#/my-child">ورود یا تأیید حساب</a>
     )}
   </section>;
 };
