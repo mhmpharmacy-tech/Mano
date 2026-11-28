@@ -75,6 +75,13 @@ export async function startIntegration(env=process.env,deliver){
       FROM pg_roles r WHERE r.rolname=current_user`);
     if(!ready?.ok||(env.MANO_STAGE_DB_TLS==='verify-full'&&!ready.encrypted))throw new Error('Integration readiness failed');
     await pool.query('SELECT id FROM mano_stage.actor() LIMIT 0');
+    if(env.MANO_STAGE_CARE_ENABLED==='true'){
+      const {rows:[care]}=await pool.query(`SELECT count(*)=2 AND bool_and(c.relrowsecurity AND c.relowner<>r.oid
+        AND NOT has_table_privilege(current_user,c.oid,'SELECT,INSERT,UPDATE,DELETE')) AS ok
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace CROSS JOIN pg_roles r
+        WHERE n.nspname='mano_stage' AND c.relname IN ('care_cards','care_events') AND r.rolname=current_user`);
+      if(!care?.ok)throw new Error('Care schema readiness failed');
+    }
     const port=Number(env.MANO_INTEGRATION_PORT||'3101');
     if(!Number.isInteger(port)||(port!==0&&port<1024)||port>65535||port===3000)throw new Error('Invalid internal port');
     server.listen(port,'127.0.0.1');await once(server,'listening');
