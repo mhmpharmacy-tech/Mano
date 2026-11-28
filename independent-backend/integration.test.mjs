@@ -97,4 +97,10 @@ test('real PostgreSQL: protected stage, parent isolation, pharmacist consent and
   assert.equal((await call('GET','/v1/profiles',a)).status,401);
   await assert.rejects(pool.query('UPDATE mano_stage.accounts SET role=\'pharmacist\' WHERE id=$1',[b.id]),{code:'42501'});
   await assert.rejects(pool.query('DELETE FROM mano_stage.profiles WHERE id=$1',[id]),{code:'42501'});
+  await assert.rejects(pool.query('SELECT * FROM mano_stage.audit_events'),{code:'42501'});
+  const events=(await admin.query('SELECT actor_id,action FROM mano_stage.audit_events')).rows;
+  assert.equal(events.filter(e=>e.action==='profile.create').length,1);
+  assert.equal(events.filter(e=>e.action==='share.grant').length,1);
+  assert.equal(events.filter(e=>e.action==='share.revoke').length,1);
+  assert.ok(events.some(e=>e.actor_id===b.id&&e.action==='session.logout'));
 });
