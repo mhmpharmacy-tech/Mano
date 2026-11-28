@@ -38,18 +38,12 @@ export function createHandler(pool,env) {
       client=await pool.connect();
       await client.query('BEGIN');
       // Identity is resolved from a revocable server-side session, never caller claims.
-      const actor=(await client.query(`SELECT a.id,a.role FROM mano_stage.sessions s
-        JOIN mano_stage.accounts a ON a.id=s.account_id
-        WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND a.active`,[digest(token)])).rows[0];
+      await client.query("SELECT set_config('mano_stage.session_digest',$1,true)",[digest(token)]);
+      const actor=(await client.query('SELECT id,role FROM mano_stage.actor()')).rows[0];
       let result;
       if (!actor) result=[401,{code:'AUTH_REQUIRED'}];
       else if(req.method==='GET' && path==='/v1/profiles') {
-        const {rows}=await client.query(`SELECT p.id,p.alias,p.age_months FROM mano_stage.profiles p
-          WHERE ($2='parent' AND p.owner_id=$1) OR ($2='pharmacist' AND EXISTS (
-            SELECT 1 FROM mano_stage.shares s JOIN mano_stage.memberships m ON m.pharmacy_id=s.pharmacy_id
-            JOIN mano_stage.pharmacies f ON f.id=s.pharmacy_id
-            WHERE s.profile_id=p.id AND s.revoked_at IS NULL AND m.account_id=$1 AND m.active AND f.active))
-          ORDER BY p.id LIMIT 100`,[actor.id,actor.role]);
+        const {rows}=await client.query('SELECT id,alias,age_months FROM mano_stage.profiles ORDER BY id LIMIT 100');
         result=[200,{profiles:rows}];
       } else if (req.method==='POST' && path==='/v1/profiles') {
         if(actor.role!=='parent') result=[403,{code:'FORBIDDEN'}];
