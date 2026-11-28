@@ -76,7 +76,7 @@ const RouteView: React.FC = () => {
         />
       );
     case 'care-cards':
-      return <CareCardsScreen />;
+      return <CareCardsScreen key={route.cardId ?? 'list'} cardId={route.cardId} />;
     case 'my-child':
       return <MyChildScreen />;
   }

@@ -251,7 +251,13 @@ export interface PharmacistConsultation {
   repliedAtLabelFa?: string;
 }
 
+export interface FamilyFollowUp {
+  recordedAtMs: number;
+  noteFa: string;
+}
+
 export interface CareCardEntry {
+  familyFollowUps?: FamilyFollowUp[];
   id: string;
   titleFa: string;
   subtitleFa: string;

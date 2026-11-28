@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { ArrowRight, Copy, Plus, Printer, QrCode, Trash2 } from 'lucide-react';
 import type { CareCardEntry } from '../domain/models.ts';
 import { AGE_BANDS } from '../domain/models.ts';
-import { currentTimeFa } from '../domain/treatmentPlan.ts';
+import { ageBandFromMonths, resolveClinicalAge } from '../domain/clinicalAge.ts';
 import { formatTempC } from '../domain/feverDoseTimelineEngine.ts';
 import { useMano } from '../state/ManoStore.tsx';
 
-export const CareCardsScreen: React.FC = () => {
+export const CareCardsScreen: React.FC<{ cardId?: string }> = ({ cardId }) => {
   const {
     childProfile,
+    vaccineBirthDateEpochMs,
+    persistenceIssue,
+    addFamilyFollowUp,
     timelineSnapshot,
     treatmentPlan,
     careCards,
@@ -22,7 +25,10 @@ export const CareCardsScreen: React.FC = () => {
   const [customTitle, setCustomTitle] = useState('');
   const [customNotes, setCustomNotes] = useState('');
 
-  const ageLabel = AGE_BANDS.find((b) => b.id === childProfile.ageBand)?.labelFa ?? 'کودک';
+  const [followUp, setFollowUp] = useState('');
+  const cards = cardId ? careCards.filter(card => card.id === cardId) : careCards;
+  const age = resolveClinicalAge(childProfile, vaccineBirthDateEpochMs);
+  const ageLabel = AGE_BANDS.find(band => band.id === ageBandFromMonths(age.ageMonths))?.labelFa ?? 'ثبت یا تأیید نشده';
 
   const handleGenerateCard = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,14 +84,14 @@ export const CareCardsScreen: React.FC = () => {
 
     const meta = defaults[cardType];
     addCareCard({
-      id: `card_${Date.now()}`,
+      id: `card_${crypto.randomUUID()}`,
       titleFa: customTitle.trim() || meta.title,
       subtitleFa: meta.subtitle,
       cardType,
       badgeFa: meta.badge,
       summaryLinesFa: lines,
       footerNoteFa: meta.footer,
-      createdAtLabelFa: `امروز ${currentTimeFa()}`,
+      createdAtLabelFa: new Date().toLocaleString('fa-IR', { dateStyle: 'short', timeStyle: 'short' }),
     });
 
     setCustomTitle('');
@@ -124,7 +130,7 @@ export const CareCardsScreen: React.FC = () => {
       </div>
 
       {/* Card Builder */}
-      <form
+      {!cardId && <form
         onSubmit={handleGenerateCard}
         className="no-print space-y-4 rounded-3xl border border-[#DCE7E1] bg-white p-5 dark:border-[#23344D] dark:bg-[#111C2E]"
       >
@@ -163,7 +169,7 @@ export const CareCardsScreen: React.FC = () => {
             </label>
             <input
               id="card-title-input"
-              type="text"
+              type="text" maxLength={500}
               value={customTitle}
               onChange={(e) => setCustomTitle(e.target.value)}
               placeholder="مثلاً کارت مراقبت شبانه"
@@ -176,7 +182,7 @@ export const CareCardsScreen: React.FC = () => {
             </label>
             <input
               id="card-note-input"
-              type="text"
+              type="text" maxLength={1000}
               value={customNotes}
               onChange={(e) => setCustomNotes(e.target.value)}
               placeholder="مثلاً نوبت بعدی قطره ساعت ۱۸ است"
@@ -192,16 +198,17 @@ export const CareCardsScreen: React.FC = () => {
           <Plus className="h-4 w-4" />
           <span>ساخت و ذخیره کارت</span>
         </button>
-      </form>
+      </form>}
 
       {/* Saved Cards */}
       <section className="space-y-4">
-        {careCards.length === 0 ? (
+        {cards.length === 0 ? (
           <div className="rounded-3xl border border-[#DCE7E1] bg-white p-8 text-center text-xs text-[#546963] dark:border-[#23344D] dark:bg-[#111C2E] dark:text-[#9EB3C4]">
-            هنوز کارتی ساخته نشده است. با دکمه بالا اولین کارت خلاصه مراقبت را بسازید.
+            {cardId ? 'این کارت در این دستگاه پیدا نشد.' : 'هنوز کارتی ساخته نشده است. با دکمه بالا اولین کارت خلاصه مراقبت را بسازید.'}
+            {cardId && <button type="button" className="block min-h-[44px] mx-auto underline" onClick={() => navigate({ name: 'care-cards' })}>همهٔ کارت‌ها</button>}
           </div>
         ) : (
-          careCards.map((card) => (
+          cards.map((card) => (
             <article
               key={card.id}
               className="space-y-3 rounded-3xl border border-[#DCE7E1] bg-white p-5 dark:border-[#23344D] dark:bg-[#111C2E]"
@@ -217,7 +224,7 @@ export const CareCardsScreen: React.FC = () => {
                   <p className="text-xs text-[#546963] dark:text-[#9EB3C4]">{card.subtitleFa}</p>
                 </div>
 
-                <div className="no-print flex items-center gap-2">
+                <div className="no-print flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleCopy(card)}
@@ -254,6 +261,38 @@ export const CareCardsScreen: React.FC = () => {
               <div className="rounded-2xl bg-[#F5F9F6] p-3 text-[11px] font-semibold text-[#546963] dark:bg-[#16243B] dark:text-[#9EB3C4]">
                 {card.footerNoteFa}
               </div>
+              {cardId ? (
+                <section aria-label="پیگیری خانواده" className="space-y-3 border-t border-[#DCE7E1] pt-3 text-xs leading-6 dark:border-[#23344D]">
+                  <h2 className="text-sm font-bold">پیگیری خانواده</h2>
+                  {card.familyFollowUps?.map((entry, index) => (
+                    <p key={index} className="whitespace-pre-wrap break-words">
+                      <time>{new Date(entry.recordedAtMs).toLocaleString('fa-IR')}</time> · {entry.noteFa}
+                    </p>
+                  ))}
+                  {(card.familyFollowUps?.length ?? 0) < 100 ? (
+                    <form className="no-print space-y-2" onSubmit={event => {
+                      event.preventDefault();
+                      if (!followUp.trim() || persistenceIssue) return;
+                      addFamilyFollowUp(card.id, followUp);
+                      setFollowUp('');
+                    }}>
+                      <label className="block font-bold">یادداشت خانواده در این دستگاه
+                        <textarea className="mt-1 block w-full rounded-xl border border-[#DCE7E1] bg-transparent p-2" maxLength={500}
+                          value={followUp} onChange={event => setFollowUp(event.target.value)} />
+                      </label>
+                      <button type="submit" disabled={!!persistenceIssue || !followUp.trim()} className="min-h-[44px] rounded-xl bg-[#105B48] px-4 font-bold text-white disabled:opacity-50">ثبت پیگیری محلی</button>
+                    </form>
+                  ) : <p>ظرفیت ۱۰۰ یادداشت این کارت تکمیل شده است.</p>}
+                  <div className="no-print flex flex-wrap gap-4 font-bold">
+                    <button type="button" className="min-h-[44px] underline" onClick={() => navigate({ name: 'ask-pharmacist' })}>پرسش از داروساز</button>
+                    <button type="button" className="min-h-[44px] underline" onClick={() => navigate({ name: 'care-cards' })}>همهٔ کارت‌ها</button>
+                  </div>
+                </section>
+              ) : (
+                <button type="button" className="no-print min-h-[44px] text-xs font-bold underline" onClick={() => navigate({ name: 'care-cards', cardId: card.id })}>
+                  باز کردن کارت و ثبت پیگیری
+                </button>
+              )}
             </article>
           ))
         )}

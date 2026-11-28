@@ -113,6 +113,7 @@ interface ManoContextValue {
   replyPharmacistConsultation: (id: string, replyFa: string) => void;
   careCards: CareCardEntry[];
   addCareCard: (card: CareCardEntry) => void;
+  addFamilyFollowUp: (id: string, note: string) => void;
   deleteCareCard: (id: string) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
@@ -672,6 +673,19 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [notify, setState],
   );
 
+  const addFamilyFollowUp = useCallback((id: string, note: string) => {
+    const noteFa = note.trim();
+    if (!noteFa || noteFa.length > 500) return;
+    const entry = { recordedAtMs: Date.now(), noteFa };
+    setState(previous => ({
+      ...previous,
+      careCards: previous.careCards.map(card =>
+        card.id === id && (card.familyFollowUps?.length ?? 0) < 100
+          ? { ...card, familyFollowUps: [entry, ...(card.familyFollowUps ?? [])] }
+          : card),
+    }));
+  }, [setState]);
+
   const deleteCareCard = useCallback((id: string) => {
     setState((prev) => ({ ...prev, careCards: prev.careCards.filter((c) => c.id !== id) }));
   }, [setState]);
@@ -773,6 +787,7 @@ export const ManoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     replyPharmacistConsultation,
     careCards: state.careCards,
     addCareCard,
+    addFamilyFollowUp,
     deleteCareCard,
     searchOpen,
     setSearchOpen,

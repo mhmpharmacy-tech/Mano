@@ -68,6 +68,39 @@ async function waitForSavedAge(page, age) {
   }, age);
 }
 
+async function verifyFamilyFollowUp(browser) {
+  const context = await browser.newContext({ locale: "fa-IR", viewport: { width: 360, height: 800 } });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${origin}/?autostart=1`);
+    await page.getByTestId("home-child-profile-btn").click();
+    await page.locator("#child-alias").fill("کودک فرضی");
+    await page.locator("#child-age-months").fill("18");
+    await page.getByRole("button", { name: "ذخیره و ساخت کارت مراقبت" }).click();
+    await page.locator("#card-title-input").fill("کارت نمونه");
+    await page.getByRole("button", { name: "ساخت و ذخیره کارت" }).click();
+    await page.getByRole("heading", { name: "کارت نمونه" }).waitFor();
+    await page.getByTestId("care-cards-screen").getByRole("button", { name: "خانه", exact: true }).click();
+    await page.getByRole("button", { name: /ادامهٔ مراقبت قبلی/ }).click();
+    await page.getByText(/نام.لقب کودک: کودک فرضی/).waitFor();
+    const followUp = page.getByRole("region", { name: "پیگیری خانواده" });
+    await followUp.getByRole("textbox").fill("یادداشت آزمایشی برای پیگیری");
+    await followUp.getByRole("button", { name: "ثبت پیگیری محلی" }).click();
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("mano_kid_v2_store"))?.careCards[0]?.familyFollowUps?.length === 1);
+    await page.reload();
+    await followUp.getByText(/یادداشت آزمایشی برای پیگیری/).waitFor();
+    await followUp.getByRole("button", { name: "پرسش از داروساز" }).click();
+    await page.getByTestId("online-consultation-panel").waitFor();
+    await page.goBack();
+    await followUp.waitFor();
+    await page.getByRole("button", { name: "حذف کارت" }).click();
+    await page.getByText("این کارت در این دستگاه پیدا نشد.", { exact: false }).first().waitFor();
+    assert.equal(await followUp.count(), 0);
+  } finally {
+    await context.close();
+  }
+}
+
 async function recordedTime(page) {
   return page.evaluate(() => {
     const now = new Date(Date.now() - 60_000);
@@ -1103,6 +1136,7 @@ try {
   await page.screenshot({ path: "web-artifacts/react-infant-fever-triage.png", fullPage: true });
 
   await verifyClinicalPrivacyAndDeletion(browser, errors);
+  await verifyFamilyFollowUp(browser);
   await verifyCarePlanTrust(browser, errors);
   await verifyKeyboardAndTaskNavigation(browser, errors);
   await verifyShortScreenCareDialogs(browser, errors);

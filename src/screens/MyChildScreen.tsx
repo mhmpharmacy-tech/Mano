@@ -26,6 +26,7 @@ export const MyChildScreen: React.FC = () => {
     childProfile,
     vaccineBirthDateEpochMs,
     updateChildProfile,
+    persistenceIssue,
     savedVisitDrafts,
     deleteVisitDraft,
     nutritionPlans,
@@ -83,6 +84,9 @@ export const MyChildScreen: React.FC = () => {
     });
     if (draftAge.source === 'birth-date') setAgeMonthsStr('');
     setClearBirthDate(false);
+    if ((e.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'care-card') {
+      navigate({ name: 'care-cards' });
+    }
   };
 
   return (
@@ -93,7 +97,7 @@ export const MyChildScreen: React.FC = () => {
             پرونده سلامت کودک و آرشیو ذخیره‌شده
           </h1>
           <p className="mt-1 text-xs text-[#546963] dark:text-[#9EB3C4]">
-            تنها مشخصات واقعی کودک را ثبت کنید؛ اطلاعات دقیق سن، وزن و حساسیت برای ایمنی تمام محاسبات استفاده می‌شوند.
+            در این پیش‌نمایش، مسیر مراقبت را با مشخصات یک کودک فرضی امتحان کنید.
           </p>
         </div>
         <button
@@ -244,6 +248,10 @@ export const MyChildScreen: React.FC = () => {
         >
           <Save className="h-4 w-4" />
           <span>ذخیره مشخصات کودک</span>
+        </button>
+        <button type="submit" value="care-card" disabled={!!persistenceIssue}
+          className="mx-2 min-h-[44px] rounded-xl border border-[#DCE7E1] px-4 text-xs font-bold dark:border-[#23344D]">
+          ذخیره و ساخت کارت مراقبت
         </button>
       </form>
 

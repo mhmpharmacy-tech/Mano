@@ -99,6 +99,7 @@ function snapshot(): LocalBackupSnapshot {
       id: 'card_sample', titleFa: 'کارت نمونه', subtitleFa: '', cardType: 'CAREGIVER_HANDOFF', badgeFa: '',
       summaryLinesFa: ['ثبت نمونه'], footerNoteFa: '', createdAtLabelFa: '',
       shareUrl: 'https://manokid.ir/care/sample',
+      familyFollowUps: [{ recordedAtMs: NOW, noteFa: 'یادداشت آزمایشی خانواده' }],
     }],
   };
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowLeft, Baby, Calculator, ChevronDown, Moon, Search, Stethoscope, Sun,
 } from 'lucide-react';
+import { useOnline } from '../online/context.ts';
 import { useMano } from '../state/ManoStore.tsx';
 import { initialAgeMonthsFromProfile } from '../domain/liquidDoseVisualizerEngine.ts';
 import { getTreatmentSlotCounts } from '../domain/treatmentPlan.ts';
@@ -21,8 +22,12 @@ const GUIDE_GROUPS = FEATURE_GROUPS.map((group) => ({
 export const HomeScreen: React.FC = () => {
   const {
     navigate, theme, toggleTheme, childProfile, vaccineBirthDateEpochMs,
-    treatmentPlan, vaccineSummary, setSearchOpen,
+    treatmentPlan, vaccineSummary, setSearchOpen, careCards,
   } = useMano();
+  const { enabled, session } = useOnline();
+  const user = session.user;
+  const pharmacistDesk = enabled && user?.emailVerified && user.staffVerified && user.staffRole === 'pharmacist' && user.pharmacyId;
+  const latestCard = careCards[0];
   const [comfortSheetOpen, setComfortSheetOpen] = useState(false);
   const slotCounts = getTreatmentSlotCounts(treatmentPlan);
   const knownAgeMonths = initialAgeMonthsFromProfile(childProfile, vaccineBirthDateEpochMs);
@@ -130,6 +135,19 @@ export const HomeScreen: React.FC = () => {
         <span className="shrink-0 text-xs font-bold text-[#105B48] dark:text-[#00D7C7]">{profileHasDetails ? 'ویرایش' : 'ثبت مشخصات'}</span>
         <ArrowLeft aria-hidden="true" className="h-4 w-4 shrink-0 text-[#105B48] dark:text-[#00D7C7]" />
       </button>
+
+      {latestCard && (
+        <button type="button" onClick={() => navigate({ name: 'care-cards', cardId: latestCard.id })}
+          className="block min-h-[44px] max-w-full break-words text-right text-sm font-bold text-[#105B48] underline dark:text-[#00D7C7]">
+          ادامهٔ مراقبت قبلی · {latestCard.titleFa}
+        </button>
+      )}
+      {enabled && user?.emailVerified && !session.pending && (!user.staffRole || pharmacistDesk) && (
+        <button type="button" onClick={() => navigate({ name: 'ask-pharmacist' })}
+          className="min-h-[44px] text-sm font-bold text-[#105B48] underline dark:text-[#00D7C7]">
+          {pharmacistDesk ? 'میز آنلاین داروساز' : 'پیگیری پاسخ داروساز'}
+        </button>
+      )}
 
       <section aria-labelledby="home-daily-tools-heading" className="space-y-3">
         <h2 id="home-daily-tools-heading" className="text-base font-extrabold">ابزارهای روزانه</h2>

@@ -16,13 +16,15 @@ export type AppRoute =
   | { name: 'skin' }
   | { name: 'devices' }
   | { name: 'ask-pharmacist'; initialTopic?: string }
-  | { name: 'care-cards' }
+  | { name: 'care-cards'; cardId?: string }
   | { name: 'my-child' };
 
 export function routeToHash(route: AppRoute): string {
   switch (route.name) {
     case 'home':
       return '#/home';
+    case 'care-cards':
+      return route.cardId ? `#/care-cards?card=${encodeURIComponent(route.cardId)}` : '#/care-cards';
     case 'symptoms':
       return route.initialFlowId ? `#/symptoms/${encodeURIComponent(route.initialFlowId)}` : '#/symptoms';
     case 'fever-dose':
@@ -98,8 +100,10 @@ export function parseHashToRoute(hash: string): AppRoute {
         return { name: 'devices' };
       case 'ask-pharmacist':
         return { name: 'ask-pharmacist', initialTopic: query.get('topic') || undefined };
-      case 'care-cards':
-        return { name: 'care-cards' };
+      case 'care-cards': {
+        const cardId = query.get('card');
+        return cardId ? { name: 'care-cards', cardId } : { name: 'care-cards' };
+      }
       case 'my-child':
         return { name: 'my-child' };
       default:

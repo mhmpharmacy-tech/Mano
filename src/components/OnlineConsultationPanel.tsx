@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useMano } from '../state/ManoStore.tsx';
 import { useOnline } from '../online/context.ts';
 import { onlineErrorMessage } from '../online/config.ts';
 import { buildOnlineTriageInput, ONLINE_FLOWS, OnlineIntakeError, onlineRedFlags, selectedOnlineFlow, type OnlineIntakeDraft } from '../online/intake.ts';
@@ -36,7 +37,10 @@ const ConsultationForm: React.FC = () => {
   };
   const refreshCases = async () => {
     const rows = parseParentCases(await controller.call<unknown>('listParentConsultations', { limit: 25 }, { clinical: true }));
-    if (isCurrent()) setCases(rows);
+    if (isCurrent()) {
+      setCases(rows);
+      if (rows.length === 0) setNotice('هنوز پرسش آنلاینی برای این حساب ثبت نشده است.');
+    }
   };
 
   return <div className="space-y-4">
@@ -145,8 +149,14 @@ const PharmacistDesk: React.FC = () => {
 
 export const OnlineConsultationPanel: React.FC = () => {
   const { enabled, session } = useOnline();
+  const { navigate } = useMano();
   return <section className="space-y-3 rounded-3xl border border-[#DCE7E1] bg-white p-5 dark:border-[#23344D] dark:bg-[#111C2E]" data-testid="online-consultation-panel">
     <h2 className="text-base font-extrabold">پرسش آنلاین غیرفوری</h2>
     {!enabled ? <p className="text-xs leading-6">ارسال آنلاین در این نسخه فعال نیست؛ یادداشت محلیِ پایین برای مراجعهٔ حضوری است و برای داروساز ارسال نمی‌شود.</p> : !session.user ? <p className="text-xs leading-6">برای استفاده از این بخش، از «پرونده کودک» وارد حساب آنلاین شوید. اطلاعات محلی به‌صورت خودکار ارسال نمی‌شود.</p> : !session.user.emailVerified ? <p className="text-xs leading-6">ایمیل را در بخش حساب تأیید کنید و وضعیت را تازه کنید. تا آن زمان اطلاعات مراقبتی ارسال نمی‌شود.</p> : session.user.staffRole ? session.user.staffRole === 'pharmacist' && session.user.staffVerified && session.user.pharmacyId ? <PharmacistDesk key={session.generation} /> : <p className="text-xs leading-6">دسترسی بالینی این حساب کارکنان تأیید نشده است. حساب مدیریتی نیز نمی‌تواند پاسخ بالینی را تأیید کند.</p> : <ConsultationForm key={session.generation} />}
+    {enabled && !session.pending && !session.user?.emailVerified && (
+      <button type="button" className={buttonClass} onClick={() => navigate({ name: 'my-child' })}>
+        ورود یا تأیید حساب
+      </button>
+    )}
   </section>;
 };
