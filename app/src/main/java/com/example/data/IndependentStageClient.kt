@@ -15,6 +15,10 @@ internal fun interface StageTransport {
     suspend fun send(request: StageRequest): StageResponse
 }
 internal data class StageProfile(val id: String, val alias: String, val ageMonths: Int)
+internal enum class CareState(val wire: String) {
+    ISSUED("issued"), ACKNOWLEDGED("acknowledged"), FOLLOWUP_REQUESTED("followup_requested"), CLOSED("closed")
+}
+internal data class StageCareCard(val id: String, val pharmacyId: String, val state: CareState)
 internal class IndependentStageClient(
     private val enabled: Boolean = false,
     private val transport: StageTransport
@@ -80,6 +84,32 @@ internal class IndependentStageClient(
         require(uuid.matches(id) && uuid.matches(pharmacyId)) { "INVALID_ID" }
         val r = request("DELETE","/internal/mano/v1/profiles/"+id+"/shares/"+pharmacyId,200)
         check(r["ok"] == JsonPrimitive(true)) { "INVALID_RESPONSE" }
+    }
+    suspend fun listCare(profileId: String): List<StageCareCard> {
+        require(uuid.matches(profileId))
+        val rows = request("GET","/internal/mano/v1/profiles/"+profileId+"/care-cards",200)["cards"] as? JsonArray ?: error("INVALID_RESPONSE")
+        check(rows.size <= 100)
+        return rows.map {
+            val row = it as? JsonObject ?: error("INVALID_RESPONSE")
+            val id = str(row,"id")
+            val pharmacy = str(row,"pharmacy_id")
+            check(uuid.matches(id) && uuid.matches(pharmacy) && str(row,"template")=="demo-care-v1")
+            val state = CareState.entries.firstOrNull { state -> state.wire == str(row,"state") } ?: error("INVALID_RESPONSE")
+            StageCareCard(id,pharmacy,state)
+        }
+    }
+    suspend fun issueCare(profileId: String, pharmacyId: String, confirmed: Boolean): String {
+        require(uuid.matches(profileId) && uuid.matches(pharmacyId) && confirmed)
+        val id = str(request("POST","/internal/mano/v1/profiles/"+profileId+"/care-cards",201,buildJsonObject {
+            put("pharmacyId",pharmacyId);put("template","demo-care-v1")
+        }),"id")
+        check(uuid.matches(id))
+        return id
+    }
+    suspend fun transitionCare(profileId: String, cardId: String, state: CareState) {
+        require(uuid.matches(profileId) && uuid.matches(cardId) && state != CareState.ISSUED)
+        val r = request("POST","/internal/mano/v1/profiles/"+profileId+"/care-cards/"+cardId+"/state",200,buildJsonObject { put("state",state.wire) })
+        check(r["ok"] == JsonPrimitive(true))
     }
     suspend fun logout() {
         val epoch = synchronized(lock) { generation }
