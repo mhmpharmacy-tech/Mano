@@ -1,0 +1,18 @@
+# MANO Integration — internal synthetic only
+
+This stacked branch builds on the verified PostgreSQL stage PR #33. The operator's Liara screenshots show the seven preflight checks, three negative API tests and 18 synthetic smoke assertions passed. This is operator evidence for the previous code, not proof of this new host or adapters.
+
+## Architecture and boundaries
+- Run `npm ci --ignore-scripts` in independent-backend and `npm run start:integration` with process environment injected by the operator. No auto-loading of .env, no public port, no root web process modification. Bind 127.0.0.1 only (default port 3101), graceful shutdown, bounded requests, separate operator and upstream gates. Never add a public reverse proxy or expose port 3101. A supervisor in an isolated internal environment must own the lifecycle; the current public Liara web app is not a supervisor for this process.
+- All three enable/acknowledgement flags must be explicit. Use verify-full with a trusted CA and matching hostname; if the current private Liara database lacks TLS, private-test is permitted strictly for synthetic data. Do not disable certificate verification for real data. Confirm provider-supported authenticated encrypted transport or choose a suitable private TLS-enabled database before production. No TLS setup was performed by this branch.
+- The operator-only host accepts only fixed profile/consent/logout paths. It rejects browser Origin and Sec-Fetch-Site headers and caller-supplied upstream credentials; the gate remains server-side. Operator identity is not patient identity. Session bearer remains required. This is NOT a public BFF or mobile API.
+- Web TypeScript and Android Kotlin adapters share paths, strict synthetic record validation, explicit consent, memory-only session and invalidation on 401. They are independent of Firebase. The transport is injected for internal harness tests and is NOT implemented as a browser-to-loopback or phone-to-loopback HTTP connection. Neither adapter is wired into the live application. No operator gate may be shipped to a browser or APK. No auto retry, dual-write or fallback to Firebase.
+- Existing demo-auth supports operator-delivered synthetic OTP only. No SMS delivery, registration, recovery, verified pharmacist onboarding, refresh or public endpoint. Future public authentication must have a separately reviewed identity flow and abuse limits.
+
+## Verification
+- PostgreSQL integration CI checks actual authorized reads through the host and operator gate rejection before DB access.
+- Existing root npm test includes src/online/independentStageClient.test.ts; no change to Vite or React.
+- Android unit test source added. The repository has no tracked Gradle wrapper or google-services.json; use a configured internal Android SDK/Gradle and appropriate non-production Firebase config to run gradle :app:testDebugUnitTest --tests com.example.data.IndependentStageClientTest. Never commit real credentials. No APK built here.
+- Existing Firefox focus test failure remains a release blocker; do not relax the test.
+- Before live wiring: implement authenticated browser/native transport (separate operator gate from user identity, CSRF/origin protection where relevant, TLS, rate limits, replay and account-switch concurrency), real account lifecycle, clinical schema, retention/deletion, backups and restore, safe migration. Full release requires real-device testing and clinical/security sign-off.
+- No main merge, public deployment, Firebase deletion or visual changes authorized.
