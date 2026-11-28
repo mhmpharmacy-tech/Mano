@@ -35,7 +35,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: node --test unit.test.mjs migration.test.mjs backup.test.mjs
       - run: npm run test:integration
         env:
