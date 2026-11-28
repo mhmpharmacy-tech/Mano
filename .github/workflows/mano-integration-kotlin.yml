@@ -1,0 +1,28 @@
+name: MANO Kotlin adapter validation
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/example/data/IndependentStageClient.kt'
+      - 'app/src/test/java/com/example/data/IndependentStageClientTest.kt'
+      - 'android-integration-test/**'
+      - '.github/workflows/mano-integration-kotlin.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  kotlin-jvm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+          cache-read-only: true
+      - run: gradle -p android-integration-test test --no-daemon
