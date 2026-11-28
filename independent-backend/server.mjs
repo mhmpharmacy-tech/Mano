@@ -43,6 +43,7 @@ export function createHandler(pool,env) {
       let result;
       if (!actor) result=[401,{code:'AUTH_REQUIRED'}];
       else if(req.method==='POST' && path==='/v1/session/logout') {
+        await client.query("SELECT mano_stage.record_audit('session.logout')");
         await client.query('SELECT mano_stage.revoke_session()');
         result=[200,{ok:true}];
       } else if(req.method==='GET' && path==='/v1/profiles') {
@@ -74,6 +75,10 @@ export function createHandler(pool,env) {
           result=q.rowCount?[200,{ok:true}]:[404,{code:'NOT_FOUND'}];
         }
       } else result=[404,{code:'NOT_FOUND'}];
+      if(actor && result[0]>=200 && result[0]<300 && path!=='/v1/session/logout'){
+        const action=path==='/v1/profiles'?(req.method==='GET'?'profile.list':'profile.create'):share?'share.grant':revoke?'share.revoke':null;
+        if(action) await client.query('SELECT mano_stage.record_audit($1)',[action]);
+      }
       await client.query('COMMIT');
       return reply(...result);
     } catch {
