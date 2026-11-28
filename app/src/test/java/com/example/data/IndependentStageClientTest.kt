@@ -1,6 +1,8 @@
 package com.example.data
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -33,5 +35,31 @@ class IndependentStageClientTest {
         assertTrue(runCatching { client.list() }.isFailure)
         assertTrue(runCatching { client.list() }.isFailure)
         assertEquals(2,calls)
+    }
+    @Test fun previousAccountResponseIsRejected() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val response = CompletableDeferred<StageResponse>()
+        val client = IndependentStageClient(true, StageTransport {
+            started.complete(Unit)
+            response.await()
+        })
+        client.setSession(token)
+        val previous = async { runCatching { client.list() } }
+        started.await()
+        client.setSession("b".repeat(43))
+        response.complete(StageResponse(200,buildJsonObject { put("profiles",JsonArray(emptyList())) }))
+        assertTrue(previous.await().isFailure)
+    }
+    @Test fun logoutAndMalformedResponseFailClosed() = runBlocking {
+        val client = IndependentStageClient(true, StageTransport {
+            if(it.path.endsWith("/logout")) StageResponse(200,buildJsonObject { put("ok",true) })
+            else StageResponse(200,buildJsonObject { put("profiles",buildJsonArray {
+                add(buildJsonObject { put("id",id);put("alias","real child");put("age_months",24) })
+            }) })
+        })
+        client.setSession(token)
+        assertTrue(runCatching { client.list() }.isFailure)
+        client.logout()
+        assertTrue(runCatching { client.list() }.isFailure)
     }
 }
