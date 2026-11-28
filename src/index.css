@@ -123,7 +123,8 @@
   }
 
   html {
-    scroll-padding-block: 6rem;
+    scroll-padding-block-start: var(--mano-focus-top, 6rem);
+    scroll-padding-block-end: var(--mano-focus-bottom, 6rem);
   }
 
   button:disabled {
