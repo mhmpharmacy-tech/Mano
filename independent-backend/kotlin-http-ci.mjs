@@ -24,7 +24,7 @@ try{
  await admin.query('INSERT INTO mano_stage.memberships(account_id,pharmacy_id,active) VALUES($1,$2,true)',[p.id,pharmacy]);
  const env={MANO_INTEGRATION_ENABLED:'true',MANO_INDEPENDENT_STAGE_ENABLED:'true',
    MANO_INTEGRATION_SYNTHETIC_ONLY:'true',MANO_INTEGRATION_OPERATOR_TOKEN:token(),
-   MANO_STAGE_ACCESS_TOKEN:token(),MANO_INTEGRATION_PORT:'0',MANO_STAGE_DATABASE_URL:stage.href,
+   MANO_STAGE_ACCESS_TOKEN:token(),MANO_STAGE_CARE_ENABLED:'true',MANO_INTEGRATION_PORT:'0',MANO_STAGE_DATABASE_URL:stage.href,
    MANO_STAGE_DB_TLS:'verify-full',MANO_STAGE_DB_CA:await readFile(process.env.MANO_TEST_TLS_CA,'utf8')};
  running=await startIntegration(env);
  // Pass only ephemeral synthetic user/transport gates to a JVM test subprocess, not an APK.
