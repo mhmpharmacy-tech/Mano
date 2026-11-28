@@ -6,14 +6,15 @@ import {uuidPattern} from './policy.mjs';
 const handlePattern=/^demo-[a-z0-9]{1,40}$/;
 async function transaction(pool,fn){
  const client=await pool.connect();
+ let discard=false;
  try{
   await client.query('BEGIN');
   const {rows:[r]}=await client.query("SELECT current_database()='mano_stage' AND current_user<>'mano_stage_app' AND has_table_privilege(current_user,'mano_stage.accounts','UPDATE') AS ok");
   if(!r?.ok)throw new Error('Dedicated synthetic operator required');
   const result=await fn(client);
   await client.query('COMMIT');return result;
- }catch(e){try{await client.query('ROLLBACK');}catch{client.release(true);throw e;}throw e;}
- finally{if(!client.released) {try{client.release();}catch{}}}
+ }catch(e){try{await client.query('ROLLBACK');}catch{discard=true;}throw e;}
+ finally{client.release(discard);}
 }
 export async function enrollDemo(pool,command){
  if(!command||command.syntheticOnly!==true||typeof command.handle!=='string'||!handlePattern.test(command.handle)||
