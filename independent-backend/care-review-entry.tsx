@@ -1,5 +1,6 @@
 // CI-only entry; excluded from the normal Vite application and Docker runtime.
 import {createRoot} from 'react-dom/client';
+import '../src/index.css';
 import {IndependentStageClient} from '../src/online/independentStageClient.ts';
 import {privateBrowserTransport} from '../src/online/independentBrowserTransport.ts';
 import {IndependentCarePreview} from '../src/screens/IndependentCarePreview.tsx';
