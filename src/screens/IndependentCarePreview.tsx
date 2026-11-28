@@ -1,15 +1,15 @@
 import { useRef, useState } from 'react';
 import type { CareState, IndependentStageClient, StageCareCard, StageProfile } from '../online/independentStageClient.ts';
 
-type Props = { enabled: boolean; client: IndependentStageClient; role: 'parent' | 'pharmacist'; pharmacyId: string };
+type Props = { enabled: boolean; client: IndependentStageClient; role: 'parent' | 'pharmacist'; pharmacyId: string; sessionEpoch: number };
 const labels: Record<CareState,string> = {
   issued:'صادر شده', acknowledged:'دریافت تأیید شد', followup_requested:'در انتظار پیگیری', closed:'پیگیری بسته شد',
 };
-// Internal review component only. The parent must remount on account changes.
+// Internal review component only. The harness must increment the non-secret sessionEpoch on each account change.
 // No app routes, real records, clinical instructions, credentials or Firebase writes.
 export function IndependentCarePreview(props: Props) {
   if (!props.enabled) return null;
-  return <CareWorkspace {...props} />;
+  return <CareWorkspace key={props.sessionEpoch+':'+props.role+':'+props.pharmacyId} {...props} />;
 }
 function CareWorkspace({client,role,pharmacyId}: Props) {
   const [view,setView]=useState<'home'|'profile'|'care'>('home');
