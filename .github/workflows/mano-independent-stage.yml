@@ -10,7 +10,7 @@ permissions:
 jobs:
   postgres-synthetic:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:18
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: node --test unit.test.mjs migration.test.mjs backup.test.mjs reconcile.test.mjs integration-host.test.mjs
+      - run: node --test unit.test.mjs migration.test.mjs backup.test.mjs reconcile.test.mjs integration-host.test.mjs browser-bridge.test.mjs
       - run: npm run test:integration
         env:
           MANO_TEST_ADMIN_URL: postgresql://postgres:ci-admin-synthetic-only@127.0.0.1:5432/mano_stage
@@ -85,6 +85,17 @@ jobs:
           MANO_TEST_TLS_URL: postgresql://mano_stage_app:ci-synthetic-only-password@127.0.0.1:5432/mano_stage
           MANO_TEST_TLS_CA: ${{ runner.temp }}/mano-ci-tls/ca.crt
         run: node kotlin-http-ci.mjs
+      - name: Install locked web harness dependencies
+        run: npm ci --prefix .. --ignore-scripts --no-audit --no-fund
+      - name: Install Chromium for private harness
+        working-directory: .
+        run: npx playwright install --with-deps chromium
+      - name: Real browser against private bridge and PostgreSQL TLS
+        env:
+          MANO_TEST_ADMIN_URL: postgresql://postgres:ci-admin-synthetic-only@127.0.0.1:5432/mano_stage
+          MANO_TEST_TLS_URL: postgresql://mano_stage_app:ci-synthetic-only-password@127.0.0.1:5432/mano_stage
+          MANO_TEST_TLS_CA: ${{ runner.temp }}/mano-ci-tls/ca.crt
+        run: node browser-http-ci.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: independent-stage-lockfile-review
