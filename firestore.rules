@@ -25,7 +25,8 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId &&
+             !exists(/databases/$(database)/documents/accountDeletionLocks/$(userId));
     }
 
     function isValidAgeBand(ageBandId) {

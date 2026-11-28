@@ -19,6 +19,43 @@ export function assertAuthenticated(
   return caller;
 }
 
+/** Web v1 accepts verified-email accounts for parent clinical intake and reads. */
+export function assertVerifiedCaregiver(
+  caller: CallerContext | null | undefined,
+): CallerContext {
+  const user = assertAuthenticated(caller);
+  if (user.token.email_verified !== true) {
+    throw new AppError("permission-denied", "A verified email account is required for parent clinical services.");
+  }
+  return user;
+}
+
+/** Server-only deletion locks also deny still-valid cached Firebase ID tokens. */
+export async function assertAccountActive(
+  store: BackendStore,
+  caller: CallerContext | null | undefined,
+): Promise<CallerContext> {
+  const user = assertAuthenticated(caller);
+  if (await store.get(`accountDeletionLocks/${assertAccountUid(user.uid)}`)) {
+    throw new AppError("permission-denied", "This account is being deleted.");
+  }
+  return user;
+}
+
+export async function assertAccountActiveInTransaction(tx: StoreTransaction, uid: string): Promise<void> {
+  if (await tx.get(`accountDeletionLocks/${assertAccountUid(uid)}`)) {
+    throw new AppError("permission-denied", "This account is being deleted.");
+  }
+}
+
+export function assertAccountUid(uid: unknown): string {
+  if (typeof uid !== "string" || uid.length < 1 || uid.length > 128 ||
+      uid === "." || uid === ".." || /[\u0000-\u001f\u007f/]/.test(uid)) {
+    throw new AppError("invalid-argument", "Unsupported authenticated account path.");
+  }
+  return uid;
+}
+
 export function assertValidId(value: unknown, fieldName: string): string {
   if (typeof value !== "string" || !FIELD_LIMITS.idRegex.test(value)) {
     throw new AppError(

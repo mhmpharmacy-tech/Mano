@@ -1,4 +1,4 @@
-import { assertAuthenticated, assertValidId, verifyPharmacistAccessInTransaction } from "./auth";
+import { assertAccountActive, assertAccountActiveInTransaction, assertValidId, verifyPharmacistAccessInTransaction } from "./auth";
 import { AppError } from "./config";
 import { BackendStore, CallerContext, ConsultationCaseDoc } from "./types";
 
@@ -55,7 +55,7 @@ function extractStructuredFields(data: Record<string, unknown>) {
 }
 
 export async function updateCare(store: BackendStore, caller: CallerContext | null, data: Record<string,unknown>) {
-  const user = assertAuthenticated(caller);
+  const user = await assertAccountActive(store, caller);
   const pharmacy = assertValidId(data.pharmacyId, "pharmacyId");
   const caseId = assertValidId(data.caseId, "caseId");
   const action = field(data.action, 20);
@@ -66,6 +66,7 @@ export async function updateCare(store: BackendStore, caller: CallerContext | nu
   if (!staff && !["open", "dose", "question", "checkin"].includes(action))
     throw new AppError("invalid-argument", "Unknown action");
   return store.runTransaction(async tx => {
+    await assertAccountActiveInTransaction(tx, user.uid);
     if (staff) await verifyPharmacistAccessInTransaction(tx, user, pharmacy);
     const path = `pharmacies/${pharmacy}/cases/${caseId}`;
     const record = await tx.get<ConsultationCaseDoc & {careCard?:CareCard}>(path);

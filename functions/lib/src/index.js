@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateCareCard = exports.cleanupExpiredConsultationState = exports.revokePharmacyStaff = exports.onboardPharmacyStaff = exports.upsertPharmacyRegistry = exports.reviewConsultationCase = exports.getPharmacyInbox = exports.listParentConsultations = exports.getParentConsultation = exports.submitConsultationCase = exports.issueConsultationTriagePass = exports.listAcceptingPharmacies = void 0;
+exports.updateCareCard = exports.cleanupExpiredConsultationState = exports.revokePharmacyStaff = exports.onboardPharmacyStaff = exports.upsertPharmacyRegistry = exports.reviewConsultationCase = exports.getPharmacyInbox = exports.listParentConsultations = exports.getParentConsultation = exports.submitConsultationCase = exports.issueConsultationTriagePass = exports.listAcceptingPharmacies = exports.processAccountDeletionJobs = exports.getAccountDeletionStatus = exports.requestAccountDeletion = exports.getAccountDeletionPolicy = void 0;
 const care_1 = require("./care");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -9,6 +9,9 @@ const cases_1 = require("./cases");
 const cleanup_1 = require("./cleanup");
 const config_1 = require("./config");
 const firestoreStore_1 = require("./firestoreStore");
+const accountDeletion_1 = require("./accountDeletion");
+const firebaseAccountDeletion_1 = require("./firebaseAccountDeletion");
+const auth_1 = require("./auth");
 // Clinical endpoints remain unavailable until independent release gates are satisfied.
 const ENFORCE_APP_CHECK = true;
 function requireClinicalRelease() {
@@ -48,11 +51,49 @@ const CALLABLE_OPTIONS = {
     enforceAppCheck: ENFORCE_APP_CHECK,
     consumeAppCheckToken: false,
 };
+function createAccountDeletionService() {
+    return new accountDeletion_1.AccountDeletionService(new firebaseAccountDeletion_1.FirebaseAccountDeletionBackend((0, firestoreStore_1.getNamedFirestore)()), (0, accountDeletion_1.resolveAccountDeletionPolicy)(process.env));
+}
+// Erasure has its own approved-policy gate. Disabling clinical AI must never
+// prevent a user from checking or requesting a previously approved deletion.
+exports.getAccountDeletionPolicy = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
+    try {
+        return createAccountDeletionService().getPolicy(extractCaller(request));
+    }
+    catch (err) {
+        return handleError(err);
+    }
+});
+exports.requestAccountDeletion = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
+    try {
+        return await createAccountDeletionService().request(extractCaller(request), request.data);
+    }
+    catch (err) {
+        return handleError(err);
+    }
+});
+exports.getAccountDeletionStatus = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
+    try {
+        return await createAccountDeletionService().getStatus(extractCaller(request), request.data);
+    }
+    catch (err) {
+        return handleError(err);
+    }
+});
+exports.processAccountDeletionJobs = (0, scheduler_1.onSchedule)({
+    region: config_1.FUNCTIONS_REGION, schedule: "every 1 minutes", timeoutSeconds: 540, maxInstances: 1,
+}, async () => {
+    if (!(0, accountDeletion_1.resolveAccountDeletionPolicy)(process.env))
+        return;
+    const service = createAccountDeletionService();
+    await service.processPendingJobs(5);
+    await service.purgeExpiredClinicalRetention(5);
+});
 exports.listAcceptingPharmacies = (0, https_1.onCall)(CALLABLE_OPTIONS, async (request) => {
     try {
         requireClinicalRelease();
         const { caseService } = createServices();
-        return await caseService.listAcceptingPharmacies(extractCaller(request));
+        return await caseService.listAcceptingPharmacies((0, auth_1.assertVerifiedCaregiver)(extractCaller(request)));
     }
     catch (err) {
         return handleError(err);
@@ -62,7 +103,7 @@ exports.issueConsultationTriagePass = (0, https_1.onCall)(CALLABLE_OPTIONS, asyn
     try {
         requireClinicalRelease();
         const { caseService } = createServices();
-        return await caseService.issueConsultationTriagePass(extractCaller(request), request.data ?? {});
+        return await caseService.issueConsultationTriagePass((0, auth_1.assertVerifiedCaregiver)(extractCaller(request)), request.data ?? {});
     }
     catch (err) {
         return handleError(err);
@@ -72,7 +113,7 @@ exports.submitConsultationCase = (0, https_1.onCall)(CALLABLE_OPTIONS, async (re
     try {
         requireClinicalRelease();
         const { caseService } = createServices();
-        return await caseService.submitConsultationCase(extractCaller(request), request.data ?? {});
+        return await caseService.submitConsultationCase((0, auth_1.assertVerifiedCaregiver)(extractCaller(request)), request.data ?? {});
     }
     catch (err) {
         return handleError(err);
@@ -82,7 +123,7 @@ exports.getParentConsultation = (0, https_1.onCall)(CALLABLE_OPTIONS, async (req
     try {
         requireClinicalRelease();
         const { caseService } = createServices();
-        return await caseService.getParentConsultation(extractCaller(request), request.data ?? {});
+        return await caseService.getParentConsultation((0, auth_1.assertVerifiedCaregiver)(extractCaller(request)), request.data ?? {});
     }
     catch (err) {
         return handleError(err);
@@ -92,7 +133,7 @@ exports.listParentConsultations = (0, https_1.onCall)(CALLABLE_OPTIONS, async (r
     try {
         requireClinicalRelease();
         const { caseService } = createServices();
-        return await caseService.listParentConsultations(extractCaller(request), request.data ?? {});
+        return await caseService.listParentConsultations((0, auth_1.assertVerifiedCaregiver)(extractCaller(request)), request.data ?? {});
     }
     catch (err) {
         return handleError(err);

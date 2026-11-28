@@ -1,4 +1,5 @@
 import { AppError, FIELD_LIMITS } from "../config";
+import { assertAccountActiveInTransaction } from "../auth";
 import { FirebaseAdminAuthService, FirestoreBackendStore, getNamedFirestore } from "../firestoreStore";
 import {
   BackendAuthService,
@@ -79,8 +80,10 @@ export async function runOutOfBandPharmacistOnboarding(
   const operatorId = (options.operatorId || "cli_admin_operator").trim();
 
   const { pharmacy, staff } = await store.runTransaction(async (tx) => {
+    await assertAccountActiveInTransaction(tx, uid);
     const now = store.nowMs();
     const existingPharmacy = await tx.get<PharmacyRegistryDoc>(pharmacyPath);
+    const existingStaff = await tx.get<StaffDirectoryDoc>(staffPath);
     const nextPharmacy: PharmacyRegistryDoc = {
       pharmacyId: options.pharmacyId,
       displayNameFa: existingPharmacy?.displayNameFa || options.pharmacyNameFa.trim(),
@@ -91,7 +94,6 @@ export async function runOutOfBandPharmacistOnboarding(
     };
     tx.set(pharmacyPath, nextPharmacy);
 
-    const existingStaff = await tx.get<StaffDirectoryDoc>(staffPath);
     const nextStaff: StaffDirectoryDoc = {
       uid,
       pharmacyId: options.pharmacyId,

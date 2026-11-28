@@ -1,5 +1,6 @@
 import { AppError } from "./config";
 import { BackendStore, RateLimitDoc } from "./types";
+import { assertAccountActiveInTransaction } from "./auth";
 
 export async function consumeRateLimit(
   store: BackendStore,
@@ -12,6 +13,7 @@ export async function consumeRateLimit(
   const path = `rateLimits/${bucketKey}`;
 
   await store.runTransaction(async (tx) => {
+    await assertAccountActiveInTransaction(tx, uid);
     const now = store.nowMs();
     const existing = await tx.get<RateLimitDoc>(path);
 

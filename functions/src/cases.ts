@@ -1,6 +1,7 @@
 import {
   assertActivePharmacy,
-  assertAuthenticated,
+  assertAccountActive,
+  assertAccountActiveInTransaction,
   assertValidId,
   verifyLivePharmacistAccess,
   verifyPharmacistAccessInTransaction,
@@ -142,7 +143,7 @@ export class ConsultationCaseService {
   async listAcceptingPharmacies(
     caller: CallerContext | null | undefined,
   ): Promise<PublicPharmacyOption[]> {
-    assertAuthenticated(caller);
+    await assertAccountActive(this.store, caller);
     const pharmacies = await this.store.queryCollection<PharmacyRegistryDoc>(
       "pharmacies",
       [
@@ -166,7 +167,7 @@ export class ConsultationCaseService {
     caller: CallerContext | null | undefined,
     req: IssueTriagePassRequest,
   ): Promise<IssueTriagePassResponse> {
-    const authed = assertAuthenticated(caller);
+    const authed = await assertAccountActive(this.store, caller);
     await consumeRateLimit(
       this.store,
       authed.uid,
@@ -208,6 +209,7 @@ export class ConsultationCaseService {
     };
 
     await this.store.runTransaction(async (tx) => {
+      await assertAccountActiveInTransaction(tx, authed.uid);
       tx.create<TriagePassDoc>(`triagePasses/${passId}`, passDoc);
     });
 
@@ -227,7 +229,7 @@ export class ConsultationCaseService {
     caller: CallerContext | null | undefined,
     req: SubmitConsultationCaseRequest,
   ): Promise<ParentConsultationView> {
-    const authed = assertAuthenticated(caller);
+    const authed = await assertAccountActive(this.store, caller);
 
     const pharmacyId = assertValidId(req.pharmacyId, "pharmacyId");
     const triagePassId = assertValidId(req.triagePassId, "triagePassId");
@@ -302,6 +304,7 @@ export class ConsultationCaseService {
 
     const caseId = this.store.generateId("case");
     const createdCase = await this.store.runTransaction(async (tx) => {
+      await assertAccountActiveInTransaction(tx, authed.uid);
       const now = this.store.nowMs();
       const pharmacy = await tx.get<PharmacyRegistryDoc>(
         `pharmacies/${pharmacyId}`,
@@ -419,7 +422,7 @@ export class ConsultationCaseService {
     caller: CallerContext | null | undefined,
     req: GetParentConsultationRequest,
   ): Promise<ParentConsultationView> {
-    const authed = assertAuthenticated(caller);
+    const authed = await assertAccountActive(this.store, caller);
     const pharmacyId = assertValidId(req.pharmacyId, "pharmacyId");
     const caseId = assertValidId(req.caseId, "caseId");
 
@@ -443,7 +446,7 @@ export class ConsultationCaseService {
     caller: CallerContext | null | undefined,
     req: ListParentConsultationsRequest = {},
   ): Promise<ParentConsultationView[]> {
-    const authed = assertAuthenticated(caller);
+    const authed = await assertAccountActive(this.store, caller);
     const limit = Math.min(Math.max(Number(req.limit ?? 25), 1), 50);
 
     const cases = await this.store.queryCollectionGroup<ConsultationCaseDoc>(

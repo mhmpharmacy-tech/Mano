@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.assertAuthenticated = assertAuthenticated;
+exports.assertVerifiedCaregiver = assertVerifiedCaregiver;
+exports.assertAccountActive = assertAccountActive;
+exports.assertAccountActiveInTransaction = assertAccountActiveInTransaction;
+exports.assertAccountUid = assertAccountUid;
 exports.assertValidId = assertValidId;
 exports.assertPharmacistClaims = assertPharmacistClaims;
 exports.assertVerifiedActiveStaffRecord = assertVerifiedActiveStaffRecord;
@@ -14,6 +18,34 @@ function assertAuthenticated(caller) {
         throw new config_1.AppError("unauthenticated", "Authentication is required for this endpoint.");
     }
     return caller;
+}
+/** Web v1 accepts verified-email accounts for parent clinical intake and reads. */
+function assertVerifiedCaregiver(caller) {
+    const user = assertAuthenticated(caller);
+    if (user.token.email_verified !== true) {
+        throw new config_1.AppError("permission-denied", "A verified email account is required for parent clinical services.");
+    }
+    return user;
+}
+/** Server-only deletion locks also deny still-valid cached Firebase ID tokens. */
+async function assertAccountActive(store, caller) {
+    const user = assertAuthenticated(caller);
+    if (await store.get(`accountDeletionLocks/${assertAccountUid(user.uid)}`)) {
+        throw new config_1.AppError("permission-denied", "This account is being deleted.");
+    }
+    return user;
+}
+async function assertAccountActiveInTransaction(tx, uid) {
+    if (await tx.get(`accountDeletionLocks/${assertAccountUid(uid)}`)) {
+        throw new config_1.AppError("permission-denied", "This account is being deleted.");
+    }
+}
+function assertAccountUid(uid) {
+    if (typeof uid !== "string" || uid.length < 1 || uid.length > 128 ||
+        uid === "." || uid === ".." || /[\u0000-\u001f\u007f/]/.test(uid)) {
+        throw new config_1.AppError("invalid-argument", "Unsupported authenticated account path.");
+    }
+    return uid;
 }
 function assertValidId(value, fieldName) {
     if (typeof value !== "string" || !config_1.FIELD_LIMITS.idRegex.test(value)) {

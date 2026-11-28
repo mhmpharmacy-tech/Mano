@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runOutOfBandPharmacistOnboarding = runOutOfBandPharmacistOnboarding;
 const config_1 = require("../config");
+const auth_1 = require("../auth");
 const firestoreStore_1 = require("../firestoreStore");
 /**
  * Out-of-band operator utility using Firebase Admin SDK to onboard a verified
@@ -39,8 +40,10 @@ async function runOutOfBandPharmacistOnboarding(store, authService, options) {
     const staffPath = `pharmacies/${options.pharmacyId}/staff/${uid}`;
     const operatorId = (options.operatorId || "cli_admin_operator").trim();
     const { pharmacy, staff } = await store.runTransaction(async (tx) => {
+        await (0, auth_1.assertAccountActiveInTransaction)(tx, uid);
         const now = store.nowMs();
         const existingPharmacy = await tx.get(pharmacyPath);
+        const existingStaff = await tx.get(staffPath);
         const nextPharmacy = {
             pharmacyId: options.pharmacyId,
             displayNameFa: existingPharmacy?.displayNameFa || options.pharmacyNameFa.trim(),
@@ -50,7 +53,6 @@ async function runOutOfBandPharmacistOnboarding(store, authService, options) {
             updatedAt: now,
         };
         tx.set(pharmacyPath, nextPharmacy);
-        const existingStaff = await tx.get(staffPath);
         const nextStaff = {
             uid,
             pharmacyId: options.pharmacyId,

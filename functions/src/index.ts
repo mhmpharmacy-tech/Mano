@@ -19,6 +19,9 @@ import {
   getNamedFirestore,
 } from "./firestoreStore";
 import { CallerContext, StaffClaims } from "./types";
+import { AccountDeletionService, resolveAccountDeletionPolicy } from "./accountDeletion";
+import { FirebaseAccountDeletionBackend } from "./firebaseAccountDeletion";
+import { assertVerifiedCaregiver } from "./auth";
 
 // Clinical endpoints remain unavailable until independent release gates are satisfied.
 const ENFORCE_APP_CHECK = true;
@@ -64,13 +67,46 @@ const CALLABLE_OPTIONS = {
   consumeAppCheckToken: false,
 } as const;
 
+function createAccountDeletionService(): AccountDeletionService {
+  return new AccountDeletionService(
+    new FirebaseAccountDeletionBackend(getNamedFirestore()),
+    resolveAccountDeletionPolicy(process.env),
+  );
+}
+
+// Erasure has its own approved-policy gate. Disabling clinical AI must never
+// prevent a user from checking or requesting a previously approved deletion.
+export const getAccountDeletionPolicy = onCall(CALLABLE_OPTIONS, async request => {
+  try { return createAccountDeletionService().getPolicy(extractCaller(request)); }
+  catch (err) { return handleError(err); }
+});
+
+export const requestAccountDeletion = onCall(CALLABLE_OPTIONS, async request => {
+  try { return await createAccountDeletionService().request(extractCaller(request), request.data); }
+  catch (err) { return handleError(err); }
+});
+
+export const getAccountDeletionStatus = onCall(CALLABLE_OPTIONS, async request => {
+  try { return await createAccountDeletionService().getStatus(extractCaller(request), request.data); }
+  catch (err) { return handleError(err); }
+});
+
+export const processAccountDeletionJobs = onSchedule({
+  region: FUNCTIONS_REGION, schedule: "every 1 minutes", timeoutSeconds: 540, maxInstances: 1,
+}, async () => {
+  if (!resolveAccountDeletionPolicy(process.env)) return;
+  const service = createAccountDeletionService();
+  await service.processPendingJobs(5);
+  await service.purgeExpiredClinicalRetention(5);
+});
+
 export const listAcceptingPharmacies = onCall(
   CALLABLE_OPTIONS,
   async (request) => {
     try {
       requireClinicalRelease();
       const { caseService } = createServices();
-      return await caseService.listAcceptingPharmacies(extractCaller(request));
+      return await caseService.listAcceptingPharmacies(assertVerifiedCaregiver(extractCaller(request)));
     } catch (err) {
       return handleError(err);
     }
@@ -84,7 +120,7 @@ export const issueConsultationTriagePass = onCall<IssueTriagePassRequest>(
       requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.issueConsultationTriagePass(
-        extractCaller(request),
+        assertVerifiedCaregiver(extractCaller(request)),
         request.data ?? ({} as IssueTriagePassRequest),
       );
     } catch (err) {
@@ -100,7 +136,7 @@ export const submitConsultationCase = onCall<SubmitConsultationCaseRequest>(
       requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.submitConsultationCase(
-        extractCaller(request),
+        assertVerifiedCaregiver(extractCaller(request)),
         request.data ?? ({} as SubmitConsultationCaseRequest),
       );
     } catch (err) {
@@ -116,7 +152,7 @@ export const getParentConsultation = onCall<GetParentConsultationRequest>(
       requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.getParentConsultation(
-        extractCaller(request),
+        assertVerifiedCaregiver(extractCaller(request)),
         request.data ?? ({} as GetParentConsultationRequest),
       );
     } catch (err) {
@@ -132,7 +168,7 @@ export const listParentConsultations = onCall<ListParentConsultationsRequest>(
       requireClinicalRelease();
       const { caseService } = createServices();
       return await caseService.listParentConsultations(
-        extractCaller(request),
+        assertVerifiedCaregiver(extractCaller(request)),
         request.data ?? {},
       );
     } catch (err) {

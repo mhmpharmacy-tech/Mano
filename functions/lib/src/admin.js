@@ -53,6 +53,7 @@ class PharmacyAdminService {
         await (0, rateLimit_1.consumeRateLimit)(this.store, admin.uid, "admin_action", config_1.RATE_LIMITS.adminAction.maxRequests, config_1.RATE_LIMITS.adminAction.windowMs);
         const staffPath = `pharmacies/${pharmacyId}/staff/${targetUid}`;
         const staffDoc = await this.store.runTransaction(async (tx) => {
+            await (0, auth_1.assertAccountActiveInTransaction)(tx, targetUid);
             const pharmacy = await tx.get(`pharmacies/${pharmacyId}`);
             if (!pharmacy || pharmacy.active !== true) {
                 throw new config_1.AppError("failed-precondition", "Cannot onboard staff into a missing or inactive pharmacy.");

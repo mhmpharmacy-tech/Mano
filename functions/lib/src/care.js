@@ -28,7 +28,7 @@ function extractStructuredFields(data) {
     };
 }
 async function updateCare(store, caller, data) {
-    const user = (0, auth_1.assertAuthenticated)(caller);
+    const user = await (0, auth_1.assertAccountActive)(store, caller);
     const pharmacy = (0, auth_1.assertValidId)(data.pharmacyId, "pharmacyId");
     const caseId = (0, auth_1.assertValidId)(data.caseId, "caseId");
     const action = field(data.action, 20);
@@ -39,6 +39,7 @@ async function updateCare(store, caller, data) {
     if (!staff && !["open", "dose", "question", "checkin"].includes(action))
         throw new config_1.AppError("invalid-argument", "Unknown action");
     return store.runTransaction(async (tx) => {
+        await (0, auth_1.assertAccountActiveInTransaction)(tx, user.uid);
         if (staff)
             await (0, auth_1.verifyPharmacistAccessInTransaction)(tx, user, pharmacy);
         const path = `pharmacies/${pharmacy}/cases/${caseId}`;

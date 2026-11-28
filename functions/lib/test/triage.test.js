@@ -82,10 +82,12 @@ const triage_1 = require("../src/triage");
     strict_1.default.equal(result.outcome, "NONURGENT");
     strict_1.default.equal(result.ruleId, "rule_nonurgent_pass_eligible");
 });
-(0, node_test_1.default)("every red flag selectable on Android prevents a nonurgent pass", async () => {
+(0, node_test_1.default)("every red flag selectable in the current React client prevents a nonurgent pass", async () => {
     const { readFile } = await Promise.resolve().then(() => __importStar(require("node:fs/promises")));
-    const seeds = await readFile("../app/src/main/java/com/example/data/ManoSourcesAndClinicalSeed.kt", "utf8");
-    const flags = [...seeds.matchAll(/RedFlagOption\("([^"]+)",\s*"[^"]+",\s*(true|false)\)/g)];
+    const seeds = await readFile("../src/data/symptomFlows.ts", "utf8");
+    const blocks = [...seeds.matchAll(/redFlags:\s*\[([\s\S]*?)\]/g)];
+    strict_1.default.ok(blocks.length >= 9, "Every shipped React symptom flow must be represented");
+    const flags = blocks.flatMap(([, block]) => [...block.matchAll(/\{\s*id:\s*'([^']+)'[\s\S]*?isImmediateEmergency:\s*(true|false)/g)]);
     strict_1.default.ok(flags.length >= 20);
     for (const [, id, critical] of flags) {
         const decision = (0, triage_1.evaluateServerTriage)({ ageBandId: "toddler_1_3y", selectedRedFlagIds: [id] });

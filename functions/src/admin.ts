@@ -1,4 +1,4 @@
-import { assertSystemAdmin, assertValidId } from "./auth";
+import { assertAccountActiveInTransaction, assertSystemAdmin, assertValidId } from "./auth";
 import { AppError, FIELD_LIMITS, RATE_LIMITS } from "./config";
 import { consumeRateLimit } from "./rateLimit";
 import {
@@ -118,6 +118,7 @@ export class PharmacyAdminService {
 
     const staffPath = `pharmacies/${pharmacyId}/staff/${targetUid}`;
     const staffDoc = await this.store.runTransaction(async (tx) => {
+      await assertAccountActiveInTransaction(tx, targetUid);
       const pharmacy = await tx.get<PharmacyRegistryDoc>(
         `pharmacies/${pharmacyId}`,
       );

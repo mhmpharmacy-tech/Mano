@@ -93,7 +93,7 @@ class ConsultationCaseService {
         this.store = store;
     }
     async listAcceptingPharmacies(caller) {
-        (0, auth_1.assertAuthenticated)(caller);
+        await (0, auth_1.assertAccountActive)(this.store, caller);
         const pharmacies = await this.store.queryCollection("pharmacies", [
             { field: "active", op: "==", value: true },
             { field: "acceptingCases", op: "==", value: true },
@@ -107,7 +107,7 @@ class ConsultationCaseService {
         }));
     }
     async issueConsultationTriagePass(caller, req) {
-        const authed = (0, auth_1.assertAuthenticated)(caller);
+        const authed = await (0, auth_1.assertAccountActive)(this.store, caller);
         await (0, rateLimit_1.consumeRateLimit)(this.store, authed.uid, "triage_pass", config_1.RATE_LIMITS.triagePass.maxRequests, config_1.RATE_LIMITS.triagePass.windowMs);
         const decision = (0, triage_1.evaluateServerTriage)(req);
         if (decision.outcome !== "NONURGENT") {
@@ -139,6 +139,7 @@ class ConsultationCaseService {
             createdAt: now,
         };
         await this.store.runTransaction(async (tx) => {
+            await (0, auth_1.assertAccountActiveInTransaction)(tx, authed.uid);
             tx.create(`triagePasses/${passId}`, passDoc);
         });
         return {
@@ -153,7 +154,7 @@ class ConsultationCaseService {
         };
     }
     async submitConsultationCase(caller, req) {
-        const authed = (0, auth_1.assertAuthenticated)(caller);
+        const authed = await (0, auth_1.assertAccountActive)(this.store, caller);
         const pharmacyId = (0, auth_1.assertValidId)(req.pharmacyId, "pharmacyId");
         const triagePassId = (0, auth_1.assertValidId)(req.triagePassId, "triagePassId");
         if (!config_1.VALID_CATEGORIES.includes(req.categoryName)) {
@@ -197,6 +198,7 @@ class ConsultationCaseService {
         await (0, rateLimit_1.consumeRateLimit)(this.store, authed.uid, "case_submit", config_1.RATE_LIMITS.caseSubmit.maxRequests, config_1.RATE_LIMITS.caseSubmit.windowMs);
         const caseId = this.store.generateId("case");
         const createdCase = await this.store.runTransaction(async (tx) => {
+            await (0, auth_1.assertAccountActiveInTransaction)(tx, authed.uid);
             const now = this.store.nowMs();
             const pharmacy = await tx.get(`pharmacies/${pharmacyId}`);
             (0, auth_1.assertActivePharmacy)(pharmacy, true);
@@ -274,7 +276,7 @@ class ConsultationCaseService {
         return toParentConsultationView(createdCase);
     }
     async getParentConsultation(caller, req) {
-        const authed = (0, auth_1.assertAuthenticated)(caller);
+        const authed = await (0, auth_1.assertAccountActive)(this.store, caller);
         const pharmacyId = (0, auth_1.assertValidId)(req.pharmacyId, "pharmacyId");
         const caseId = (0, auth_1.assertValidId)(req.caseId, "caseId");
         const caseDoc = await this.store.get(`pharmacies/${pharmacyId}/cases/${caseId}`);
@@ -287,7 +289,7 @@ class ConsultationCaseService {
         return toParentConsultationView(caseDoc);
     }
     async listParentConsultations(caller, req = {}) {
-        const authed = (0, auth_1.assertAuthenticated)(caller);
+        const authed = await (0, auth_1.assertAccountActive)(this.store, caller);
         const limit = Math.min(Math.max(Number(req.limit ?? 25), 1), 50);
         const cases = await this.store.queryCollectionGroup("cases", [{ field: "parentUid", op: "==", value: authed.uid }], "createdAt", "desc", limit);
         return cases
