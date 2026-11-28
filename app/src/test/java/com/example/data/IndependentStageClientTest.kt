@@ -62,4 +62,26 @@ class IndependentStageClientTest {
         client.logout()
         assertTrue(runCatching { client.list() }.isFailure)
     }
+    @Test fun careCardContractRejectsUnconfirmedIssuanceAndUnexpectedState() = runBlocking {
+        val calls = mutableListOf<StageRequest>()
+        val client = IndependentStageClient(true, StageTransport { req ->
+            calls.add(req)
+            if(req.method == "GET") StageResponse(200,buildJsonObject {
+                put("cards",buildJsonArray { add(buildJsonObject {
+                    put("id",id);put("pharmacy_id",id);put("template","demo-care-v1");put("state","issued")
+                }) })
+            }) else if(req.path.endsWith("/state")) StageResponse(200,buildJsonObject { put("ok",true) })
+            else StageResponse(201,buildJsonObject { put("id",id) })
+        })
+        client.setSession(token)
+        assertEquals(listOf(StageCareCard(id,id,CareState.ISSUED)),client.listCare(id))
+        assertTrue(runCatching { client.issueCare(id,id,false) }.isFailure)
+        assertEquals(1,calls.size)
+        assertEquals(id,client.issueCare(id,id,true))
+        client.transitionCare(id,id,CareState.ACKNOWLEDGED)
+        assertEquals(JsonPrimitive("demo-care-v1"),calls[1].body?.get("template"))
+        assertEquals(JsonPrimitive("acknowledged"),calls[2].body?.get("state"))
+        assertTrue(runCatching { client.transitionCare(id,id,CareState.ISSUED) }.isFailure)
+        assertEquals(3,calls.size)
+    }
 }
