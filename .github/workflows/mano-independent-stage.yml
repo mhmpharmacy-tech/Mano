@@ -40,6 +40,37 @@ jobs:
       - run: npm run test:integration
         env:
           MANO_TEST_ADMIN_URL: postgresql://postgres:ci-admin-synthetic-only@127.0.0.1:5432/mano_stage
+      - name: Enable authenticated TLS on disposable CI PostgreSQL only
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/mano-ci-tls"
+          mkdir -p "$d"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=MANO-CI-CA -keyout "$d/ca.key" -out "$d/ca.crt"
+          openssl req -newkey rsa:2048 -nodes -subj /CN=localhost -keyout "$d/server.key" -out "$d/server.csr"
+          printf 'subjectAltName=DNS:localhost,IP:127.0.0.1\nextendedKeyUsage=serverAuth\n' > "$d/server.ext"
+          openssl x509 -req -in "$d/server.csr" -CA "$d/ca.crt" -CAkey "$d/ca.key" -CAcreateserial -days 1 -extfile "$d/server.ext" -out "$d/server.crt"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=Untrusted-CI -keyout "$d/wrong.key" -out "$d/wrong.crt"
+          docker cp "$d/server.key" "$PG_CONTAINER:/tmp/mano-server.key"
+          docker cp "$d/server.crt" "$PG_CONTAINER:/tmp/mano-server.crt"
+          docker exec -u root "$PG_CONTAINER" chown postgres:postgres /tmp/mano-server.key /tmp/mano-server.crt
+          docker exec -u root "$PG_CONTAINER" chmod 600 /tmp/mano-server.key
+          docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage -c "ALTER SYSTEM SET ssl_cert_file='/tmp/mano-server.crt'"
+          docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage -c "ALTER SYSTEM SET ssl_key_file='/tmp/mano-server.key'"
+          docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage -c "ALTER SYSTEM SET ssl=on"
+          docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage -c "SELECT pg_reload_conf()"
+          for i in $(seq 1 15); do
+            if [ "$(docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage -Atc 'SHOW ssl')" = "on" ]; then break; fi
+            sleep 1
+          done
+          test "$(docker exec -u postgres "$PG_CONTAINER" psql -d mano_stage -Atc 'SHOW ssl')" = "on"
+      - name: Verify TLS and reject incorrect trust roots
+        env:
+          MANO_TEST_TLS_URL: postgresql://mano_stage_app:ci-synthetic-only-password@127.0.0.1:5432/mano_stage
+          MANO_TEST_TLS_CA: ${{ runner.temp }}/mano-ci-tls/ca.crt
+          MANO_TEST_TLS_WRONG_CA: ${{ runner.temp }}/mano-ci-tls/wrong.crt
+        run: node --test tls-integration.test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: independent-stage-lockfile-review
