@@ -8,7 +8,7 @@ kotlin {
         }
         test {
             kotlin.srcDir("../app/src/test/java/com/example/data")
-            kotlin.include("IndependentStageClientTest.kt")
+            kotlin.include("IndependentStageClientTest.kt", "IndependentStageHttpTest.kt")
         }
     }
 }
